@@ -1505,7 +1505,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ PARTS WORKSHOP ============ -->
   <div class="screen" id="s-parts">
     <div class="panel"><h2>✂️ Parts Workshop</h2><div class="sub">Integration by parts undoes the product rule: split the integrand into u, to differentiate, and dv, to integrate, and ∫ u dv = uv − ∫ v du. Pick a split and see what it leaves. A good one leaves an integral simpler than the one you started with.</div></div>
-    <div id="bpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a split by hand or pick the number alone"></div>
+    <div id="bpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a split by hand, pick the number alone, or call whether a split gets easier"></div>
     <div class="panel">
       <div id="bqBox"></div>
       <div id="bpSets" class="wsModes" role="group" aria-label="Which integral"></div>
@@ -15561,7 +15561,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">✂️ Parts Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started. Then turn it round: see an integral to split, and pick which of four numbers stands alone in the answer.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started. Then turn it round: see an integral to split, and pick which of four numbers stands alone in the answer. Or call four splits: does what parts leaves get easier, come back the same, or get harder?</div>
          <button class="btn sm" id="tomeParts" style="width:auto;margin-top:8px" onclick="Parts.open()">Open the parts workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -27938,6 +27938,190 @@ const Implicit = {
   }
 };
 
+/* ---------- Easier or harder? The parts workshop's third mode ----------
+   Four integrals, each already split into u and dv, and the player calls
+   whether what parts leaves, ∫ v du, is easier than the integral it came
+   from, the same kind again, or harder. It all goes by what u and dv do:
+   a power of x taken as u drops a power, ln x taken as u differentiates
+   away, eˣ and sines taken against each other come back the same kind, and
+   eˣ or a sine taken as u, with a power of x left to integrate, raises the
+   power. Rounds set the same integral split both ways, an ln that vanishes,
+   integrals that come back round, and splits that make it worse. Each pane
+   writes the integral with its u and dv; once the round is right, du, v and
+   what parts leaves are written in. A slip rings that pane and works it
+   through. Nothing is saved, and there is no clock. */
+const PartsTurn = {
+  // [u, dv]: x1 x² x³ powers of x, e2 e²ˣ, s2 sin 2x, c1 cos x, l ln x, 1 a bare dx
+  ROUNDS:[
+    [['x1','e1'], ['e1','x1'], ['s1','e1'], ['l','x1']],
+    [['c1','e1'], ['x2','s1'], ['l','1'], ['s1','x2']],
+    [['e2','x3'], ['x1','c2'], ['e1','c1'], ['x3','e1']],
+    [['l','x2'], ['c1','x1'], ['x1','s1'], ['s2','e3']],
+    [['e3','c2'], ['x2','e2'], ['e1','x2'], ['l','x3']],
+    [['x3','c1'], ['s1','x1'], ['c2','e2'], ['e2','x2']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four splits right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'ln',   t:'Call one where u = ln x makes the ln vanish.', toast:'ln x differentiates away',
+     ok:K=>K.kinds.has('ln')},
+    {id:'loop', t:'Call one that comes back the same kind.', toast:'It comes back round',
+     ok:K=>K.kinds.has('loop')},
+    {id:'rise', t:'Call one where the power of x rises.', toast:'The wrong u makes it worse',
+     ok:K=>K.kinds.has('rise')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Parts trades ∫ u dv for uv − ∫ v du: u is differentiated and dv integrated. So the new integral, ∫ v du, is easier when differentiating u makes it simpler: a power of x drops a power, and ln x becomes 1/x and vanishes. It is harder when u is eˣ or a sine and the power of x is left as dv, because integrating it raises the power. And when u and dv are eˣ and a sine or cosine, ∫ v du is eˣ times a sine or cosine again: the same kind, which comes back round.',
+  L:'ABCD',
+  SUP:['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'],
+  ORDER:'xescl',
+  WORD:{1:'easier', 0:'the same kind', [-1]:'harder'},
+  NAMES:{1:'what is left is easier', 0:'it comes back the same kind', [-1]:'what is left is harder'},
+  R(){ return this.ROUNDS[this.ri]; },
+  // 1 easier, 0 the same kind, −1 harder
+  truth(i){ const [u,dv]=this.R()[i];
+    return u[0]==='x' || u==='l' ? 1 : dv[0]==='x' ? -1 : 0; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  red([n,d]){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); return [n/g,d/g]; },
+  // one factor written out: x², e²ˣ, sin 2x, ln x
+  show(t){ const k=+t.slice(1)||1, w=k===1?'x':k+'x';
+    return t[0]==='x' ? (k===1?'x':'x'+this.SUP[k]) : t[0]==='e' ? (k===1?'eˣ':'e'+this.SUP[k]+'ˣ')
+      : t[0]==='s' ? 'sin '+w : t[0]==='c' ? 'cos '+w : t==='l' ? 'ln x' : ''; },
+  // a term c·xᵖ·(factors), as {c:[n,d], p, f}
+  term(c,p,f){ return {c:this.red(c), p, f:f.slice().sort((a,b)=>this.ORDER.indexOf(a[0])-this.ORDER.indexOf(b[0]))}; },
+  d(t){ const k=+t.slice(1)||1;
+    return t[0]==='x' ? this.term([k,1],k-1,[]) : t[0]==='e' ? this.term([k,1],0,[t]) : t[0]==='s' ? this.term([k,1],0,['c'+k])
+      : t[0]==='c' ? this.term([-k,1],0,['s'+k]) : this.term([1,1],-1,[]); },
+  int(t){ const k=+t.slice(1)||1;
+    return t==='1' ? this.term([1,1],1,[]) : t[0]==='x' ? this.term([1,k+1],k+1,[]) : t[0]==='e' ? this.term([1,k],0,[t])
+      : t[0]==='s' ? this.term([-1,k],0,['c'+k]) : this.term([1,k],0,['s'+k]); },
+  mul(A,B){ return this.term([A.c[0]*B.c[0],A.c[1]*B.c[1]],A.p+B.p,[...A.f,...B.f]); },
+  body(T){ const x=T.p===0 ? '' : T.p===1 ? 'x' : T.p>1 ? 'x'+this.SUP[T.p] : '1/x';
+    return [x,...T.f.map(t=>this.show(t))].filter(Boolean).join(' '); },
+  // a number written in front: nothing for 1, a minus for −1, then 2 or (1/2) and a space
+  front([n,d]){ return d===1 ? (n===1 ? '' : n===-1 ? '−' : neg(n)+' ') : `(${n<0?'−':''}${Math.abs(n)}/${d}) `; },
+  // a term written out: 2x, 2e²ˣ, −sin x, 2 cos 2x, (1/3) x³, (1/x)
+  fmt(T){ const b=this.body(T), f=this.front(T.c);
+    if(!b) return f.trim() || '1';
+    if(b==='1/x') return f+'(1/x)';
+    return T.c[1]===1 && /^\S+ $/.test(f) && /^[xe]/.test(b) ? f.trim()+b : f+b; },
+  integrand(i){ const [u,dv]=this.R()[i]; return this.body(this.term([1,1],0,[u,dv].filter(t=>t!=='1'))); },
+  integral(i){ return `∫ ${this.integrand(i)} dx`; },
+  du(i){ const T=this.d(this.R()[i][0]), m=this.fmt(T); return `du = ${m==='1' ? '' : m+' '}dx`; },
+  v(i){ return `v = ${this.fmt(this.int(this.R()[i][1]))}`; },
+  // what parts leaves, ∫ v du, with its number in front
+  left(i){ const [u,dv]=this.R()[i], T=this.mul(this.int(dv),this.d(u)), b=this.body(T);
+    return `${this.front(T.c)}∫ ${b ? b+' ' : ''}dx`; },
+  lns(){ return [0,1,2,3].filter(i=>this.R()[i][0]==='l'); },
+  loops(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  rises(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  tags(){ const t=[]; if(this.lns().length) t.push('ln'); if(this.loops().length) t.push('loop'); if(this.rises().length) t.push('rise'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  pw(t){ return +t.slice(1)||1; },
+  why(i){
+    const [u,dv]=this.R()[i], t=this.truth(i);
+    const head=`u = ${this.show(u)}, so ${this.du(i)}, and dv = ${dv==='1'?'':this.show(dv)+' '}dx, so ${this.v(i)}: ∫ v du = ${this.left(i)}.`;
+    if(t===1 && u==='l') return `${head} The ln is gone and only a power of x is left: easier.`;
+    if(t===1) return `${head} The power of x drops from ${this.pw(u)} to ${this.pw(u)-1}: easier.`;
+    if(t===0) return `${head} That is eˣ times a sine or cosine again, the same kind as before: it comes back round.`;
+    return `${head} The power of x rises from ${this.pw(dv)} to ${this.pw(dv)+1}: harder. Swapped round, u = ${this.show(dv)} would drop it.`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ln=this.lns(), lo=this.loops(), ri=this.rises();
+      if(ln.length){ const i=ln[0];
+        out.push(`In ${this.L[i]}, u = ln x and du = (1/x) dx swallows the ln: ∫ v du = ${this.left(i)} is only a power of x.`); }
+      if(lo.length){ const i=lo[0];
+        out.push(`In ${this.L[i]}, ∫ v du = ${this.left(i)} is the same kind again: a second round of parts brings the first integral back, and that is how it is solved.`); }
+      if(ri.length){ const i=ri[0], dv=this.R()[i][1];
+        out.push(`In ${this.L[i]}, u = ${this.show(this.R()[i][0])} leaves ${this.show(dv)} to integrate, and the power of x rises: swapped, u = ${this.show(dv)} would make it drop.`); }
+      out.push(`What each split leaves: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.left(i)}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad) out.push(`In ${this.L[i]}, ${this.integral(i)}: ${this.why(i)} You had it as ${this.WORD[this.calls[i]]}.`);
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the integral, its u in gold and its dv in blue. Once the
+     round is right, du, v and what parts leaves are written in. */
+  svg(){
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four integrals split for parts: ${[0,1,2,3].map(i=>`${this.L[i]}, ${this.integral(i)} with u = ${this.show(this.R()[i][0])} and dv = ${this.R()[i][1]==='1'?'':this.show(this.R()[i][1])+' '}dx`).join('; ')}${this.solved?', each with du, v and what parts leaves written in':''}">`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, [u,dv]=this.R()[i];
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="int" x="${cx}" y="${Y+50}" fill="${FIG_COL.ink}" font-size="13" text-anchor="middle">${this.integral(i)}</text>`;
+      out+=`<text data-k="split" x="${cx}" y="${Y+72}" font-size="12" text-anchor="middle"><tspan data-k="u" fill="${FIG_COL.a}">u = ${this.show(u)}</tspan><tspan fill="${FIG_COL.ink}"> · </tspan><tspan data-k="dv" fill="${FIG_COL.b}">dv = ${dv==='1'?'':this.show(dv)+' '}dx</tspan></text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="duv" x="${cx}" y="${Y+92}" fill="${FIG_COL.c}" font-size="11" text-anchor="middle">${this.du(i)} · ${this.v(i)}</text>`;
+        out+=`<text data-k="leaves" x="${X+10}" y="${Y+118}" fill="${FIG_COL.ink}" font-size="11">→ ${this.left(i)}</text>`;
+        out+=`<text data-k="${{1:'easier',0:'same',[-1]:'harder'}[t]}" x="${X+172}" y="${Y+118}" fill="${t<0?FIG_COL.d:FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'↓',0:'↻',[-1]:'↑'}[t]}</text>`; }
+    }
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Parts.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Parts.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Parts.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="PartsTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four integrals, each split into u and dv. Is what parts leaves, ∫ v du, easier, the same kind, or harder?</div>`;
+    out+=`<div id="pttFig">${this.svg()}<div class="figcap">Each u is in gold and each dv in blue. Once all four are called right, du, v and what parts leaves are written in.</div></div>`;
+    out+=`<div id="pttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="pttStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">u = ${this.show(this.R()[i][0])}</span></b>`+
+        this.btn(i,1,'↓ Easier')+this.btn(i,0,'↻ Same')+this.btn(i,-1,'↑ Harder')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="pttRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="pttNext" onclick="PartsTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="pttCheck" ${this.ready()?'':'disabled '}onclick="PartsTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="pttGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="pttGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SPLIT SEER','every split weighed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which number alone? The parts workshop turned round ----------
    An integral ∫ (ax + b)·eᵏˣ dx with whole a, b and k, and four numbers, one
    of them the B in (Ax + B)·eᵏˣ + C, which is b/k − a/k². The x number
@@ -28182,11 +28366,11 @@ const Parts = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('bpTab').innerHTML=[['hand','✂️ Pick a split by hand','Pick a split by hand and see what parts leaves'],['pick','🎯 Which number alone?','See an integral to split, and pick which of four numbers stands alone in the answer']]
+    document.getElementById('bpTab').innerHTML=[['hand','✂️ Pick a split by hand','Pick a split by hand and see what parts leaves'],['pick','🎯 Which number alone?','See an integral to split, and pick which of four numbers stands alone in the answer'],['turn','📉 Easier or harder?','See four integrals split into u and dv, and call whether what parts leaves is easier, the same kind, or harder']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Parts.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['bpSets','bpFig','bpOpts','bpRead','bpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('bqBox').innerHTML=pick ? PartsPick.html() : '';
+    document.getElementById('bqBox').innerHTML=!pick ? '' : this.tab==='pick' ? PartsPick.html() : PartsTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('bpSets').innerHTML=this.SETS.map((s,i)=>

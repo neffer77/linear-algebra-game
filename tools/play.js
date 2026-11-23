@@ -193,6 +193,7 @@ const SUITES = [
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
+  require('./play/partsturn'), // see four integrals split into u and dv, call whether what parts leaves is easier, the same kind or harder
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
   require('./play/secturn'), // see four curves with a secant each, call its slope more than f′(a), equal to it or less
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on

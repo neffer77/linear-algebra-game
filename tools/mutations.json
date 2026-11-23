@@ -1,60 +1,60 @@
 {
-  "change": "Add a Does du fit mode to the swap workshop",
+  "change": "Add an Easier or harder mode to the parts workshop",
   "mutations": [
     {
-      "name": "the power of x is not checked",
+      "name": "ln as u is called harder",
       "file": "index.html",
-      "find": "truth(i){ const {c,p,a,m}=this.Q(i); return p!==m-1 ? -1 : c===m*a ? 1 : 0; },",
-      "replace": "truth(i){ const {c,p,a,m}=this.Q(i); return c===m*a ? 1 : 0; },",
+      "find": "return u[0]==='x' || u==='l' ? 1 : dv[0]==='x' ? -1 : 0; },",
+      "replace": "return u[0]==='x' ? 1 : dv[0]==='x' || u==='l' ? -1 : 0; },",
       "run": "verify"
     },
     {
-      "name": "du forgets the m",
+      "name": "eˣ against a power is called the same kind",
       "file": "index.html",
-      "find": "c===m*a ? 1 : 0; },",
-      "replace": "c===a ? 1 : 0; },",
+      "find": "u[0]==='x' || u==='l' ? 1 : dv[0]==='x' ? -1 : 0;",
+      "replace": "u[0]==='x' || u==='l' ? 1 : dv[0]==='l' ? -1 : 0;",
       "run": "verify"
     },
     {
-      "name": "the number in front is turned upside down",
+      "name": "a cosine's slope loses its minus",
       "file": "index.html",
-      "find": "k(i){ const {c,a,m}=this.Q(i); return this.fr(c,m*a); },",
-      "replace": "k(i){ const {c,a,m}=this.Q(i); return this.fr(m*a,c); },",
+      "find": "t[0]==='c' ? this.term([-k,1],0,['s'+k]) : this.term([1,1],-1,[]); },",
+      "replace": "t[0]==='c' ? this.term([k,1],0,['s'+k]) : this.term([1,1],-1,[]); },",
       "run": "verify"
     },
     {
-      "name": "du drops its minus",
+      "name": "integrating a power forgets to divide",
       "file": "index.html",
-      "find": "return `du = ${m*a===1 ? '' : m*a===-1 ? '−' : neg(m*a)}${x} dx`; },",
-      "replace": "return `du = ${Math.abs(m*a)===1 ? '' : neg(Math.abs(m*a))}${x} dx`; },",
+      "find": "t[0]==='x' ? this.term([1,k+1],k+1,[]) : t[0]==='e'",
+      "replace": "t[0]==='x' ? this.term([1,1],k+1,[]) : t[0]==='e'",
       "run": "verify"
     },
     {
-      "name": "the leftover power is off by one",
+      "name": "the leftover power stays where it was",
       "file": "index.html",
-      "find": "`${this.xp(this.Q(i).p-this.Q(i).m+1)} left over`; },",
-      "replace": "`${this.xp(this.Q(i).p-this.Q(i).m)} left over`; },",
+      "find": "mul(A,B){ return this.term([A.c[0]*B.c[0],A.c[1]*B.c[1]],A.p+B.p,[...A.f,...B.f]); },",
+      "replace": "mul(A,B){ return this.term([A.c[0]*B.c[0],A.c[1]*B.c[1]],Math.max(A.p,B.p),[...A.f,...B.f]); },",
       "run": "verify"
     },
     {
       "name": "du is written before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
-      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
+      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"duv\"",
+      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"duv\"",
       "run": "verify"
     },
     {
-      "name": "a minus in u is not looked for",
+      "name": "u = ln x is not looked for",
       "file": "index.html",
-      "find": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).a<0 && this.truth(i)>=0); },",
-      "replace": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).b<0 && this.truth(i)>=0); },",
+      "find": "lns(){ return [0,1,2,3].filter(i=>this.R()[i][0]==='l'); },",
+      "replace": "lns(){ return [0,1,2,3].filter(i=>this.R()[i][1]==='l'); },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Parts.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Parts.render();",
       "run": "verify"
     }
   ]

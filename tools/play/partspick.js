@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see an integral to split, and pick which of four numbers stands alone in the answer\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeParts');
     t.eq('the parts workshop opens', await t.screen(), 's-parts');
-    t.eq('picking a split by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('picking a split by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6863));
     await t.tapText(/Which number alone\?/);
-    t.eq('which number alone is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which number alone is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the integrals, the figure, the split buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('bqBox').innerText)).startsWith(
