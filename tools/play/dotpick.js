@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see two arrows, and pick which of four numbers is u·v\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeDot');
     t.eq('the dot product workshop opens', await t.screen(), 's-dot');
-    t.eq('setting the arrows is the pressed mode', await pressed(t), 'true,false');
+    t.eq('setting the arrows is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6161));
     await t.tapText(/Which u·v\?/);
-    t.eq('which u·v is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which u·v is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the steppers, the plane, the readout, Start again and the goals step aside', await hidden(t, 'dtVecs') && await hidden(t, 'dtFig') && await hidden(t, 'dtRead') && await hidden(t, 'dtReset') && await hidden(t, 'dtGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('dtPick').innerText)).startsWith(
       'u·v = u₁v₁ + u₂v₂: multiply first with first, second with second, and add.'));

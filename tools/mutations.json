@@ -1,32 +1,60 @@
 {
-  "change": "Name each matrix's own det in Match them up",
+  "change": "Add a Call the angle mode to the dot product workshop",
   "mutations": [
     {
-      "name": "the slip readout works every det as det A",
+      "name": "the sign check calls 90° less than 90°",
       "file": "index.html",
-      "find": "and det ${X} = ${this.par(a)}",
-      "replace": "and det A = ${this.par(a)}",
+      "find": "truth(i){ return Math.sign(this.dot(i)); }",
+      "replace": "truth(i){ return this.dot(i)>=0?1:-1; }",
       "run": "verify"
     },
     {
-      "name": "the slip says det A does not match for every matrix",
+      "name": "a square pair on an axis counts as off the axes",
       "file": "index.html",
-      "find": "`the trace matches, but det ${X} does not`",
-      "replace": "`the trace matches, but det A does not`",
+      "find": "this.dot(i)===0 && P[i].every(p=>p[0]!==0 && p[1]!==0)",
+      "replace": "this.dot(i)===0",
       "run": "verify"
     },
     {
-      "name": "two matrices sharing a det are told as sharing det A",
+      "name": "a flip checks only v's first number",
       "file": "index.html",
-      "find": "both have det ${neg(this.det(M[i]))}, so only",
-      "replace": "share det A = ${neg(this.det(M[i]))}, so only",
+      "find": "P[i][1][0]===-P[j][1][0] && P[i][1][1]===-P[j][1][1]",
+      "replace": "P[i][1][0]===-P[j][1][0]",
       "run": "verify"
     },
     {
-      "name": "a curve that misses the axis is weighed against det A",
+      "name": "the arc runs the long way round",
       "file": "index.html",
-      "find": "4 × det ${this.L[ns[0]]} = ${4*d}",
-      "replace": "4 × det A = ${4*d}",
+      "find": "A ${r} ${r} 0 0 ${z>0?0:1} ${f(cx+ev[0]*r)}",
+      "replace": "A ${r} ${r} 0 0 ${z>0?1:0} ${f(cx+ev[0]*r)}",
+      "run": "verify"
+    },
+    {
+      "name": "the slip pairs the wrong numbers",
+      "file": "index.html",
+      "find": "${this.par(u[0])}${this.par(v[0])} + ${this.par(u[1])}${this.par(v[1])} = ${neg(d)}",
+      "replace": "${this.par(u[0])}${this.par(v[1])} + ${this.par(u[1])}${this.par(v[0])} = ${neg(d)}",
+      "run": "verify"
+    },
+    {
+      "name": "the drawn angle is cut down, not rounded",
+      "file": "index.html",
+      "find": "${Math.round(this.deg(i))}°</text>",
+      "replace": "${Math.floor(this.deg(i))}°</text>",
+      "run": "verify"
+    },
+    {
+      "name": "a call still moves once the round is right",
+      "file": "index.html",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Dot.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Dot.render();",
+      "run": "verify"
+    },
+    {
+      "name": "a square corner is drawn on one arrow only",
+      "file": "index.html",
+      "find": "L ${f(cx+(eu[0]+ev[0])*r)} ${f(cy+(eu[1]+ev[1])*r)}",
+      "replace": "L ${f(cx+(eu[0]+eu[0])*r)} ${f(cy+(eu[1]+eu[1])*r)}",
       "run": "verify"
     }
   ]

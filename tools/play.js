@@ -124,6 +124,7 @@ const SUITES = [
   require('./play/charmatch'),  // match four matrices to their det(A − λI)
   require('./play/spanpick'), // see two arrows and a ring, pick which of four mixes lands on it
   require('./play/dotpick'),  // see two arrows, pick which of four numbers is u·v
+  require('./play/dotturn'),  // see four pairs of arrows, call each angle less than, exactly or more than 90°
   require('./play/antipick'), // see f, pick which of four F has f as its slope
   require('./play/transpick'), // see A, pick which of four matrices is Aᵀ
   require('./play/transsort'), // call four square matrices: Aᵀ = A, Aᵀ = −A or neither

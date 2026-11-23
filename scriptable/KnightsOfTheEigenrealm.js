@@ -1017,7 +1017,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOT PRODUCT WORKSHOP ============ -->
   <div class="screen" id="s-dot">
     <div class="panel"><h2>🎯 Dot Product Workshop</h2><div class="sub">The dot product of two arrows is one number that says how far they agree. Set u and v, and watch it, the angle between them, and the shadow u casts on v.</div></div>
-    <div id="dtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the arrows or pick u·v"></div>
+    <div id="dtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the arrows, pick u·v or call the angle"></div>
     <div class="panel">
       <div id="dtPick"></div>
       <div id="dtVecs" class="wsMat dtVecs" role="group" aria-label="The two arrows"></div>
@@ -15461,7 +15461,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🎯 Dot Product Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other. Then turn it round: see two arrows, and pick which of four numbers is u·v.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other. Then turn it round: see two arrows, and pick which of four numbers is u·v. Or call the angle: see four pairs, and say whether each meets at less than, exactly or more than 90°.</div>
          <button class="btn sm" id="tomeDot" style="width:auto;margin-top:8px" onclick="Dot.open()">Open the dot product workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -17448,11 +17448,11 @@ const Dot = {
   },
   reset(){ this.u=[...this.START.u]; this.v=[...this.START.v]; this.render(); },
   render(){
-    document.getElementById('dtTab').innerHTML=[['set','🎚️ Set the arrows','Set two arrows by hand and watch their dot product and the angle between them'],['pick','🎯 Which u·v?','See two arrows, and pick which of four numbers is their dot product']]
+    document.getElementById('dtTab').innerHTML=[['set','🎚️ Set the arrows','Set two arrows by hand and watch their dot product and the angle between them'],['pick','🎯 Which u·v?','See two arrows, and pick which of four numbers is their dot product'],['angle','📐 Call the angle','See four pairs of arrows, and call each angle less than, exactly or more than 90°']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Dot.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='set';
     for(const id of ['dtVecs','dtFig','dtRead','dtReset','dtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('dtPick').innerHTML=pick ? DotPick.html() : '';
+    document.getElementById('dtPick').innerHTML=!pick ? '' : this.tab==='pick' ? DotPick.html() : DotTurn.html();
     if(pick) return;
     const names=['first','second'];
     document.getElementById('dtVecs').innerHTML=['u','v'].map((w,r)=>
@@ -28708,6 +28708,170 @@ const Cross = {
         Celebrate.banner('MASTER OF THE CROSS','every square arrow found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Call the angle: the dot product workshop's third mode ----------
+   The dot product workshop turned round a second way: four pairs of arrows,
+   and you call each angle less than, exactly or more than 90°. Since
+   u·v = |u| |v| cos θ and lengths are never negative, the sign of
+   u₁v₁ + u₂v₂ settles it, with no angle worked. Rounds hold square pairs
+   with no part 0, a pair whose v is turned round, and pairs whose dot is
+   only ±1, a degree or so from square. A slip rings that pair and works its
+   dot; once all four are right, each gets its angle drawn and named.
+   Nothing is saved, and there is no clock. */
+const DotTurn = {
+  ROUNDS:[
+    [[[2,1],[1,3]], [[2,1],[-1,2]], [[1,2],[3,-2]], [[-2,1],[3,1]]],
+    [[[3,1],[1,2]], [[3,1],[-1,-2]], [[0,2],[3,0]], [[1,-2],[2,2]]],
+    [[[-1,3],[2,1]], [[2,2],[-1,1]], [[1,0],[-2,1]], [[-2,-1],[-1,-3]]],
+    [[[2,-1],[1,2]], [[1,1],[3,-1]], [[1,1],[-3,1]], [[3,2],[-2,1]]],
+    [[[4,1],[-1,3]], [[-3,1],[-1,-3]], [[2,3],[1,1]], [[-1,2],[-2,1]]],
+    [[[1,3],[2,-1]], [[1,3],[-2,1]], [[0,-2],[-1,0]], [[-2,2],[1,3]]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',    t:'Call all four angles right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'square', t:'Call a square pair where neither arrow lies on an axis.', toast:'Square without an axis',
+     ok:K=>K.kinds.has('square')},
+    {id:'flip',   t:'Call a pair and the same u with v turned round.', toast:'Turn v round, and the dot turns too',
+     ok:K=>K.kinds.has('flip')},
+    {id:'close',  t:'Call a pair whose dot is only 1 or −1, a hair from square.', toast:'A hair from square',
+     ok:K=>K.kinds.has('close')},
+    {id:'fix',    t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',  t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'u·v = |u| |v| cos θ, and lengths are never negative, so u·v has the sign of cos θ: more than 0 when the angle is less than 90°, 0 when it is exactly 90°, and less than 0 when it is more. Work u₁v₁ + u₂v₂; you never need the angle itself.',
+  L:'ABCD',
+  WORD:{1:'less than 90°', 0:'exactly 90°', [-1]:'more than 90°'},
+  R(){ return this.ROUNDS[this.ri]; },
+  dot(i){ const [u,v]=this.R()[i]; return u[0]*v[0]+u[1]*v[1]; },
+  truth(i){ return Math.sign(this.dot(i)); },
+  len2(p){ return p[0]*p[0]+p[1]*p[1]; },
+  deg(i){ const [u,v]=this.R()[i]; return Math.acos(this.dot(i)/Math.sqrt(this.len2(u)*this.len2(v)))*180/Math.PI; },
+  vec(p){ return \`⟨\${p.map(c=>neg(c)).join(', ')}⟩\`; },
+  par(c){ return \`(\${neg(c)})\`; },
+  /* what a round holds: square pairs off the axes, a pair whose v is turned round, pairs a hair from square */
+  squares(){ const P=this.R(); return [0,1,2,3].filter(i=>this.dot(i)===0 && P[i].every(p=>p[0]!==0 && p[1]!==0)); },
+  flips(){ const P=this.R(), out=[];
+    for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(P[i][0].join()===P[j][0].join() && P[i][1][0]===-P[j][1][0] && P[i][1][1]===-P[j][1][1]) out.push([i,j]);
+    return out; },
+  closes(){ const P=this.R(); return [0,1,2,3].filter(i=>Math.abs(this.dot(i))===1 && this.len2(P[i][0])>=5 && this.len2(P[i][1])>=5); },
+  tags(){ const t=[]; if(this.squares().length) t.push('square'); if(this.flips().length) t.push('flip'); if(this.closes().length) t.push('close'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  working(){
+    const P=this.R(), out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fl=this.flips(), sq=this.squares(), cl=this.closes();
+      if(fl.length){ const [i,j]=fl[0];
+        out.push(\`\${this.L[i]} and \${this.L[j]} share u, and \${this.L[j]}'s v is \${this.L[i]}'s turned round: u·(−v) = −(u·v), so \${this.L[i]}'s \${Math.round(this.deg(i))}° becomes 180° − \${Math.round(this.deg(i))}° = \${Math.round(this.deg(j))}°.\`); }
+      if(sq.length) out.push(\`\${this.list(sq)} \${sq.length>1?'are each':'is'} square though neither arrow lies on an axis: the two products cancel, \${sq.map(i=>{ const [u,v]=P[i]; return \`\${this.par(u[0])}\${this.par(v[0])} + \${this.par(u[1])}\${this.par(v[1])} = 0\`; }).join(' and ')}.\`);
+      if(cl.length){ const i=cl[0];
+        out.push(\`In \${this.L[i]}, u·v is only \${neg(this.dot(i))}, so the angle is \${Math.round(this.deg(i))}°, a few degrees \${this.dot(i)>0?'short of':'past'} square, yet the sign still settles it.\`); }
+      out.push(\`The angles, to the nearest degree: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${Math.round(this.deg(i))}°\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const [u,v]=P[i], d=this.dot(i);
+        const why = d>0 ? \`\${neg(d)} is more than 0, so cos θ is too: the angle is less than 90°.\`
+          : d<0 ? \`\${neg(d)} is less than 0, so cos θ is too: the angle is more than 90°.\`
+          : 'That is 0, so cos θ is 0: the arrows are square to each other, at exactly 90°.';
+        out.push(\`In \${this.L[i]}, u = \${this.vec(u)} and v = \${this.vec(v)}: u·v = u₁v₁ + u₂v₂ = \${this.par(u[0])}\${this.par(v[0])} + \${this.par(u[1])}\${this.par(v[1])} = \${neg(d)}. \${why} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pair in its own square: u blue, v gold, from the middle; a slip is
+     ringed red, and once called right each gets its angle in green: an arc
+     and its degrees, or a small square corner where it is exactly 90° */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2);
+    const arrow=(x0,y0,x1,y1,col,key)=>{ const d=Math.hypot(x1-x0,y1-y0), ux=(x1-x0)/d, uy=(y1-y0)/d, h=7, bx=x1-ux*h, by=y1-uy*h;
+      return \`<line data-k="\${key}" x1="\${f(x0)}" y1="\${f(y0)}" x2="\${f(bx)}" y2="\${f(by)}" stroke="\${col}" stroke-width="2.5"/>\`+
+        \`<polygon data-k="\${key}-head" points="\${f(x1)},\${f(y1)} \${f(bx-uy*3.5)},\${f(by+ux*3.5)} \${f(bx+uy*3.5)},\${f(by-ux*3.5)}" fill="\${col}"/>\`; };
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four pairs of arrows: \${P.map(([u,v],i)=>\`\${this.L[i]}, u = \${this.vec(u)} and v = \${this.vec(v)}\`).join('; ')}\${this.solved?', each with its angle':''}">\`;
+    P.forEach(([u,v],i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, cy=Y+68, m=Math.max(...u.map(Math.abs),...v.map(Math.abs)), s=48/m;
+      const tip=p=>[cx+p[0]*s, cy-p[1]*s];
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+14}" y1="\${cy}" x2="\${X+166}" y2="\${cy}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="\${cx}" y1="\${Y+10}" x2="\${cx}" y2="\${Y+122}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const [ux,uy]=tip(u), [vx,vy]=tip(v);
+      out+=arrow(cx,cy,vx,vy,FIG_COL.b,'v')+arrow(cx,cy,ux,uy,FIG_COL.a,'u');
+      const lab=(x,y,t,col)=>{ const d=Math.hypot(x-cx,y-cy)||1; return \`<text x="\${f(x+(x-cx)/d*10)}" y="\${f(y+(y-cy)/d*10+4)}" fill="\${col}" font-size="12" font-weight="700" text-anchor="middle">\${t}</text>\`; };
+      out+=lab(ux,uy,'u',FIG_COL.a)+lab(vx,vy,'v',FIG_COL.b);
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){
+        const nu=Math.sqrt(this.len2(u)), nv=Math.sqrt(this.len2(v)), eu=[u[0]/nu,-u[1]/nu], ev=[v[0]/nv,-v[1]/nv];
+        const bx=eu[0]+ev[0], by=eu[1]+ev[1], bn=Math.hypot(bx,by), lx=cx+bx/bn*34, ly=cy+by/bn*34+4;
+        if(this.dot(i)===0){ const r=10;
+          out+=\`<path data-k="right" d="M \${f(cx+eu[0]*r)} \${f(cy+eu[1]*r)} L \${f(cx+(eu[0]+ev[0])*r)} \${f(cy+(eu[1]+ev[1])*r)} L \${f(cx+ev[0]*r)} \${f(cy+ev[1]*r)}" fill="none" stroke="\${FIG_COL.c}" stroke-width="2"/>\`;
+        } else { const r=18, z=u[0]*v[1]-u[1]*v[0];
+          out+=\`<path data-k="arc" d="M \${f(cx+eu[0]*r)} \${f(cy+eu[1]*r)} A \${r} \${r} 0 0 \${z>0?0:1} \${f(cx+ev[0]*r)} \${f(cy+ev[1]*r)}" fill="none" stroke="\${FIG_COL.c}" stroke-width="2" stroke-dasharray="4 3"/>\`;
+        }
+        out+=\`<text data-k="deg" x="\${f(lx)}" y="\${f(ly)}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="middle">\${Math.round(this.deg(i))}°</text>\`;
+      }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Dot.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Dot.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Dot.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="DotTurn.call(\${i},\${c})" aria-label="Pair \${this.L[i]}: the angle is \${this.WORD[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four pairs u and v. Is the angle between them less than 90°, exactly 90°, or more?</div>\`;
+    out+=\`<div id="dtaFig">\${this.svg()}<div class="figcap">u is blue and v is gold. Once all four are called right, each gets its angle in green, with a square corner where it is exactly 90°.</div></div>\`;
+    out+=\`<div id="dtaStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map(([u,v],i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="dtaStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.vec(u)} · \${this.vec(v)}</span></b>\`+
+        this.btn(i,1,'&lt; 90°')+this.btn(i,0,'= 90°')+this.btn(i,-1,'&gt; 90°')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="dtaRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="dtaNext" onclick="DotTurn.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="dtaCheck" \${this.ready()?'':'disabled '}onclick="DotTurn.check()" aria-label="\${this.ready()?'Check the four angles':'Call all four angles to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="dtaGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="dtaGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TRUE AIM','every angle called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
