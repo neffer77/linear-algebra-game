@@ -1,60 +1,60 @@
 {
-  "change": "Add an Over or under mode to the Taylor workshop",
+  "change": "Add a Peak or valley mode to the biggest build workshop",
   "mutations": [
     {
-      "name": "the call is turned round",
+      "name": "a peak and a valley are swapped",
       "file": "index.html",
-      "find": "const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(d); },",
-      "replace": "const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(-d); },",
+      "find": "truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },",
+      "replace": "truth(i){ const s=this.side(i); return this.m(i)%2 ? s : 0; },",
       "run": "verify"
     },
     {
-      "name": "the factorial is dropped",
+      "name": "an even power still turns",
       "file": "index.html",
-      "find": "const id=this.id(i), s=this.fact(k);",
-      "replace": "const id=this.id(i), s=k||1;",
+      "find": "truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },",
+      "replace": "truth(i){ const s=this.side(i); return -s; },",
       "run": "verify"
     },
     {
-      "name": "sin x gets cos x's powers",
+      "name": "the number out front is left out",
       "file": "index.html",
-      "find": "const id=this.id(i), s=this.fact(k);\n    if(id==='exp') return 1/s;\n    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;",
-      "replace": "const id=this.id(i), s=this.fact(k);\n    if(id==='exp') return 1/s;\n    if(id==='sin') return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;",
+      "find": "side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },",
+      "replace": "side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),1)); },",
       "run": "verify"
     },
     {
-      "name": "a missing power is not looked for",
+      "name": "the powers of the other factors are dropped",
       "file": "index.html",
-      "find": "skips(){ return [0,1,2,3].filter(i=>this.x(i)!==0 && this.c(i,this.n(i)+1)===0); },",
-      "replace": "skips(){ return []; },",
+      "find": "r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },",
+      "replace": "r===this.c(i) ? p : p*(this.c(i)-r),this.a(i))); },",
       "run": "verify"
     },
     {
-      "name": "a negative x counts for sin and cos too",
+      "name": "a cubed factor is not looked for",
       "file": "index.html",
-      "find": "negs(){ return [0,1,2,3].filter(i=>this.id(i)==='exp' && this.x(i)<0); },",
-      "replace": "negs(){ return [0,1,2,3].filter(i=>this.x(i)<0); },",
+      "find": "deeps(){ return [0,1,2,3].filter(i=>this.m(i)%2===1 && this.m(i)>1); },",
+      "replace": "deeps(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the polynomials are drawn before the round is right",
+      "name": "f is drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){\n        out+=`<path data-k=\"poly\"",
-      "replace": "if(true){\n        out+=`<path data-k=\"poly\"",
+      "find": "if(this.solved) out+=`<path data-k=\"f\"",
+      "replace": "if(true) out+=`<path data-k=\"f\"",
       "run": "verify"
     },
     {
-      "name": "the gold dot sits on the axis",
+      "name": "f is drawn without its 1/(k+1)",
       "file": "index.html",
-      "find": "cy=\"${f(py(this.f(i)))}\" r=\"3.5\" fill=\"${FIG_COL.b}\"",
-      "replace": "cy=\"${f(py(0))}\" r=\"3.5\" fill=\"${FIG_COL.b}\"",
+      "find": "s+v*Math.pow(t,k+1)/(k+1),0); return g(x)-g(this.c(i)); },",
+      "replace": "s+v*Math.pow(t,k+1),0); return g(x)-g(this.c(i)); },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Optim.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Optim.render();",
       "run": "verify"
     }
   ]

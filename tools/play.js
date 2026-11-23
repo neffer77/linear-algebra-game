@@ -182,6 +182,7 @@ const SUITES = [
   require('./play/fitpick'), // see a few points, pick which of four numbers is the slope of the best line through them
   require('./play/fitrank'), // see four lines through the same points, and rank them from the best fit to the worst
   require('./play/buildpick'), // see a fence and a paddock count, pick which of four widths holds the most
+  require('./play/optturn'), // see four slopes that are 0 at a point, call each a peak, a valley or neither
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split

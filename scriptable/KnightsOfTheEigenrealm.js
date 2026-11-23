@@ -2132,7 +2132,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
   <div class="screen" id="s-optim">
     <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
-    <div id="opTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand or pick the width that holds the most"></div>
+    <div id="opTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand, pick the width that holds the most, or call each flat spot a peak or a valley"></div>
     <div class="panel">
       <div id="bbBox"></div>
       <div id="opSets" class="wsModes" role="group" aria-label="What to build"></div>
@@ -15726,7 +15726,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏗️ Biggest Build Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing. Then turn it round: see a fence and a paddock count and pick which of four widths holds the most.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing. Then turn it round: see a fence and a paddock count and pick which of four widths holds the most. Or call it: see four slopes that are 0 at a point, and say whether f has a peak there, a valley or neither.</div>
          <button class="btn sm" id="tomeOptim" style="width:auto;margin-top:8px" onclick="Optim.open()">Open the biggest build workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -37154,6 +37154,183 @@ const BuildPick = {
    of that, and find where the slope is 0. The steps are half a unit so every
    number is exact; one setting shows a flat tangent that marks the least, so
    the player learns to check which way the curve goes on either side. */
+/* ---------- Peak or valley? The biggest build workshop's third mode ----------
+   Four slopes f′, each 0 at one x = c, and the player calls whether f has a
+   peak there, a valley, or neither. f′ is given as factors, so its sign just
+   either side of c can be read off them: + then − is a peak, − then + is a
+   valley, and the same sign both sides is neither, a flat step on the way up
+   or down. Each pane draws f′ with c marked; f itself stays hidden. Rounds
+   hold a factor squared, which touches 0 without crossing; a factor cubed,
+   where f″(c) is 0 too and the second derivative test says nothing, yet f
+   still turns; and a − out front, which turns every sign round. A slip rings
+   that pane and works f′ half a step either side through; once all four are
+   right, each pane draws f. Nothing is saved, and there is no clock. */
+const OptTurn = {
+  // [the number out front, [[root, power], …], c]: f′(x) = a(x − r₁)^m₁(x − r₂)^m₂…
+  ROUNDS:[
+    [[3,[[-1,1],[1,1]],1], [1,[[0,2]],0], [-2,[[0,1],[2,1]],2], [1,[[1,3]],1]],
+    [[1,[[-2,1],[1,1]],-2], [-1,[[1,2],[3,1]],1], [1,[[0,1],[2,2]],0], [-1,[[-1,3]],-1]],
+    [[2,[[0,1],[3,1]],3], [1,[[-1,1],[1,1]],-1], [1,[[0,1],[2,2]],2], [-3,[[1,1]],1]],
+    [[1,[[0,3],[2,1]],0], [-1,[[-2,1],[0,1]],-2], [1,[[-1,2],[1,1]],-1], [1,[[1,1],[3,1]],3]],
+    [[-1,[[0,2]],0], [1,[[-1,1],[0,1],[1,1]],0], [2,[[1,3],[3,1]],1], [1,[[-1,1],[0,1],[1,1]],1]],
+    [[-1,[[-1,1],[2,1]],2], [1,[[0,1],[1,2]],0], [1,[[-1,3],[1,1]],1], [1,[[-2,1],[0,2]],0]]
+  ],
+  H:0.5,
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flat', t:'Call a slope that touches 0 without crossing.', toast:'A flat step, no turn',
+     ok:K=>K.kinds.has('flat')},
+    {id:'deep', t:'Call a turn where f″ is 0 too.', toast:'f″ is 0, yet it turns',
+     ok:K=>K.kinds.has('deep')},
+    {id:'neg',  t:'Call a slope with a − out front.', toast:'A minus turns every sign',
+     ok:K=>K.kinds.has('neg')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'At x = c the slope f′ is 0. Read the sign of f′ just either side: + then − and f rises then falls, a peak; − then + and f falls then rises, a valley; the same sign both sides and f keeps going through a flat step, neither. A factor (x − c) to an odd power changes sign at c, and to an even power does not.',
+  L:'ABCD',
+  WORD:{1:'a peak', 0:'neither', [-1]:'a valley'},
+  NAMES:{1:'f has a peak there', 0:'f has neither there', [-1]:'f has a valley there'},
+  R(){ return this.ROUNDS[this.ri]; },
+  a(i){ return this.R()[i][0]; },
+  fs(i){ return this.R()[i][1]; },
+  c(i){ return this.R()[i][2]; },
+  m(i){ return this.fs(i).find(([r])=>r===this.c(i))[1]; },
+  d(i,x){ return this.fs(i).reduce((p,[r,m])=>p*Math.pow(x-r,m),this.a(i)); },
+  // the sign f′ keeps just right of c, from the other factors and the number out front
+  side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },
+  // 1 a peak, −1 a valley, 0 neither
+  truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },
+  // f, from f′ multiplied out and summed term by term, with f(c) = 0
+  coef(i){ let p=[this.a(i)]; for(const [r,m] of this.fs(i)) for(let j=0;j<m;j++){ const q=Array(p.length+1).fill(0); p.forEach((v,k)=>{ q[k+1]+=v; q[k]-=r*v; }); p=q; } return p; },
+  F(i,x){ const p=this.coef(i), g=t=>p.reduce((s,v,k)=>s+v*Math.pow(t,k+1)/(k+1),0); return g(x)-g(this.c(i)); },
+  sup(k){ return k===1 ? '' : String(k).replace(/\\d/g, d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  fac(r,m){ return (r===0 ? 'x' : \`(x \${r<0?'+':'−'} \${Math.abs(r)})\`)+this.sup(m); },
+  ftext(i,drop){ const a=drop?Math.abs(this.a(i)):this.a(i); return (a===1?'':a===-1?'−':neg(a))+this.fs(i).map(([r,m])=>this.fac(r,m)).join(''); },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '' : '≈ ')+this.num(v); },
+  // f′ at x worked factor by factor
+  work(i,x){
+    const a=this.a(i), parts=a===1 ? [] : [neg(a)];
+    for(const [r,m] of this.fs(i)){ const v=x-r, b=v<0 ? \`(\${neg(v)})\` : neg(v); parts.push(b+this.sup(m)); }
+    return \`\${parts.join(' × ')} \${this.fmt(this.d(i,x)).startsWith('≈') ? '' : '= '}\${this.fmt(this.d(i,x))}\`;
+  },
+  negs(){ return [0,1,2,3].filter(i=>this.a(i)<0 && this.m(i)%2===1); },
+  flats(){ return [0,1,2,3].filter(i=>this.m(i)%2===0); },
+  deeps(){ return [0,1,2,3].filter(i=>this.m(i)%2===1 && this.m(i)>1); },
+  tags(){ const t=[]; if(this.flats().length) t.push('flat'); if(this.deeps().length) t.push('deep'); if(this.negs().length) t.push('neg'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  sg(v){ return v>0 ? '+' : '−'; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fl=this.flats(), dp=this.deeps(), ng=this.negs();
+      if(fl.length){ const i=fl[0], c=this.c(i), s=this.side(i);
+        out.push(\`In \${this.L[i]}, f′ has \${this.fac(c,this.m(i))} in it, so it touches 0 at x = \${neg(c)} without crossing: f keeps \${s>0?'rising':'falling'} through a flat step, neither a peak nor a valley.\`); }
+      if(dp.length){ const i=dp[0], c=this.c(i), t=this.truth(i);
+        out.push(\`In \${this.L[i]}, \${this.fac(c,this.m(i))} makes f″(\${neg(c)}) = 0 too, so the second derivative test says nothing, yet f′ still goes from \${t>0?'+ to −':'− to +'}: \${this.WORD[t]}.\`); }
+      if(ng.length){ const i=ng[0], t=this.truth(i);
+        out.push(\`In \${this.L[i]}, the − out front turns every sign of f′ round, so this is \${this.WORD[t]} where \${this.ftext(i,true)} alone would give \${this.WORD[-t]}.\`); }
+      out.push(\`Signs of f′ either side: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.sg(this.d(i,this.c(i)-this.H))} then \${this.sg(this.d(i,this.c(i)+this.H))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const c=this.c(i), lo=c-this.H, hi=c+this.H, dl=this.d(i,lo), dr=this.d(i,hi), t=this.truth(i);
+        const how = t>0 ? 'f rises then falls: a peak' : t<0 ? 'f falls then rises: a valley' : \`f keeps \${dl>0?'rising':'falling'} through a flat step: neither\`;
+        out.push(\`In \${this.L[i]}, f′(x) = \${this.ftext(i)} is 0 at x = \${neg(c)}. Just left, f′(\${neg(lo)}) = \${this.work(i,lo)}, \${dl>0?'above':'below'} 0; just right, f′(\${neg(hi)}) = \${this.work(i,hi)}, \${dr>0?'above':'below'} 0. So \${how}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: f′ in gold from c − 2 to c + 2, scaled to fit near c, the
+     x-axis, and a dashed line at c with a dot where f′ is 0; once the round
+     is right, f in blue to its own scale */
+  peak(i,g){ let M=0; for(let j=0;j<=48;j++){ const t=this.c(i)-1.2+2.4*j/48; M=Math.max(M,Math.abs(g(t))); } return M; },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four slopes, each 0 at one x: \${Q.map((q,i)=>\`\${this.L[i]}, f′(x) = \${this.ftext(i)}, at x = \${neg(this.c(i))}\`).join('; ')}\${this.solved?', each with f drawn':''}">\`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, c=this.c(i);
+      const kx=150/4.4, px=t=>X+15+(t-c+2.2)*kx, y0=Y+80, kd=40/this.peak(i,t=>this.d(i,t)), kf=40/this.peak(i,t=>this.F(i,t));
+      out+=\`<clipPath id="optClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#optClip\${i})">\`;
+      out+=\`<line data-k="axis" x1="\${f(px(c-2.2))}" y1="\${f(y0)}" x2="\${f(px(c+2.2))}" y2="\${f(y0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line data-k="at" x1="\${f(px(c))}" y1="\${Y+34}" x2="\${f(px(c))}" y2="\${Y+124}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="3 3"/>\`;
+      const path=(g,k)=>{ const pts=[]; for(let j=0;j<=60;j++){ const t=c-2+4*j/60; pts.push((j?'L':'M')+f(px(t))+' '+f(Math.max(Y-40,Math.min(Y+170,y0-g(t)*k)))); } return pts.join(''); };
+      out+=\`<path data-k="slope" d="\${path(t=>this.d(i,t),kd)}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+      if(this.solved) out+=\`<path data-k="f" d="\${path(t=>this.F(i,t),kf)}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2" stroke-dasharray="5 3"/>\`;
+      out+=\`<circle data-k="zero" cx="\${f(px(c))}" cy="\${f(y0)}" r="3.5" fill="\${FIG_COL.b}"/>\`;
+      out+=\`</g>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+17}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">f′(x) = \${this.ftext(i)}</text>\`;
+      out+=\`<text data-k="how" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.dim}" font-size="11" text-anchor="end">at x = \${neg(c)}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'peak',0:'neither',[-1]:'valley'}[t]}" x="\${X+172}" y="\${Y+43}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'∩ peak',0:'→ neither',[-1]:'∪ valley'}[t]}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Optim.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Optim.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Optim.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="OptTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const Q=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four slopes f′, each 0 at one x. Does f have a peak there, a valley, or neither?</div>\`;
+    out+=\`<div id="optFig">\${this.svg()}<div class="figcap">Each pane draws the slope f′ in gold, with a dashed line and a dot where it is 0. Once all four are called right, each f is drawn in blue.</div></div>\`;
+    out+=\`<div id="optStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="optStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">f′ = \${this.ftext(i)}, x = \${neg(this.c(i))}</span></b>\`+
+        this.btn(i,1,'∩ Peak')+this.btn(i,0,'→ Neither')+this.btn(i,-1,'∪ Valley')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="optRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="optNext" onclick="OptTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="optCheck" \${this.ready()?'':'disabled '}onclick="OptTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="optGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="optGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SUMMIT READER','every flat spot called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Optim = {
   SETS:[
     {id:'wall', btn:'Wall paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
@@ -37217,11 +37394,11 @@ const Optim = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('opTab').innerHTML=[['hand','🏗️ Step it by hand','Step x by hand and watch what the build holds'],['pick','🎯 Which width holds most?','See a fence and a paddock count and pick which of four widths holds the most']]
+    document.getElementById('opTab').innerHTML=[['hand','🏗️ Step it by hand','Step x by hand and watch what the build holds'],['pick','🎯 Which width holds most?','See a fence and a paddock count and pick which of four widths holds the most'],['turn','⛰️ Peak or valley?','See four slopes that are 0 at a point, and call whether each f has a peak there, a valley or neither']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Optim.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['opSets','opFig','opStep','opRead','opGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('bbBox').innerHTML=pick ? BuildPick.html() : '';
+    document.getElementById('bbBox').innerHTML=!pick ? '' : this.tab==='pick' ? BuildPick.html() : OptTurn.html();
     if(pick) return;
     const S=this.set(), x=this.x(), d=this.d();
     document.getElementById('opSets').innerHTML=this.SETS.map((s,i)=>

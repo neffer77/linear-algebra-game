@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see a fence and a paddock count and pick which of four widths holds the most\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeOptim');
     t.eq('the biggest build workshop opens', await t.screen(), 's-optim');
-    t.eq('stepping it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('stepping it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6464));
     await t.tapText(/Which width holds most\?/);
-    t.eq('which width holds most is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which width holds most is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the builds, figure, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('bbBox').innerText)).startsWith(
