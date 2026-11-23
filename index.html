@@ -1848,7 +1848,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ INVERSE SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-invslope">
     <div class="panel"><h2>🪩 Inverse Slope Workshop</h2><div class="sub">Arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x. A mirror swaps rise and run, so the slope flips. Step along, watch a point land on its mirror image, then try the two slips everyone makes and catch them out.</div></div>
-    <div id="ivTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mirror a curve by hand or pick the slope of an inverse"></div>
+    <div id="ivTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mirror a curve by hand, pick the slope of an inverse, or call it steeper or gentler"></div>
     <div class="panel">
       <div id="vpBox"></div>
       <div id="ivSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which inverse"></div>
@@ -15622,7 +15622,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪩 Inverse Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge. Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge. Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there. Or call four inverse slopes steeper than 1, exactly 1 or gentler.</div>
          <button class="btn sm" id="tomeInvSlope" style="width:auto;margin-top:8px" onclick="InvSlope.open()">Open the inverse slope workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -32694,6 +32694,194 @@ const TanPlane = {
    it. A wrong pick is checked the way the workshop teaches: g undoes f, so
    g(f(x)) = x has slope 1, and by the chain rule g′(u) × f′(p) must be 1.
    Nothing is saved. */
+/* ---------- Steeper or gentler? The inverse slope workshop's third mode ----------
+   Four curves f, each with its inverse g read at one u, and the player calls
+   whether g's slope there is steeper than 1 in size, exactly 1, or gentler.
+   g sends u back to the x where f(x) = u, and the mirror in y = x flips the
+   slope: g′(u) = 1/f′(x). So where f is gentle, g is steep, and the other
+   way round. Each pane draws f with the point (x, u) on it and the mirror
+   line; g itself stays hidden until the round is right. Rounds hold points
+   where taking f′ at u instead of at x gives the other call, slopes of
+   exactly 1 in size, and falling curves, read by size. A slip rings that pane
+   and works x, f′(x) and the flip through. Nothing is saved, and there is no
+   clock. */
+const InvTurn = {
+  // each curve: f and its slope as text and as numbers, g as text and as numbers, and where f lives
+  F:{
+    exp:  {f:'eˣ', fp:'eˣ', g:'ln u', fn:Math.exp, d:Math.exp, inv:Math.log, lo:-9, hi:9},
+    ln:   {f:'ln x', fp:'1/x', g:'eᵘ', fn:Math.log, d:x=>1/x, inv:Math.exp, lo:1e-9, hi:60},
+    cube: {f:'x³', fp:'3x²', g:'∛u', fn:x=>x**3, d:x=>3*x*x, inv:Math.cbrt, lo:-9, hi:9},
+    sqrt: {f:'√x', fp:'1/(2√x)', g:'u²', fn:Math.sqrt, d:x=>1/(2*Math.sqrt(x)), inv:u=>u*u, lo:0, hi:60},
+    recip:{f:'1/x', fp:'−1/x²', g:'1/u', fn:x=>1/x, d:x=>-1/(x*x), inv:u=>1/u, lo:1e-9, hi:60},
+    sin:  {f:'sin x', fp:'cos x', g:'arcsin u', fn:Math.sin, d:Math.cos, inv:Math.asin, lo:-Math.PI/2, hi:Math.PI/2},
+    tan:  {f:'tan x', fp:'1/cos²x', g:'arctan u', fn:Math.tan, d:x=>1/Math.cos(x)**2, inv:Math.atan, lo:-Math.PI/2+1e-9, hi:Math.PI/2-1e-9},
+    cos:  {f:'cos x', fp:'−sin x', g:'arccos u', fn:Math.cos, d:x=>-Math.sin(x), inv:Math.acos, lo:0, hi:Math.PI},
+    expn: {f:'e⁻ˣ', fp:'−e⁻ˣ', g:'−ln u', fn:x=>Math.exp(-x), d:x=>-Math.exp(-x), inv:u=>-Math.log(u), lo:-9, hi:9},
+    line: {f:'2x + 1', fp:'2', g:'(u − 1)/2', fn:x=>2*x+1, d:()=>2, inv:u=>(u-1)/2, lo:-60, hi:60}
+  },
+  // [curve, x, x as written, u = f(x) as written]
+  ROUNDS:[
+    [['exp',-1,'−1','1/e'], ['sqrt',0.25,'1/4','1/2'], ['cube',2,'2','8'], ['recip',2,'2','1/2']],
+    [['tan',Math.PI/4,'π/4','1'], ['cos',Math.PI/2,'π/2','0'], ['ln',2,'2','ln 2'], ['sin',Math.PI/6,'π/6','1/2']],
+    [['expn',-Math.LN2,'−ln 2','2'], ['sqrt',1/16,'1/16','1/4'], ['sin',0,'0','0'], ['cube',0.5,'1/2','1/8']],
+    [['cube',0.8,'0.8','0.512'], ['cos',Math.PI/3,'π/3','1/2'], ['exp',0,'0','1'], ['line',1,'1','3']],
+    [['recip',1,'1','1'], ['exp',Math.LN2,'ln 2','2'], ['sqrt',4,'4','2'], ['recip',0.5,'1/2','2']],
+    [['tan',0,'0','0'], ['expn',Math.LN2,'ln 2','1/2'], ['ln',0.5,'1/2','−ln 2'], ['cos',Math.PI/6,'π/6','√3/2']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'atx',  t:'Call a slope where taking f′ at u would give the other call.', toast:'f′ belongs at x',
+     ok:K=>K.kinds.has('atx')},
+    {id:'exact',t:'Call a slope of exactly 1 in size.', toast:'Exactly 1, both ways',
+     ok:K=>K.kinds.has('exact')},
+    {id:'fall', t:'Call the slope of a falling inverse.', toast:'Falling, read by size',
+     ok:K=>K.kinds.has('fall')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'g is the inverse of f, so at u it goes back to the x where f(x) = u. The mirror in y = x swaps rise and run, so g′(u) = 1/f′(x), with f′ taken at that x, not at u. Where f is gentler than slope 1, g is steeper, and the other way round. Read the slope by its size, whatever its sign.',
+  L:'ABCD',
+  WORD:{1:'steeper than 1', 0:'exactly 1 in size', [-1]:'gentler than 1'},
+  NAMES:{1:'g is steeper than slope 1 there', 0:'g’s slope is exactly 1 in size there', [-1]:'g is gentler than slope 1 there'},
+  R(){ return this.ROUNDS[this.ri]; },
+  S(i){ return this.F[this.R()[i][0]]; },
+  x(i){ return this.R()[i][1]; },
+  xs(i){ return this.R()[i][2]; },
+  us(i){ return this.R()[i][3]; },
+  u(i){ return this.S(i).fn(this.x(i)); },
+  fp(i){ return this.S(i).d(this.x(i)); },
+  gp(i){ return 1/this.fp(i); },
+  // 1 steeper than 1, 0 exactly 1, −1 gentler, from the size of g′(u)
+  size(v){ const a=Math.abs(v); return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },
+  truth(i){ return this.size(this.gp(i)); },
+  // the slip: f′ taken at u, flipped; null where f has no slope at u
+  atU(i){ const S=this.S(i), u=this.u(i); if(u<S.lo || u>S.hi) return null; const v=S.d(u); return !isFinite(v) ? null : Math.abs(v)<1e-12 ? 0 : v; },
+  wrongAtU(i){ const v=this.atU(i); return v===null ? null : v===0 ? 1 : this.size(1/v); },
+  atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },
+  exacts(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  falls(){ return [0,1,2,3].filter(i=>this.fp(i)<0); },
+  tags(){ const t=[]; if(this.atxs().length) t.push('atx'); if(this.exacts().length) t.push('exact'); if(this.falls().length) t.push('fall'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '= ' : '≈ ')+this.num(v); },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ax=this.atxs(), ex=this.exacts(), fl=this.falls();
+      if(ax.length){ const i=ax[0], v=this.atU(i);
+        out.push(`In ${this.L[i]}, f′ belongs at x = ${this.xs(i)}, not at u = ${this.us(i)}: f′(${this.us(i)}) ${this.fmt(v)}, and ${v===0 ? 'flipping 0 stands g straight up' : `flipped that is ${this.fmt(1/v).replace(/^= /,'')}`}, which would call it ${this.WORD[this.wrongAtU(i)]}.`); }
+      if(ex.length){ const i=ex[0];
+        out.push(`In ${this.L[i]}, f′(${this.xs(i)}) ${this.fmt(this.fp(i))}, size 1, so flipping leaves the size alone: g′(${this.us(i)}) ${this.fmt(this.gp(i))}, as steep as the mirror line.`); }
+      if(fl.length){ const i=fl[0];
+        out.push(`In ${this.L[i]}, f falls, so its mirror g falls too: g′(${this.us(i)}) ${this.fmt(this.gp(i))} is below 0, and its size, ${this.num(Math.abs(this.gp(i)))}, is what is called.`); }
+      out.push(`Each g′(u): ${[0,1,2,3].map(i=>`${this.L[i]} ${this.fmt(this.gp(i)).replace(/^= /,'')}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const S=this.S(i), fp=this.fp(i);
+        out.push(`In ${this.L[i]}, g = ${S.g} undoes f(x) = ${S.f}, so at u = ${this.us(i)} it goes back to x = ${this.xs(i)}. f′(x) = ${S.fp}, so f′(${this.xs(i)}) ${this.fmt(fp)}, and g′(${this.us(i)}) = 1/f′(${this.xs(i)}) ${this.fmt(1/fp)}: ${this.WORD[this.truth(i)]}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: a square window centred between (x, u) and (u, x), so the
+     dashed mirror line runs corner to corner; f in blue with a dot at (x, u)
+     and a dotted line in from height u; once the round is right, g in gold
+     with its dot at (u, x) */
+  win(i){ const x=this.x(i), u=this.u(i); return {c:(x+u)/2, w:Math.max(1.3, Math.abs(x-u)/2+0.9)}; },
+  SZ:88,
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2), SZ=this.SZ;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with its inverse g read at one u: ${Q.map((q,i)=>`${this.L[i]}, f(x) = ${this.S(i).f}, g at u = ${this.us(i)}`).join('; ')}${this.solved?', each with g drawn':''}">`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, S=this.S(i), x=this.x(i), u=this.u(i), {c,w}=this.win(i);
+      const X0=X+46, Y0=Y+36, px=v=>X0+(v-(c-w))/(2*w)*SZ, py=v=>Y0+SZ-(v-(c-w))/(2*w)*SZ;
+      out+=`<clipPath id="ivtClip${i}"><rect x="${X0}" y="${Y0}" width="${SZ}" height="${SZ}"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<rect data-k="frame" x="${X0}" y="${Y0}" width="${SZ}" height="${SZ}" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#ivtClip${i})">`;
+      out+=`<line data-k="mirror" x1="${X0}" y1="${Y0+SZ}" x2="${X0+SZ}" y2="${Y0}" stroke="${FIG_COL.dim}" stroke-width="1" stroke-dasharray="4 4"/>`;
+      // f sampled across the window's x, and g across the window's u through g itself, each kept where it is the inverse of the other, broken where it leaves the window far behind
+      const path=swap=>{ const pts=[], h=swap ? S.inv : S.fn, lo=swap ? c-w-0.5 : Math.max(S.lo,c-w-0.5), hi=swap ? c+w+0.5 : Math.min(S.hi,c+w+0.5); let pen=false;
+        for(let j=0;j<=240;j++){ const t=lo+(hi-lo)*j/240, v=h(t), a=swap ? v : t;
+          if(!isFinite(v) || Math.abs(v-c)>4*w || (swap && (a<S.lo || a>S.hi || Math.abs(S.fn(a)-t)>1e-9*Math.max(1,Math.abs(t))))){ pen=false; continue; }
+          pts.push((pen?'L':'M')+f(px(t))+' '+f(py(v))); pen=true; }
+        return pts.join(''); };
+      out+=`<path data-k="f" d="${path(false)}" fill="none" stroke="${FIG_COL.a}" stroke-width="2"/>`;
+      out+=`<line data-k="ulevel" x1="${X0}" y1="${f(py(u))}" x2="${f(px(x))}" y2="${f(py(u))}" stroke="${FIG_COL.a}" stroke-width="1" stroke-dasharray="2 3"/>`;
+      if(this.solved) out+=`<path data-k="g" d="${path(true)}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      out+=`<circle data-k="fdot" cx="${f(px(x))}" cy="${f(py(u))}" r="3.5" fill="${FIG_COL.a}"/>`;
+      if(this.solved) out+=`<circle data-k="gdot" cx="${f(px(u))}" cy="${f(py(x))}" r="3.5" fill="${FIG_COL.b}"/>`;
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = ${S.f}</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">g at u = ${this.us(i)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'steep',0:'exact',[-1]:'gentle'}[t]}" x="${X+172}" y="${Y+122}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ steeper',0:'● 1',[-1]:'▼ gentler'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    InvSlope.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    InvSlope.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; InvSlope.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="InvTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves f, each with its inverse g read at one u. By size, is g’s slope there steeper than 1, exactly 1, or gentler?</div>`;
+    out+=`<div id="ivtFig">${this.svg()}<div class="figcap">Each pane draws f in blue with its point (x, u) and the dashed mirror line y = x. Once all four are called right, each mirror g is drawn in gold.</div></div>`;
+    out+=`<div id="ivtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="ivtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">g = ${this.S(i).g}, u = ${this.us(i)}</span></b>`+
+        this.btn(i,1,'▲ Steeper')+this.btn(i,0,'● Exactly 1')+this.btn(i,-1,'▼ Gentler')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="ivtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ivtNext" onclick="InvTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ivtCheck" ${this.ready()?'':'disabled '}onclick="InvTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="ivtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ivtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE MIRROR','every inverse slope called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const InvPick = {
   SLIPS:['noFlip','atU','noD','noThree','noB'],
   P:[-2,-1,1,2],
@@ -32956,11 +33144,11 @@ const InvSlope = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('ivTab').innerHTML=[['hand','🪩 Mirror it by hand','Step along a curve and its mirror by hand'],['pick','🎯 Which slope?','See a rising curve and a point, and pick which of four numbers is the slope of its inverse there']]
+    document.getElementById('ivTab').innerHTML=[['hand','🪩 Mirror it by hand','Step along a curve and its mirror by hand'],['pick','🎯 Which slope?','See a rising curve and a point, and pick which of four numbers is the slope of its inverse there'],['turn','📐 Steeper or gentler?','See four curves and a point on each inverse, and call whether the inverse is steeper than slope 1 there, exactly 1 or gentler']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="InvSlope.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ivSets','ivFig','ivStep','ivModes','ivRead','ivGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('vpBox').innerHTML=pick ? InvPick.html() : '';
+    document.getElementById('vpBox').innerHTML=!pick ? '' : this.tab==='pick' ? InvPick.html() : InvTurn.html();
     if(pick) return;
     document.getElementById('ivSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="InvSlope.pick(${i})" aria-label="g(u) = ${s.g} u, the mirror of ${s.f} x">${s.btn}</button>`).join('');

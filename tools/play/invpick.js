@@ -36,11 +36,11 @@ module.exports = {
       /Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeInvSlope');
     t.eq('the inverse slope workshop opens', await t.screen(), 's-invslope');
-    t.eq('mirroring it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('mirroring it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which slope\?/);
-    t.eq('which slope is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which slope is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, figure, stepper, modes, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('vpBox').innerText)).startsWith(

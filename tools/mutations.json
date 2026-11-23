@@ -1,60 +1,60 @@
 {
-  "change": "Add a Peak or valley mode to the biggest build workshop",
+  "change": "Add a Steeper or gentler mode to the inverse slope workshop",
   "mutations": [
     {
-      "name": "a peak and a valley are swapped",
+      "name": "the flip is left out",
       "file": "index.html",
-      "find": "truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },",
-      "replace": "truth(i){ const s=this.side(i); return this.m(i)%2 ? s : 0; },",
+      "find": "gp(i){ return 1/this.fp(i); },",
+      "replace": "gp(i){ return this.fp(i); },",
       "run": "verify"
     },
     {
-      "name": "an even power still turns",
+      "name": "f′ is taken at u",
       "file": "index.html",
-      "find": "truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },",
-      "replace": "truth(i){ const s=this.side(i); return -s; },",
+      "find": "fp(i){ return this.S(i).d(this.x(i)); },",
+      "replace": "fp(i){ return this.S(i).d(this.u(i)); },",
       "run": "verify"
     },
     {
-      "name": "the number out front is left out",
+      "name": "a slope of exactly 1 is not looked for",
       "file": "index.html",
-      "find": "side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },",
-      "replace": "side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),1)); },",
+      "find": "return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },",
+      "replace": "return a>1 ? 1 : -1; },",
       "run": "verify"
     },
     {
-      "name": "the powers of the other factors are dropped",
+      "name": "a falling slope is read by its sign",
       "file": "index.html",
-      "find": "r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },",
-      "replace": "r===this.c(i) ? p : p*(this.c(i)-r),this.a(i))); },",
+      "find": "size(v){ const a=Math.abs(v);",
+      "replace": "size(v){ const a=v;",
       "run": "verify"
     },
     {
-      "name": "a cubed factor is not looked for",
+      "name": "the f′-at-u slip is never found",
       "file": "index.html",
-      "find": "deeps(){ return [0,1,2,3].filter(i=>this.m(i)%2===1 && this.m(i)>1); },",
-      "replace": "deeps(){ return []; },",
+      "find": "atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },",
+      "replace": "atxs(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "f is drawn before the round is right",
+      "name": "the mirrors are drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved) out+=`<path data-k=\"f\"",
-      "replace": "if(true) out+=`<path data-k=\"f\"",
+      "find": "if(this.solved) out+=`<path data-k=\"g\"",
+      "replace": "if(true) out+=`<path data-k=\"g\"",
       "run": "verify"
     },
     {
-      "name": "f is drawn without its 1/(k+1)",
+      "name": "the blue dot sits at (u, x)",
       "file": "index.html",
-      "find": "s+v*Math.pow(t,k+1)/(k+1),0); return g(x)-g(this.c(i)); },",
-      "replace": "s+v*Math.pow(t,k+1),0); return g(x)-g(this.c(i)); },",
+      "find": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(x))}\" cy=\"${f(py(u))}\"",
+      "replace": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(u))}\" cy=\"${f(py(x))}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Optim.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Optim.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
       "run": "verify"
     }
   ]
