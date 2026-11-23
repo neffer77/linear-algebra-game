@@ -101,6 +101,7 @@ const SUITES = [
   require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
   require('./play/meanvalue'), // match a tangent to the chord by hand
   require('./play/chordpick'), // see a curve and its chord, pick which of four numbers is c
+  require('./play/chordturn'), // see four curves with their chords, call whether each c lies left of the middle, at it, or right
   require('./play/tanline'),   // estimate f(x) from the tangent at a and measure the miss
   require('./play/estpick'),   // see a curve and an x near a, pick which of four numbers is the tangent's estimate
   require('./play/tanturn'),   // see four curves, call each tangent estimate too high, too low or exact
@@ -160,6 +161,7 @@ const SUITES = [
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/impturn'), // see four curves with a point each, call each tangent rising, falling, flat or upright
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
+  require('./play/coverturn'), // see four fractions split in two, call whether A is bigger than B, the same or smaller
   require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
   require('./play/shaperead'), // read a curve's four points: rises or falls, cup or cap
@@ -188,16 +190,19 @@ const SUITES = [
   require('./play/buildpick'), // see a fence and a paddock count, pick which of four widths holds the most
   require('./play/optturn'), // see four slopes that are 0 at a point, call each a peak, a valley or neither
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
+  require('./play/sliceturn'), // see four planes over rectangles, call whether each holds more than its box, the same or less
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/swapturn'), // see four integrals with their u, call whether the rest is du exactly, up to a number, or leaves an x over
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
+  require('./play/partsturn'), // see four integrals split into u and dv, call whether what parts leaves is easier, the same kind or harder
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
   require('./play/secturn'), // see four curves with a secant each, call its slope more than f′(a), equal to it or less
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on
   require('./play/contourmatch'), // see a contour map and pick which of four functions f(x, y) drew it
   require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v
+  require('./play/arrowturn'), // see four pairs of arrows, call whether u + v or u − v is longer, or they are the same
   require('./play/mixpick'), // the Tome's mix: one question from a different workshop's pick mode each time
   require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
   require('./play/composeturn'), // see four pairs of matrices, call whether the order makes a difference to each

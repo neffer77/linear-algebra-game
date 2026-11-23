@@ -33,11 +33,11 @@ module.exports = {
       /Then turn it round: see a plane over a rectangle, and pick which of four numbers is the volume under it\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeSlice');
     t.eq('the slice workshop opens', await t.screen(), 's-slice');
-    t.eq('sweeping it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('sweeping it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6565));
     await t.tapText(/Which volume\?/);
-    t.eq('which volume is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which volume is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the functions, the hold, the figure, the stepper, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('dqBox').innerText)).startsWith(

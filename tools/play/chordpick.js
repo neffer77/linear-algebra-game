@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeMeanValue');
     t.eq('the chord workshop opens', await t.screen(), 's-mvt');
-    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(1883));
     await t.tapText(/Which c\?/);
-    t.eq('which c is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which c is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the curves, the figure, the move buttons, the readout and the goals step aside', await hidden(t, 'mvtSets') && await hidden(t, 'mvtFig') && await hidden(t, 'mvtMoveRow') && await hidden(t, 'mvtRead') && await hidden(t, 'mvtGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('mvpBox').innerText)).startsWith(
       'A smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends.'));

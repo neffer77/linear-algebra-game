@@ -1,60 +1,67 @@
 {
-  "change": "Add a Does du fit mode to the swap workshop",
+  "change": "Add a Left or right mode to the chord workshop",
   "mutations": [
     {
-      "name": "the power of x is not checked",
+      "name": "the chord's slope is taken over the wrong run",
       "file": "index.html",
-      "find": "truth(i){ const {c,p,a,m}=this.Q(i); return p!==m-1 ? -1 : c===m*a ? 1 : 0; },",
-      "replace": "truth(i){ const {c,p,a,m}=this.Q(i); return c===m*a ? 1 : 0; },",
+      "find": "s(i){ const {a,b}=this.Q(i); return (this.f(i,b)-this.f(i,a))/(b-a); },",
+      "replace": "s(i){ const {a,b}=this.Q(i); return (this.f(i,b)-this.f(i,a))/2; },",
       "run": "verify"
     },
     {
-      "name": "du forgets the m",
+      "name": "f′ forgets to triple the cube's coefficient",
       "file": "index.html",
-      "find": "c===m*a ? 1 : 0; },",
-      "replace": "c===a ? 1 : 0; },",
+      "find": "d1(i){ const {k}=this.Q(i); return [k[1],2*k[2],3*k[3]]; },",
+      "replace": "d1(i){ const {k}=this.Q(i); return [k[1],2*k[2],k[3]]; },",
       "run": "verify"
     },
     {
-      "name": "the number in front is turned upside down",
+      "name": "c is taken as the interval's other root",
       "file": "index.html",
-      "find": "k(i){ const {c,a,m}=this.Q(i); return this.fr(c,m*a); },",
-      "replace": "k(i){ const {c,a,m}=this.Q(i); return this.fr(m*a,c); },",
+      "find": "return [(-q+D)/(2*r),(-q-D)/(2*r)].find(x=>x>a+1e-9 && x<b-1e-9); },",
+      "replace": "return [(-q-D)/(2*r),(-q+D)/(2*r)].find(x=>x>a-1e9); },",
       "run": "verify"
     },
     {
-      "name": "du drops its minus",
+      "name": "the bend is read at the left end",
       "file": "index.html",
-      "find": "return `du = ${m*a===1 ? '' : m*a===-1 ? '−' : neg(m*a)}${x} dx`; },",
-      "replace": "return `du = ${Math.abs(m*a)===1 ? '' : neg(Math.abs(m*a))}${x} dx`; },",
+      "find": "bend(i){ const [u,v]=this.d2(i); return Math.sign(u+v*this.m(i)); },",
+      "replace": "bend(i){ const [u,v]=this.d2(i); return Math.sign(u+v*this.Q(i).a); },",
       "run": "verify"
     },
     {
-      "name": "the leftover power is off by one",
+      "name": "a chord that falls is not looked for",
       "file": "index.html",
-      "find": "`${this.xp(this.Q(i).p-this.Q(i).m+1)} left over`; },",
-      "replace": "`${this.xp(this.Q(i).p-this.Q(i).m)} left over`; },",
+      "find": "falls(){ return [0,1,2,3].filter(i=>this.s(i)<0); },",
+      "replace": "falls(){ return [0,1,2,3].filter(i=>this.s(i)<=0); },",
       "run": "verify"
     },
     {
-      "name": "du is written before the round is right",
+      "name": "the readout says f′ climbs on a curve that bends down",
       "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
-      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
+      "find": "so f′ ${up?'climbs':'falls'}, and it must",
+      "replace": "so f′ climbs, and it must",
       "run": "verify"
     },
     {
-      "name": "a minus in u is not looked for",
+      "name": "the tangent is drawn before the round is right",
       "file": "index.html",
-      "find": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).a<0 && this.truth(i)>=0); },",
-      "replace": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).b<0 && this.truth(i)>=0); },",
+      "find": "if(this.solved){ const t=this.truth(i), c=this.c(i)",
+      "replace": "{ const t=this.truth(i), c=this.c(i)",
+      "run": "verify"
+    },
+    {
+      "name": "the middle is dashed at a",
+      "file": "index.html",
+      "find": "<line data-k=\"mid\" x1=\"${g(px(m))}\"",
+      "replace": "<line data-k=\"mid\" x1=\"${g(px(a))}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    MeanValue.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    MeanValue.render();",
       "run": "verify"
     }
   ]
