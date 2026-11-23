@@ -36,11 +36,11 @@ module.exports = {
       /Then turn it round: see a shape, and pick which of four matrices makes it\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeWorkshop');
     t.eq('the matrix workshop opens', await t.screen(), 's-workshop');
-    t.eq('free play is the pressed mode', await pressed(t), 'true,false,false');
+    t.eq('free play is the pressed mode', await pressed(t), 'true,false,false,false');
 
     await t.ev(() => R.seed(4242));
     await t.tapText(/Which matrix\?/);
-    t.eq('which matrix is now the pressed mode', await pressed(t), 'false,false,true');
+    t.eq('which matrix is now the pressed mode', await pressed(t), 'false,false,true,false');
     t.ok('the steppers and the goals step aside', await hidden(t, 'wsMat') && await hidden(t, 'wsBtns') && await hidden(t, 'wsGoalPanel'));
     t.eq('the rule is stated before anything is asked', await t.ev(() => document.getElementById('wsTask').innerText.trim()),
       'Each column of a matrix is where an arrow lands: the first column is where î ends, the second where ĵ ends. Which matrix makes the dashed shape?');

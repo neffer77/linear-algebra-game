@@ -2544,6 +2544,148 @@ const bestiaryNotes = (() => {
   want(Bestiary.tests(REALMS[0])[0] === 'Adding vectors' && Bestiary.tests(REALMS[0]).length === new Set(REALMS[0].pool).size, 'tests', 'a realm\'s topics are not named as the Tome names them');
   return { checks, foes: foes.length };
 })();
+/* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
+   again from its numbers: its determinant ad − bc, the size of it, and the
+   ranks from a sort of the sizes. Every matrix is ranked wrong in all three
+   wrong ways and the slip worked; each round's misleading cases (a flip that
+   still stretches more, bigger numbers that stretch less, a square pressed
+   flat) are found afresh; and the drawing is checked: each shape's corners
+   are where the unit square's corners land, and its area, worked from those
+   corners, is the stretch. */
+const detRankNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const par = n => (n<0? '('+neg(n)+')' : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Workshop = {render(){ env.renders++; }};" +
+    cut('const DetRank = {', "/* ---------- More or less? The slope workshop's third mode") + 'return DetRank;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pr = n => (n < 0 ? '(' + ng(n) + ')' : String(n));
+  const ORD = ['1st', '2nd', '3rd', '4th'];
+  const and = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('detrank', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== 'A matrix stretches every area by the same amount, the size of its determinant: |ad − bc|. The dashed unit square lands on the blue shape. A minus sign only flips the shape over; it does not shrink it. Rank the four from 1st, the biggest stretch, to 4th, the smallest.') fail('detrank', 'rule', 'the rule is not stated as it should be');
+  const kindsSeen = new Set();
+  let checks = 0, wrongs = 0, shapes = 0;
+  S.ROUNDS.forEach((Ms, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Ms.length !== 4 || Ms.some(m => m.length !== 4 || m.some(v => !Number.isInteger(v) || Math.abs(v) > 4))) { fail('detrank', key, 'it does not hold four whole-number matrices'); return; }
+    if (new Set(Ms.map(m => m.join())).size !== 4) fail('detrank', key, 'two matrices are the same');
+    const det = Ms.map(([a, b, c, d]) => a * d - b * c), area = det.map(Math.abs);
+    if (new Set(area).size !== 4) fail('detrank', key, `two matrices tie on ${area.join(', ')}`);
+    const sorted = [...area].sort((a, b) => b - a), truth = area.map(t => sorted.indexOf(t));
+    if (truth.some((t, i) => S.truth(i) !== t || S.det(i) !== det[i] || S.area(i) !== area[i])) fail('detrank', key, `its matrices are ranked ${[0, 1, 2, 3].map(i => S.truth(i) + 1).join('')}, not ${truth.map(t => t + 1).join('')}`);
+    if (truth.join() === '0,1,2,3' || truth.join() === '3,2,1,0') fail('detrank', key, 'the matrices come in order, so the letters give the ranking away');
+    // every corner of every shape stays inside its pane: 8 pixels a unit, 80 across and 48 up or down from the middle
+    Ms.forEach(([a, b, c, d], i) => { if ([a, b, a + b].some(x => Math.abs(x) > 9) || [c, d, c + d].some(y => Math.abs(y) > 6)) fail('detrank', key, `the shape for ${'ABCD'[i]} leaves its pane`); });
+    // what the round holds, found afresh
+    const size = Ms.map(m => m.reduce((s, v) => s + Math.abs(v), 0)), fl = [], bg = [];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      if (det[i] < 0 && det[j] > 0 && truth[i] < truth[j]) fl.push([i, j]);
+      if (size[i] > size[j] && truth[i] > truth[j]) bg.push([i, j]); }
+    const ft = [0, 1, 2, 3].filter(i => det[i] === 0);
+    if (ft.some(i => truth[i] !== 3)) fail('detrank', key, 'a flat square does not rank last');
+    const tags = [fl.length ? 'flip' : null, bg.length ? 'big' : null, ft.length ? 'flat' : null].filter(Boolean);
+    tags.forEach(t => kindsSeen.add(t));
+    if (!tags.length) fail('detrank', key, 'nothing in it misleads');
+    if (S.tags().join() !== tags.join()) fail('detrank', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const mat = ([a, b, c, d]) => `[${ng(a)} ${ng(b)} ; ${ng(c)} ${ng(d)}]`;
+    const work = ([a, b, c, d]) => `${pr(a)}·${pr(d)} − ${pr(b)}·${pr(c)} = ${ng(a * d)} ${b * c < 0 ? '+' : '−'} ${Math.abs(b * c)} = ${ng(a * d - b * c)}`;
+    const rows = ([a, b, c, d]) => `rows ${ng(a)}, ${ng(b)} and ${ng(c)}, ${ng(d)}`;
+    // every matrix ranked wrong, one at a time, in all three wrong ways
+    Ms.forEach((m, i) => {
+      for (let k = 0; k < 4; k++) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `${'ABCD'[i]}, ${mat(m)}: ad − bc = ${work(m)}, so it stretches area ${area[i]} times. Of the stretches ${and(sorted.map(String))}, that is the ${ORD[truth[i]]} biggest, so it ranks ${ORD[truth[i]]}. You had it ${ORD[k]}.`,
+          '0 ranked right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('detrank', key, `with ${'ABCD'[i]} ranked ${ORD[k]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        const ring = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+        if (ring.length !== 1 || +ring[0][1] !== (i % 2) * 180 + 3 || +ring[0][2] !== Math.floor(i / 2) * 120 + 3) fail('detrank', key, `with ${'ABCD'[i]} wrong, its pane is not ringed alone`);
+        if (/data-k="rank"/.test(svg)) fail('detrank', key, `with ${'ABCD'[i]} wrong, the ranks are given away`);
+        if (S.solved || S.streak) fail('detrank', key, 'a wrong ranking is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('detrank', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 ranked right on the first check this visit.'].join(' | ')) fail('detrank', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('detrank', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, ranked with the buttons
+    reset(); S.ri = ri;
+    if (!/id="drkCheck" disabled /.test(S.html())) fail('detrank', key, 'the check is open before the matrices are ranked');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="drkCheck" disabled /.test(S.html())) fail('detrank', key, `the check opens with ${'ABCD'[skip]} unranked`);
+      S.check();
+      if (S.tries || S.marks) fail('detrank', key, `a check runs with ${'ABCD'[skip]} unranked`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const mm = h0.match(new RegExp(`onclick="DetRank\\.call\\(${i},(\\d)\\)" aria-label="Matrix ${'ABCD'[i]}, ${rows(Ms[i])}, ranks ${ORD[t]}${t === 0 ? ', the biggest stretch' : t === 3 ? ', the smallest' : ''}"`));
+      if (!mm || +mm[1] !== t) fail('detrank', key, `the button ranking ${'ABCD'[i]} ${ORD[t]} does not rank it`);
+      else S.call(i, +mm[1]);
+      if ((h0.match(new RegExp(`DetRank\\.call\\(${i},`, 'g')) || []).length !== 4) fail('detrank', key, `${'ABCD'[i]} does not offer all four ranks`);
+    });
+    if (S.calls.join() !== truth.join()) fail('detrank', key, 'the buttons cannot make the right ranking');
+    if (/id="drkCheck" disabled /.test(S.html())) fail('detrank', key, 'the check stays shut with every matrix ranked');
+    S.check(); checks++;
+    const want = ['Yes: all four are ranked right.'];
+    if (fl.length) { const [i, j] = fl[0]; want.push(`${'ABCD'[i]}'s determinant is ${ng(det[i])}, below 0, yet it ranks above ${'ABCD'[j]}, whose determinant is ${det[j]}: the minus sign only flips the square over, and its area still grows ${area[i]} times.`); }
+    if (bg.length) { const [i, j] = bg[0]; want.push(`${'ABCD'[i]}'s numbers come to ${size[i]} in size against ${'ABCD'[j]}'s ${size[j]}, yet ${'ABCD'[i]} ranks below: the stretch is ad − bc, not the size of the numbers, and for ${'ABCD'[i]} that is ${work(Ms[i])}.`); }
+    if (ft.length) want.push(`${'ABCD'[ft[0]]}'s determinant is 0: its two columns lie on one line, so the square is pressed flat and has no area at all.`);
+    want.push(`The stretches: ${area.map((t, i) => `${'ABCD'[i]} ${t}`).join(', ')}.`);
+    want.push('1 ranked right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('detrank', key, `once ranked the readout is ${S.working().join(' | ')}`);
+    // the drawing: corners where the unit square's land, and the area read back off them
+    const svg = S.svg();
+    const polys = [...svg.matchAll(/data-k="shape" points="([^"]+)"/g)].map(m => m[1].split(' ').map(p => p.split(',').map(Number)));
+    if (polys.length !== 4) fail('detrank', key, `${polys.length} shapes are drawn, not four`);
+    polys.forEach((P, i) => {
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 120, [a, b, c, d] = Ms[i];
+      const back = P.map(([px, py]) => [(px - X - 90) / 8, (Y + 60 - py) / 8]);
+      const corners = [[0, 0], [a, c], [a + b, c + d], [b, d]];
+      if (back.length !== 4 || back.some(([x, y], k) => Math.abs(x - corners[k][0]) > 0.01 || Math.abs(y - corners[k][1]) > 0.01)) fail('detrank', key, `the shape for ${'ABCD'[i]} does not have the unit square's corners where they land`);
+      let sh = 0; for (let k = 0; k < 4; k++) { const [x1, y1] = back[k], [x2, y2] = back[(k + 1) % 4]; sh += x1 * y2 - x2 * y1; }
+      if (Math.abs(Math.abs(sh / 2) - area[i]) > 0.01) fail('detrank', key, `the shape for ${'ABCD'[i]} has area ${Math.abs(sh / 2)}, not ${area[i]}`); else shapes++;
+    });
+    if ((svg.match(/data-k="unit"/g) || []).length !== 4) fail('detrank', key, 'every pane does not show the unit square');
+    const rk = [...svg.matchAll(/data-k="rank"[^>]*>([^<]+)</g)].map(m => m[1]);
+    if (rk.join('|') !== truth.map((t, i) => `${ORD[t]} · ×${area[i]}`).join('|')) fail('detrank', key, `the panes are marked ${rk.join('|')}`);
+    const h = S.html();
+    if (!h.includes('id="drkNext"') || /onclick="DetRank\.call/.test(h.replace(/disabled onclick="DetRank\.call/g, ''))) fail('detrank', key, 'once ranked, Next is not offered or a rank still opens');
+    const before = S.calls.join(); S.call(0, (truth[0] + 1) % 4);
+    if (S.calls.join() !== before) fail('detrank', key, 'a rank moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('detrank', key, 'Next does not deal the next round fresh');
+  });
+  if ([...kindsSeen].sort().join() !== 'big,flat,flip') fail('detrank', 'setup', `the rounds hold ${[...kindsSeen].sort().join()}, not a flip, bigger numbers and a flat square`);
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('detrank', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const Ms = S.R(), ar = Ms.map(([a, b, c, d]) => Math.abs(a * d - b * c)), srt = [...ar].sort((a, b) => b - a), right = ar.map(t => srt.indexOf(t));
+    S.calls = right.slice(); if (slip) S.calls[1] = (right[1] + 1) % 4;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'big,fix,flip'], [false, 'big,fix,flip,one'], [false, 'big,fix,flip,one'], [false, 'big,fix,flip,one,three'], [false, 'big,fix,flat,flip,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('detrank', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A flip is still a stretch · Big numbers, small stretch · A slip caught and fixed | ✓ Right on the first check | ✓ Three in a row') fail('detrank', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'STRETCH JUDGE / every stretch ranked') fail('detrank', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, shapes };
+})();
+
 const slipNotes = (() => {
   const plain = h => String(h).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
@@ -25628,6 +25770,7 @@ console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFi
 console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
+console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
 {

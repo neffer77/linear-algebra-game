@@ -15686,7 +15686,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it. Or rank the stretch: four matrices, from the biggest stretch of area to the smallest.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -16774,12 +16774,19 @@ const Workshop = {
   },
   render(){
     const M=this.M, match=this.mode==='match' && this.goal;
-    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape'],['pick','🔢 Which matrix?']]
+    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape'],['pick','🔢 Which matrix?'],['rank','🏅 Rank the stretch']]
       .map(([m,t])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Workshop.setMode('\${m}')">\${t}</button>\`).join('');
     // Which matrix? The shape is drawn and four matrices offered: no steppers.
-    const pick=this.mode==='pick';
-    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : '';
+    const pick=this.mode==='pick', rank=this.mode==='rank';
+    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick||rank?'none':'';
+    document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : rank ? DetRank.html() : '';
+    // Rank the stretch: four matrices drawn in their own panes, so the shared figure and readout step aside.
+    if(rank){
+      document.getElementById('wsTask').style.display='none';
+      for(const id of ['wsFig','wsRead']) document.getElementById(id).innerHTML='';
+      document.getElementById('wsGoalPanel').style.display='none';
+      return;
+    }
     if(pick){
       const task=document.getElementById('wsTask'); task.style.display=''; task.textContent=MatPick.RULE;
       Figure.render(MatPick.fig(), document.getElementById('wsFig'));
@@ -16946,6 +16953,162 @@ const MatPick = {
       lines.push(\`That was it: î lands on \${this.at([A[0][0],A[1][0]])}, the first column, and ĵ on \${this.at([A[0][1],A[1][1]])}, the second. Here is a new shape.\`); }
     lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
     return lines.map(l=>\`<div>\${l}</div>\`).join('');
+  }
+};
+
+/* ---------- Rank the stretch: the matrix workshop's fourth mode ----------
+   Four whole-number 2×2 matrices, each drawn in its own pane as the shape the
+   unit square lands on, and the player ranks them from the biggest stretch of
+   area to the smallest by the size of the determinant, |ad − bc|. The rounds
+   are chosen so the easy guesses mislead: a matrix that flips the square over,
+   its determinant below 0, that still stretches more than one that does not;
+   a matrix with the bigger numbers that stretches less; and a matrix that
+   presses the square flat. A slip works that matrix's determinant. No two
+   stretches in a round tie. Nothing is saved, and there is no clock. */
+const DetRank = {
+  // each matrix its rows run together: [a, b, c, d] for rows (a, b) and (c, d)
+  ROUNDS:[
+    [[3,2,2,3],[2,0,0,-3],[1,1,-1,1],[2,1,1,2]],
+    [[3,3,1,2],[1,-2,2,1],[2,1,0,-2],[1,0,0,1]],
+    [[-1,2,2,-1],[2,3,1,2],[0,2,-2,1],[3,0,1,2]],
+    [[1,3,-2,1],[3,2,3,3],[-2,1,2,1],[2,-1,1,2]],
+    [[2,4,1,2],[1,0,0,-1],[2,-1,1,1],[0,-2,1,0]],
+    [[3,1,1,-3],[2,2,2,3],[1,-1,1,2],[3,3,1,3]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Rank all four matrices right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flip', t:'Rank a matrix that flips the square over above one that does not.', toast:'A flip is still a stretch',
+     ok:K=>K.kinds.has('flip')},
+    {id:'big',  t:'Rank a matrix with the bigger numbers below one with smaller ones.', toast:'Big numbers, small stretch',
+     ok:K=>K.kinds.has('big')},
+    {id:'flat', t:'Rank last a matrix that presses the square flat onto a line.', toast:'Flat has no area',
+     ok:K=>K.kinds.has('flat')},
+    {id:'fix',  t:'Check a ranking with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Rank three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A matrix stretches every area by the same amount, the size of its determinant: |ad − bc|. The dashed unit square lands on the blue shape. A minus sign only flips the shape over; it does not shrink it. Rank the four from 1st, the biggest stretch, to 4th, the smallest.',
+  L:'ABCD',
+  ORD:['1st','2nd','3rd','4th'],
+  R(){ return this.ROUNDS[this.ri]; },
+  mat(i){ const [a,b,c,d]=this.R()[i]; return \`[\${neg(a)} \${neg(b)} ; \${neg(c)} \${neg(d)}]\`; },
+  rows(i){ const [a,b,c,d]=this.R()[i]; return \`rows \${neg(a)}, \${neg(b)} and \${neg(c)}, \${neg(d)}\`; },
+  det(i){ const [a,b,c,d]=this.R()[i]; return a*d-b*c; },
+  area(i){ return Math.abs(this.det(i)); },
+  size(i){ return this.R()[i].reduce((s,v)=>s+Math.abs(v),0); },
+  /* rank 0 for the biggest stretch, 3 for the smallest */
+  truth(i){ const s=this.area(i); return [0,1,2,3].filter(j=>this.area(j)>s).length; },
+  /* what a round holds: a flip ranked above a matrix that keeps its side, bigger numbers ranked below, a square pressed flat */
+  flips(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.det(i)<0 && this.det(j)>0 && this.truth(i)<this.truth(j)) out.push([i,j]); return out; },
+  bigs(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.size(i)>this.size(j) && this.truth(i)>this.truth(j)) out.push([i,j]); return out; },
+  flats(){ return [0,1,2,3].filter(i=>this.det(i)===0); },
+  tags(){ const t=[]; if(this.flips().length) t.push('flip'); if(this.bigs().length) t.push('big'); if(this.flats().length) t.push('flat'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  and(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; },
+  /* ad − bc worked out: (a)·(d) − (b)·(c) = p − q = D */
+  work(i){ const [a,b,c,d]=this.R()[i], p=a*d, q=b*c;
+    return \`\${par(a)}·\${par(d)} − \${par(b)}·\${par(c)} = \${neg(p)} \${q<0?'+':'−'} \${Math.abs(q)} = \${neg(p-q)}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are ranked right.');
+      const fl=this.flips(), bg=this.bigs(), ft=this.flats();
+      if(fl.length){ const [i,j]=fl[0];
+        out.push(\`\${this.L[i]}'s determinant is \${neg(this.det(i))}, below 0, yet it ranks above \${this.L[j]}, whose determinant is \${this.det(j)}: the minus sign only flips the square over, and its area still grows \${this.area(i)} times.\`); }
+      if(bg.length){ const [i,j]=bg[0];
+        out.push(\`\${this.L[i]}'s numbers come to \${this.size(i)} in size against \${this.L[j]}'s \${this.size(j)}, yet \${this.L[i]} ranks below: the stretch is ad − bc, not the size of the numbers, and for \${this.L[i]} that is \${this.work(i)}.\`); }
+      if(ft.length){ const i=ft[0];
+        out.push(\`\${this.L[i]}'s determinant is 0: its two columns lie on one line, so the square is pressed flat and has no area at all.\`); }
+      out.push(\`The stretches: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.area(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const all=[0,1,2,3].map(j=>this.area(j)).sort((a,b)=>b-a);
+        out.push(\`\${this.L[i]}, \${this.mat(i)}: ad − bc = \${this.work(i)}, so it stretches area \${this.area(i)} times. Of the stretches \${this.and(all.map(String))}, that is the \${this.ORD[this.truth(i)]} biggest, so it ranks \${this.ORD[this.truth(i)]}. You had it \${this.ORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 ranked.\`);
+    }
+    out.push(\`\${this.wins} ranked right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each matrix in its own pane, 8 pixels to a unit both ways so areas can be
+     compared by eye: the dashed unit square, and in blue the shape it lands
+     on, with corners at 0, the first column, both columns and the second; a
+     slip rings that pane, and once ranked right each pane gets its rank and
+     its stretch */
+  U:8,
+  svg(){
+    const f=n=>n.toFixed(2), R=this.R(), U=this.U;
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="Four matrices, each with the shape the unit square lands on: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.rows(i)}\`).join('; ')}\${this.solved?', each with its rank and its stretch':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*120, [a,b,c,d]=R[i];
+      const PX=x=>X+90+x*U, PY=y=>Y+60-y*U;
+      const pts=[[0,0],[a,c],[a+b,c+d],[b,d]].map(([x,y])=>\`\${f(PX(x))},\${f(PY(y))}\`).join(' ');
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+10}" y1="\${Y+60}" x2="\${X+170}" y2="\${Y+60}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+90}" y1="\${Y+8}" x2="\${X+90}" y2="\${Y+112}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="unit" x="\${f(PX(0))}" y="\${f(PY(1))}" width="\${U}" height="\${U}" fill="none" stroke="\${FIG_COL.ink}" stroke-width="1" stroke-dasharray="2 2"/>\`;
+      out+=\`<polygon data-k="shape" points="\${pts}" fill="\${FIG_COL.a}" fill-opacity="0.28" stroke="\${FIG_COL.a}" stroke-width="2" stroke-linejoin="round"/>\`;
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved) out+=\`<text data-k="rank" x="\${X+168}" y="\${Y+22}" fill="\${FIG_COL.c}" font-size="13" font-weight="700" text-anchor="end">\${this.ORD[this.truth(i)]} · ×\${this.area(i)}</text>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,k){
+    if(this.solved || this.calls[i]===k) return;
+    this.calls=this.calls.slice(); this.calls[i]=k; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Workshop.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Workshop.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Workshop.render(); },
+  btn(i,k){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-k="\${k}" aria-pressed="\${this.calls[i]===k}" \${this.solved?'disabled ':''}onclick="DetRank.call(\${i},\${k})" aria-label="Matrix \${this.L[i]}, \${this.rows(i)}, ranks \${this.ORD[k]}\${k===0?', the biggest stretch':k===3?', the smallest':''}">\${this.ORD[k]}</button>\`;
+  },
+  html(){
+    const R=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four matrices. Rank them from the biggest stretch of area to the smallest.</div>\`;
+    out+=\`<div id="drkFig">\${this.svg()}<div class="figcap">Each pane shows the dashed unit square and, in blue, the shape one matrix lands it on, drawn to the same scale. Once all four are ranked right, each pane gets its rank and its stretch.</div></div>\`;
+    out+=\`<div id="drkStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+R.map((l,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="drkStop" data-i="\${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 5;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.mat(i)}</span></b>\`+
+        [0,1,2,3].map(k=>this.btn(i,k)).join('')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="drkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="drkNext" onclick="DetRank.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="drkCheck" \${this.ready()?'':'disabled '}onclick="DetRank.check()" aria-label="\${this.ready()?'Check the four ranks':'Rank all four matrices to check them'}">\${this.ready()?'Check my ranking':'Rank all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="drkGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="drkGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('STRETCH JUDGE','every stretch ranked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
