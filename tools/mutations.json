@@ -1,61 +1,75 @@
 {
-  "change": "Add an Above or below mode to the water level workshop",
+  "change": "Add elite rematches: a beaten foe comes back with one twist",
   "mutations": [
     {
-      "name": "f″ takes 3 for the cube's 6",
+      "name": "the armour cracks on a streak of two",
       "file": "index.html",
-      "find": "f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },",
-      "replace": "f2(i,x){ const {c3,c2}=this.Q(i); return 3*c3*x+2*c2; },",
+      "find": "    if(B.combo>=3){ B.armour=0;",
+      "replace": "    if(B.combo>=2){ B.armour=0;",
       "run": "verify"
     },
     {
-      "name": "the bend is counted at the ends too",
+      "name": "the armour lets a third through, not half",
       "file": "index.html",
-      "find": "return z>a && z<b ? this.fr(-c2,3*c3) : null; },",
-      "replace": "return z>=a && z<=b ? this.fr(-c2,3*c3) : null; },",
+      "find": "    return Math.max(1, Math.round(dmg/2));\n  }\n};",
+      "replace": "    return Math.max(1, Math.round(dmg/3));\n  }\n};",
       "run": "verify"
     },
     {
-      "name": "level cubics are not looked for",
+      "name": "a frenzied elite keeps the elite's full health",
       "file": "index.html",
-      "find": "flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },",
-      "replace": "flats(){ return []; },",
+      "find": "const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));",
+      "replace": "const hp=Math.round(foe.hp*1.25);",
       "run": "verify"
     },
     {
-      "name": "the average takes a third, not a sixth",
+      "name": "a first meeting can come back elite",
       "file": "index.html",
-      "find": "avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },",
-      "replace": "avg(i){ const {m}=this.Q(i); return this.fr(3*this.f(i,m)+this.gapN(i),3); },",
+      "find": "    if(!beaten || !R.chance(this.CHANCE)) return foe;",
+      "replace": "    if(!R.chance(this.CHANCE)) return foe;",
       "run": "verify"
     },
     {
-      "name": "the average is drawn before the round is right",
+      "name": "a forced twist is never spent",
       "file": "index.html",
-      "find": "if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');",
-      "replace": "out+=lvl(av,'avg',FIG_COL.d,'6 3');",
+      "find": "    if(this.force){ const k=this.force; this.force=null; return this.make(foe, k); }",
+      "replace": "    if(this.force){ const k=this.force; return this.make(foe, k); }",
       "run": "verify"
     },
     {
-      "name": "the middle level is drawn at the left end",
+      "name": "every foe counts as already beaten",
       "file": "index.html",
-      "find": "out+=lvl(fm,'mid',FIG_COL.dim,'4 3');",
-      "replace": "out+=lvl(this.f(i,a),'mid',FIG_COL.dim,'4 3');",
-      "run": "verify"
+      "find": "    this._start(Elite.roll(this.realm.foes[fi], !!(Game.s && Game.s.cleared[ri+':'+fi])));",
+      "replace": "    this._start(Elite.roll(this.realm.foes[fi], true));",
+      "run": "play:elite"
     },
     {
-      "name": "curves that bend down are not looked for",
+      "name": "a swift elite winds up no sooner",
       "file": "index.html",
-      "find": "downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },",
-      "replace": "downs(){ return []; },",
-      "run": "verify"
+      "find": "- (f.elite==='swift'?1:0));",
+      "replace": "- 0);",
+      "run": "play:elite"
     },
     {
-      "name": "a call still moves once the round is right",
+      "name": "the armour is never put on",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
-      "run": "verify"
+      "find": "    this.armour = f.elite==='armoured' ? 1 : 0;",
+      "replace": "    this.armour = 0;",
+      "run": "play:elite"
+    },
+    {
+      "name": "a vampiric elite drinks nothing",
+      "file": "index.html",
+      "find": "    if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
+      "replace": "    if(false && this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
+      "run": "play:elite"
+    },
+    {
+      "name": "an elite pays like a rematch",
+      "file": "index.html",
+      "find": "    const full=first || !!this.foe.elite;",
+      "replace": "    const full=first;",
+      "run": "play:elite"
     }
   ]
 }

@@ -87,6 +87,17 @@ prefilled — tap through it and you need never touch a keyboard again.
   you. It is all decoration: the bubble is hidden from screen readers, the daily's straw
   knight keeps silent, it never touches the seeded draw that makes the daily the same
   for everyone, and nothing of it is saved.
+- **Elite rematches.** A foe you have already beaten comes back, one fight in four, as a
+  gold-ringed elite with one twist, named on its health bar and said aloud as the fight
+  opens. **Armoured** shrugs off half of every blow until three answers in a row crack it.
+  **Vampiric** heals by the blow it lands each time you miss. **Swift** winds up its slam a
+  turn sooner, so bracing matters more. **Frenzied** hits half again as hard on a quarter
+  less health. Each twist rewards a habit the game is teaching: a streak, accuracy, or
+  answering when it counts. An elite has a quarter more health than the foe it was, and
+  felling one pays the first clear's gold and experience again with a sure chest, where
+  a plain rematch pays under half and drops loot only sometimes. So replaying old ground
+  is worth something, and the twist is rolled as the fight begins and gone when it ends:
+  nothing is saved.
 
 **⛓️ Rites.** A topic that is genuinely complex does not arrive as one hard question. It
 arrives as a ladder of five-second steps — *pick u · find du · rewrite · integrate* — each
@@ -2989,6 +3000,7 @@ Inside `index.html` the code is organised as:
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Talk` | what foes say as a fight opens, when a blow lands either way, at a streak of five, when nearly beaten and on the killing blow, repeated in the verdict; a voice for each kind of foe and one for each realm boss |
+| `Elite` | the four twists a beaten foe can come back with, how often it comes back as one, what an elite's armour lets through, and the line that opens an elite fight |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
@@ -3088,6 +3100,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
 | `findslip` | a held topic can be asked as find the slip, tagged, with the squire's answer and the question; three different mistakes, all this question's own diagnoses, the right pick being the diagnosis of the answer shown; none marked a trap; a matrix in the claim keeps its shape; no Perfect Strike, the working still offered; a right pick strikes, counts whole and lays out all three with the squire's marked and the answer done right; a wrong pick is struck, is not recorded as a slip of the knight's own, and brings one like it; never on a topic not yet held, nor with lessons off; a diagnosis quoting an answer sends the question back to plain; a mistake sharing more of the squire's words than the others is caught as an echo, a tie or a shared word singles nothing out, and the squire never gives an answer whose own slip echoes it; about one in five; never on a ladder or in the daily; the yard asks and explains it the same way; nothing is saved |
 | `talk` | every kind of foe has a line for every moment and every boss its own, none too long for the bubble; a foe speaks as the fight opens, in its own voice, with a boss's line its own; the bubble is hidden from screen readers, fits the scene at 320px even at its longest line and goes away by itself; a landed blow draws a gloat, repeated in the verdict and hidden there from screen readers too, a crit a cry and an ordinary hit nothing, with no line carried over from an earlier turn or the opening; a streak of five draws one worry, nearly beaten one plea, and the killing blow last words; a wind-up due on a foe left standing still lands, braced, and one due on a foe the answer beats dies with it; a new fight starts quiet; the daily's straw knight keeps silent and talk never moves the daily's seeded draw; nothing is saved |
+| `elite` | a beaten foe is an elite one fight in four and a first meeting never is; an armoured elite has a quarter more health, its twist on its bar and said as the fight opens, halves the first two blows and is cracked by the third answer in a row, landing in full from then on; a vampiric elite drinks back the blow it lands on a miss; a swift one winds up a turn sooner; a frenzied one has a quarter less health and hits half again as hard; felling an elite pays a first clear's gold with a sure chest and says so, where a plain rematch pays under half and says nothing; nothing runs off a phone and nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
