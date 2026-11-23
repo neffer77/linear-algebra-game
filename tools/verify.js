@@ -14746,6 +14746,151 @@ const productTurnNotes = (() => {
   if (env.banners.join() !== 'FIELD READER / every slope called') fail('productturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+const ladderTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Ladder = {render(){ env.renders++; }};" +
+    cut('const LadderTurn = {', 'const Ladder = {') + 'return LadderTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // each ladder worked afresh: the top's height from Pythagoras, and its speed by moving the foot a little either way
+  const h = 1e-6;
+  const two = v => { const r = Math.round(v * 100) / 100; return neg(r); };
+  const near = v => (Math.abs(Math.round(v * 100) / 100 - v) < 1e-9 ? `= ${two(v)}` : `≈ ${two(v)}`);
+  const root = n => { const r = Math.round(Math.sqrt(n)); return r * r === n ? String(r) : `√${n}`; };
+  const WD = { 1: 'faster', 0: 'just as fast', [-1]: 'slower' };
+  const NAME = { 1: 'the top is faster', 0: 'the top is just as fast', [-1]: 'the top is slower' };
+  const MARK = { 1: 'fast ▲ faster', 0: 'same = as fast', [-1]: 'slow ▼ slower' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([L2, x, v]) => {
+    const Y = X => Math.sqrt(L2 - X * X), y = Y(x), top = (Y(x - v * h) - Y(x + v * h)) / (2 * h);
+    const t = Math.abs(top - v) < 1e-5 * v ? 0 : Math.sign(top - v);
+    const yr = Math.round(y), ys = yr * yr === L2 - x * x ? String(yr) : `√${L2 - x * x} ≈ ${two(y)}`;
+    return { L2, x, v, y, top, t, r: x / y, len: Math.sqrt(L2), ys, yroot: root(L2 - x * x) };
+  });
+  if (S.ROUNDS.length !== 6) fail('ladderturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('ladderturn', key, `it holds ${P.length} ladders, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = P[i].join(); if (seen.has(s)) fail('ladderturn', key, `${L[i]} comes round twice`); seen.add(s);
+      if (![w.L2, w.x, w.v].every(n => Number.isInteger(n) && n > 0) || w.x * w.x >= w.L2 || w.len > 25) fail('ladderturn', key, `${L[i]} is not a whole-number foot on a ladder up to 25 m that still leans on the wall`);
+      if (Math.abs(w.top / w.v - w.r) > 1e-6) fail('ladderturn', key, `${L[i]}'s top, moved a little, does not fall x/y times as fast as the foot`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('ladderturn', key, `its ladders are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('ladderturn', key, 'every ladder is called the same');
+    // what the round holds, found afresh: past halfway yet slower, exactly as fast, a fast foot yet slower
+    const pa = [], sa = [], qu = [];
+    W.forEach((w, i) => {
+      if (w.t === -1 && w.x > w.len / 2) pa.push(i);
+      if (w.t === 0) sa.push(i);
+      if (w.t === -1 && w.v >= 3) qu.push(i); });
+    const tags = [pa.length ? 'past' : null, sa.length ? 'same' : null, qu.length ? 'quick' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('ladderturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every ladder called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      const says = w.t > 0 ? 'more than 1, so it is faster' : w.t < 0 ? 'less than 1, so it is slower' : 'exactly 1, so it is just as fast';
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, the ladder is ${root(w.L2)} m long with its foot x = ${w.x} m out, so the top is y = √(${w.L2} − ${w.x * w.x}) = ${w.ys} m up. The top falls x/y = ${w.x}/${w.yroot} ${near(w.r)} times as fast as the foot: ${says}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('ladderturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(ladder|top|fast|same|slow)"/.test(svg)) fail('ladderturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a ladder is given away`);
+        if (S.solved || S.streak) fail('ladderturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('ladderturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('ladderturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('ladderturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="ltCheck" disabled /.test(S.html())) fail('ladderturn', key, 'the check is open before the ladders are called');
+    if (/data-k="(ladder|top)"/.test(S.svg())) fail('ladderturn', key, 'a ladder is drawn before the round is right');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="ltCheck" disabled /.test(S.html())) fail('ladderturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('ladderturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="LadderTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('ladderturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`LadderTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('ladderturn', key, `${L[i]} does not offer faster, same and slower`);
+      if (!h0.includes(`${L[i]} <span class="small">L = ${root(W[i].L2)}, x = ${W[i].x}, x′ = ${W[i].v}</span>`)) fail('ladderturn', key, `${L[i]}'s buttons are not labelled with its ladder`);
+    });
+    if (S.calls.join() !== truth.join()) fail('ladderturn', key, 'the buttons cannot make the right calls');
+    if (/id="ltCheck" disabled /.test(S.html())) fail('ladderturn', key, 'the check stays shut with every ladder called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (pa.length) { const w = W[pa[0]];
+      want.push(`In ${L[pa[0]]}, the foot is ${w.x} m out, past half of the ${root(w.L2)} m ladder, yet the top is still ${w.ys} m up: higher than the foot is out, so the top is slower.`); }
+    if (sa.length) { const w = W[sa[0]];
+      if (w.x * w.x * 2 !== w.L2) fail('ladderturn', key, `${L[sa[0]]} is called just as fast with x ≠ y`);
+      want.push(`In ${L[sa[0]]}, x = y = ${w.x} m: the ladder leans at 45°, and its top falls exactly as fast as its foot slides, ${w.v} m/s.`); }
+    if (qu.length) { const w = W[qu[0]], sp = w.v * w.r;
+      want.push(`In ${L[qu[0]]}, the foot races out at ${w.v} m/s, yet the top falls at only ${Math.abs(Math.round(sp * 100) / 100 - sp) < 1e-9 ? '' : 'about '}${two(sp)} m/s: x/y ${near(w.r)} is below 1 whatever the foot's speed.`); }
+    want.push(`Each x/y: ${W.map((w, i) => `${L[i]} ${near(w.r).replace(/^= /, '')}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('ladderturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each ladder read back off its pane, with its foot x out and its top y up, to one scale
+    const svg = S.svg();
+    const groups = [...svg.matchAll(/<g clip-path="url\(#ltClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], m[2]]);
+    if (groups.length !== 4) fail('ladderturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const g = groups[i][1];
+      const ln = k => { const m = g.match(new RegExp(`data-k="${k}" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"`)); return m ? m.slice(1).map(Number) : null; };
+      const dot = k => { const m = g.match(new RegExp(`data-k="${k}" cx="([^"]+)" cy="([^"]+)"`)); return m ? [+m[1], +m[2]] : null; };
+      const gr = ln('ground'), wa = ln('wall'), la = ln('ladder'), ft = dot('foot'), tp = dot('top');
+      if (groups[i][0] !== i || !gr || !wa || !la || !ft || !tp) { fail('ladderturn', key, `${L[i]} is missing its ground, wall, ladder, foot or top`); return; }
+      const gx = wa[0], gy = gr[1], run = la[0] - la[2], rise = la[1] - la[3], k = Math.hypot(run, rise) / w.len;
+      if (wa[0] !== wa[2] || gr[1] !== gr[3] || gr[0] !== gx || la[2] !== gx || la[1] !== gy || Math.abs(ft[0] - la[0]) > 0.01 || ft[1] !== gy || tp[0] !== gx || Math.abs(tp[1] - la[3]) > 0.01)
+        fail('ladderturn', key, `${L[i]}'s ladder does not run from its foot on the ground to its top on the wall`);
+      if (Math.abs(run / k - w.x) > 0.02 || Math.abs(rise / k - w.y) > 0.02 || run < 0 || rise < 0)
+        fail('ladderturn', key, `${L[i]}'s ladder, read back off the drawing, does not have its foot ${w.x} m out and its top ${w.y.toFixed(2)} m up`);
+      if (!svg.includes(`>L = ${root(w.L2)} m, x′ = ${w.v} m/s</text>`)) fail('ladderturn', key, `${L[i]}'s length and speed are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(fast|same|slow)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('ladderturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="ltNext"') || /onclick="LadderTurn\.call/.test(hh.replace(/disabled onclick="LadderTurn\.call/g, ''))) fail('ladderturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('ladderturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('ladderturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('ladderturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,past,quick,same'], [false, 'fix,one,past,quick,same'], [false, 'fix,one,past,quick,same'], [false, 'fix,one,past,quick,same,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('ladderturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Past halfway, still slower · Neck and neck · A fast foot, a slow top · A slip caught and fixed | ✓ Right on the first check') fail('ladderturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'LADDER READER / every speed called') fail('ladderturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -22233,6 +22378,7 @@ console.log(`  ways called       ${pad(impTurnNotes.checks.toLocaleString(), 12)
 console.log(`  shadows called    ${pad(gramTurnNotes.checks.toLocaleString(), 12)}  (checks of four c's called too low, just right or too high in the Gram–Schmidt workshop, ${gramTurnNotes.wrongs} of them with one c called wrong and caught, and ${gramTurnNotes.arrows} pairs whose u₁, u₂, c·u₁ and w are read back off the drawing)`);
 console.log(`  steps called      ${pad(newtonTurnNotes.checks.toLocaleString(), 12)}  (checks of four Newton steps called left, right, staying or stuck in the Newton workshop, ${newtonTurnNotes.wrongs} of them with one step called wrong and caught, and ${newtonTurnNotes.steps} curves and tangents read back off the drawing)`);
 console.log(`  products called   ${pad(productTurnNotes.checks.toLocaleString(), 12)}  (checks of four products called rising, flat or falling in the product rule workshop, ${productTurnNotes.wrongs} of them with one product called wrong and caught, and ${productTurnNotes.panes} panes whose f, g, y and tangent are read back off the drawing)`);
+console.log(`  ladders called    ${pad(ladderTurnNotes.checks.toLocaleString(), 12)}  (checks of four ladders called faster, just as fast or slower than the foot in the ladder workshop, ${ladderTurnNotes.wrongs} of them with one ladder called wrong and caught, and ${ladderTurnNotes.panes} ladders read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
