@@ -9089,6 +9089,18 @@ const WarPath = {
   }
 };
 
+/* Win it back. A miss lets the foe's blow land, and the question after it is
+   one like it, asked while the explanation is still on screen. Land that one
+   and half the blow comes back: the reward is for using what was just shown,
+   and it never pays more than the miss cost, so missing on purpose only loses.
+   It lives for one question in one fight and is never saved. */
+const Recover = {
+  owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },
+  heal(n){ const g=Game.s, was=g.hp; g.hp=Math.min(g.maxHp, g.hp+n); return g.hp-was; },
+  line(n){ return n>0 ? `<div class="miss again" id="recoverLine">❤️ <b>Land it to win back ${n}</b> of that blow.</div>` : ''; },
+  back(n){ return n>0 ? `, and won back <b id="recovered">❤️ ${n}</b> of the blow` : ''; }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9143,6 +9155,7 @@ const Battle = {
     this.beastLeft=Passage.guard();
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0; this.runBest=0;
+    this.recover=0; this.recovered=0;   // half a missed blow, owed to the question like it
     this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
@@ -9697,12 +9710,17 @@ const Battle = {
        screen and in mind. Once only — a miss on that second go returns to the
        usual draw, so a struggling knight is never held on one topic. A first
        meeting is the lesson ladder's to pace, so it is left to it. */
+    const owed=this.recover||0; this.recover=0; this.recovered=0;
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
       this.runBest=Math.max(this.runBest||0,this.combo);
+      if(owed && this.cur.redo){
+        this.recovered=Recover.heal(owed);
+        if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
+      }
       const w=this.wStats();
       const speed = this.speedMult(el);
       const crit = R.chance(w.crit + this.combo*0.02);
@@ -9795,6 +9813,7 @@ const Battle = {
       for(let i=0;i<blows;i++)
         dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
+      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);
       Anim.strike('e',dmg,false);
       // A vampiric elite drinks back the blow it lands.
       if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){
@@ -9910,8 +9929,8 @@ const Battle = {
       ((ok || st.quiet)?'':`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">${st.a}</b>.</div>`)+
       (miss?`<div class="miss">You chose <b>${picked}</b>: ${miss}.</div>`:'')+ slipNote +
       (ok && this.nudged && !inRite ? `<div class="miss nudged">💡 Nudged: half the strike, and half the credit toward ${label}.</div>` : '')+
-      (!inRite && this.redo && Game.s.hp>0 ? `<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>` : '')+
-      (!inRite && ok && this.cur.redo ? `<div class="miss again">↺ <b>Got it this time.</b> The second go landed.</div>` : '')+
+      (!inRite && this.redo && Game.s.hp>0 ? `<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>`+Recover.line(this.recover) : '')+
+      (!inRite && ok && this.cur.redo ? `<div class="miss again">↺ <b>Got it this time.</b> The second go landed${Recover.back(this.recovered)}.</div>` : '')+
       (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>`:'')+
       `<div>${st.ex}</div>`+ rule +
       `<div id="afig"></div>`+

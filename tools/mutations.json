@@ -1,54 +1,61 @@
 {
-  "change": "Add a war path: victories in a row this sitting pay more gold",
+  "change": "Win back half a missed blow by landing the question like it",
   "mutations": [
     {
-      "name": "the war path never stops climbing",
+      "name": "the whole blow is won back",
       "file": "index.html",
-      "find": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },",
-      "replace": "bonus(n){ return this.STEP*Math.max(0, n-1); },",
+      "find": "owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },",
+      "replace": "owed(dmg){ return dmg>0 ? dmg : 0; },",
       "run": "verify"
     },
     {
-      "name": "the first victory already pays more",
+      "name": "half is rounded down",
       "file": "index.html",
-      "find": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },",
-      "replace": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n)); },",
+      "find": "owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },",
+      "replace": "owed(dmg){ return dmg>0 ? Math.floor(dmg/2) : 0; },",
       "run": "verify"
     },
     {
-      "name": "the arena counts toward the path",
+      "name": "winning it back heals past full health",
       "file": "index.html",
-      "find": "const wp=this.mode==='campaign' ? WarPath.won() : 1;",
-      "replace": "const wp=WarPath.won();",
+      "find": "g.hp=Math.min(g.maxHp, g.hp+n); return g.hp-was; },",
+      "replace": "g.hp=g.hp+n; return g.hp-was; },",
       "run": "verify"
     },
     {
-      "name": "a fall leaves the path running",
+      "name": "any right answer wins it back",
       "file": "index.html",
-      "find": "    const path=WarPath.broke();\n    const lost=",
-      "replace": "    const path=WarPath.n;\n    const lost=",
+      "find": "      if(owed && this.cur.redo){\n",
+      "replace": "      if(owed){\n",
       "run": "verify"
     },
     {
-      "name": "leaving a won fight ends the path",
+      "name": "a second miss keeps what was owed",
       "file": "index.html",
-      "find": "const path=live && this.mode==='campaign' ? WarPath.broke() : 0;",
-      "replace": "const path=this.mode==='campaign' ? WarPath.broke() : 0;",
+      "find": "const owed=this.recover||0; this.recover=0; this.recovered=0;",
+      "replace": "const owed=this.recover||0; this.recovered=0;",
       "run": "verify"
     },
     {
-      "name": "the line promises the wrong next pay",
+      "name": "a fight carries the last fight's debt",
       "file": "index.html",
-      "find": "Win the next for +${this.pct(n+1)}%.",
-      "replace": "Win the next for +${this.pct(n)}%.",
+      "find": "    this.recover=0; this.recovered=0;   // half a missed blow",
+      "replace": "    this.recovered=0;   // half a missed blow",
       "run": "verify"
     },
     {
-      "name": "the gold is paid at the plain rate",
+      "name": "the miss does not say what landing the next wins back",
       "file": "index.html",
-      "find": "(Phase.flawless(this)?1.25:1)*wp);",
-      "replace": "(Phase.flawless(this)?1.25:1));",
-      "run": "play:warpath"
+      "find": "so you can use this straight away.</div>`+Recover.line(this.recover) : '')+",
+      "replace": "so you can use this straight away.</div>` : '')+",
+      "run": "verify"
+    },
+    {
+      "name": "the blow is owed back from before it lands",
+      "file": "index.html",
+      "find": "      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);\n",
+      "replace": "      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg+40);\n",
+      "run": "play:recover"
     }
   ]
 }
