@@ -17109,6 +17109,20 @@ const coverTurnNotes = (() => {
   if (env.banners.join() !== 'COVER CAPTAIN / every split compared') fail('coverturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Figure labels: every workshop figure's text is drawn over a rim of the
+   panel's colour, so nothing drawn beneath a label hides it. */
+const haloNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+  const m = css.match(/\[id\$="Fig"\] svg text\{([^}]*)\}/);
+  if (!m) fail('labels', 'style', 'no rule rims the figures\' labels');
+  else for (const want of ['paint-order:stroke', 'stroke:var(--panel)', 'stroke-width:3px', 'stroke-linejoin:round'])
+    if (!m[1].split(';').includes(want)) fail('labels', 'style', `the labels' rim lacks ${want}`);
+  if (/<text[^>]*\bstroke=/.test(html)) fail('labels', 'style', 'a label sets its own stroke, which the rim would override');
+  const figs = new Set([...html.matchAll(/id="([A-Za-z]+Fig)"/g)].map(x => x[1]));
+  if (figs.size < 100) fail('labels', 'figures', `only ${figs.size} figures are found`);
+  return { figs: figs.size };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24610,6 +24624,7 @@ console.log(`  solids weighed    ${pad(latheTurnNotes.checks.toLocaleString(), 1
 console.log(`  swaps fitted      ${pad(swapTurnNotes.checks.toLocaleString(), 12)}  (checks of four integrals called as du fitting exactly, up to a number or leaving an x over in the swap workshop, ${swapTurnNotes.wrongs} of them with one called wrong and caught, and ${swapTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits weighed    ${pad(partsTurnNotes.checks.toLocaleString(), 12)}  (checks of four splits called as leaving something easier, the same kind or harder in the parts workshop, ${partsTurnNotes.wrongs} of them with one called wrong and caught, and ${partsTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits compared   ${pad(coverTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions called as A bigger than B, the same or smaller in the cover-up workshop, ${coverTurnNotes.wrongs} of them with one called wrong and caught, and ${coverTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

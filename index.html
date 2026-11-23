@@ -709,6 +709,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .fig{display:block; width:100%; height:auto; border-radius:10px; margin:8px 0 2px;
   border:1px solid var(--edge); background:#171129;}
 .figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
+/* Every workshop figure's labels sit on a thin rim of the panel's own colour,
+   so a curve or an arrow that runs under a label leaves it readable. */
+[id$="Fig"] svg text{paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
 #afig .fig{margin-top:10px;}
 /* The workshop: a 2×2 matrix you can turn by hand. The first column is
    coloured like î and the second like ĵ, because a column is where the

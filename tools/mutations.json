@@ -1,60 +1,18 @@
 {
-  "change": "Add an A or B mode to the cover-up workshop",
+  "change": "Keep figure labels readable where a curve runs under them",
   "mutations": [
     {
-      "name": "A's cover-up puts in the other root",
+      "name": "the labels lose their rim",
       "file": "index.html",
-      "find": "A(i){ const {p,q,r,s}=this.Q(i); return (p*r+q)/(r-s); },",
-      "replace": "A(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(r-s); },",
+      "find": "[id$=\"Fig\"] svg text{paint-order:stroke;",
+      "replace": "[id$=\"Fig\"] svg text{",
       "run": "verify"
     },
     {
-      "name": "B's leftover factor is taken the wrong way round",
+      "name": "the rim is drawn in another colour",
       "file": "index.html",
-      "find": "B(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(s-r); },",
-      "replace": "B(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(r-s); },",
-      "run": "verify"
-    },
-    {
-      "name": "A and B are compared by size",
-      "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.A(i)-this.B(i)); },",
-      "replace": "truth(i){ return Math.sign(Math.abs(this.A(i))-Math.abs(this.B(i))); },",
-      "run": "verify"
-    },
-    {
-      "name": "a factor's sign is misread",
-      "file": "index.html",
-      "find": "fac(r){ return r===0 ? 'x' : `x ${r<0?'+':'−'} ${Math.abs(r)}`; },",
-      "replace": "fac(r){ return r===0 ? 'x' : `x ${r<0?'−':'+'} ${Math.abs(r)}`; },",
-      "run": "verify"
-    },
-    {
-      "name": "a trap is not looked for",
-      "file": "index.html",
-      "find": "return a && b && a!==b && (Math.abs(a)>Math.abs(b)) === (a<b); }); },",
-      "replace": "return a && b && a!==b && (Math.abs(a)>Math.abs(b)) === (a>b); }); },",
-      "run": "verify"
-    },
-    {
-      "name": "A and B are written before the round is right",
-      "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i), M=this.span(i)",
-      "replace": "{ const t=this.truth(i), M=this.span(i)",
-      "run": "verify"
-    },
-    {
-      "name": "the number line runs backwards",
-      "file": "index.html",
-      "find": "at=v=>+(X+90+v/M*70).toFixed(2)",
-      "replace": "at=v=>+(X+90-v/M*70).toFixed(2)",
-      "run": "verify"
-    },
-    {
-      "name": "a call still moves once the round is right",
-      "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cover.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cover.render();",
+      "find": "svg text{paint-order:stroke;stroke:var(--panel);",
+      "replace": "svg text{paint-order:stroke;stroke:var(--gold);",
       "run": "verify"
     }
   ]
