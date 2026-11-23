@@ -23,6 +23,7 @@ const fight = (t, kind, beaten = true) => t.ev(([kind, beaten]) => {
   Elite.force = kind;
   // with no twist named: a beaten foe plain, and a first meeting with the dice sure to bring an elite if they could
   const odds = Elite.CHANCE; if (!kind) Elite.CHANCE = beaten ? 0 : 1;
+  WarPath.n = 0;                         // each fight's gold at the plain rate, not a run of wins
   Battle.begin(0, 1);
   Elite.CHANCE = odds;
   Game.s.maxHp = Game.s.hp = 99999;
