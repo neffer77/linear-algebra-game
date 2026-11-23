@@ -13554,6 +13554,154 @@ const crossTurnNotes = (() => {
   if (env.banners.join() !== 'RIGHT HAND / every turn called') fail('crossturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, turns };
 })();
+const dotTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Dot = {render(){ env.renders++; }};" +
+    cut('const DotTurn = {', '/* -------------------- which slope?') + 'return DotTurn;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const V = p => `⟨${p.map(ng).join(', ')}⟩`;
+  // the angle between u and v, from their directions alone, in degrees
+  const angOf = ([u, v]) => { let d = Math.abs(Math.atan2(v[1], v[0]) - Math.atan2(u[1], u[0])); if (d > Math.PI) d = 2 * Math.PI - d; return d * 180 / Math.PI; };
+  const callOf = p => { const a = angOf(p); return Math.abs(a - 90) < 1e-9 ? 0 : a < 90 ? 1 : -1; };
+  const dotOf = ([u, v]) => u[0] * v[0] + u[1] * v[1];
+  const WD = { 1: 'less than 90°', 0: 'exactly 90°', [-1]: 'more than 90°' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('dotturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, angles = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('dotturn', key, `it holds ${P.length} pairs, not four`); return; }
+    P.forEach(([u, v], i) => { const k = u.join() + '|' + v.join(); if (seen.has(k)) fail('dotturn', key, `pair ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (u.every(c => c === 0) || v.every(c => c === 0)) fail('dotturn', key, `pair ${'ABCD'[i]} has a zero arrow`);
+      if (u[0] * v[1] - u[1] * v[0] === 0) fail('dotturn', key, `pair ${'ABCD'[i]} lies on one line`); });
+    const truth = P.map(callOf);
+    if (truth.some((t, i) => S.truth(i) !== t || S.dot(i) !== dotOf(P[i]))) fail('dotturn', key, `its pairs are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('dotturn', key, 'every angle is called the same');
+    // what the round holds, found afresh
+    const fl = [], sq = [], cl = [];
+    for (let i = 0; i < 4; i++) { for (let j = i + 1; j < 4; j++) if (P[i][0].join() === P[j][0].join() && P[i][1].map(c => -c).join() === P[j][1].join()) fl.push([i, j]);
+      if (truth[i] === 0 && P[i].every(p => p[0] && p[1])) sq.push(i);
+      if (Math.abs(dotOf(P[i])) === 1 && P[i].every(p => p[0] * p[0] + p[1] * p[1] >= 5)) cl.push(i); }
+    fl.forEach(([i, j]) => { if (truth[i] !== -truth[j]) fail('dotturn', key, `${'ABCD'[i]} and ${'ABCD'[j]} share u with v turned round but are not called opposite ways`); });
+    const tags = [sq.length ? 'square' : null, fl.length ? 'flip' : null, cl.length ? 'close' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('dotturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every pair called wrong, one at a time, in both wrong ways
+    P.forEach(([u, v], i) => {
+      for (const c of [1, 0, -1]) {
+        if (c === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
+        const d = dotOf(P[i]);
+        const why = d > 0 ? `${ng(d)} is more than 0, so cos θ is too: the angle is less than 90°.`
+          : d < 0 ? `${ng(d)} is less than 0, so cos θ is too: the angle is more than 90°.`
+            : 'That is 0, so cos θ is 0: the arrows are square to each other, at exactly 90°.';
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, u = ${V(u)} and v = ${V(v)}: u·v = u₁v₁ + u₂v₂ = (${ng(u[0])})(${ng(v[0])}) + (${ng(u[1])})(${ng(v[1])}) = ${ng(d)}. ${why} You had it as ${WD[c]}.`,
+          '0 called right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('dotturn', key, `with ${'ABCD'[i]} called ${WD[c]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(arc|right|deg)"/.test(svg)) fail('dotturn', key, `with ${'ABCD'[i]} wrong, the wrong pair is not ringed alone or the angles are given away`);
+        if (S.solved || S.streak) fail('dotturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('dotturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('dotturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('dotturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="dtaCheck" disabled /.test(S.html())) fail('dotturn', key, 'the check is open before the angles are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="dtaCheck" disabled /.test(S.html())) fail('dotturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('dotturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="DotTurn\\.call\\(${i},(-?[01])\\)" aria-label="Pair ${'ABCD'[i]}: the angle is ${WD[t]}"`));
+      if (!m || +m[1] !== t) fail('dotturn', key, `the button for ${'ABCD'[i]} ${WD[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`DotTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('dotturn', key, `${'ABCD'[i]} does not offer less, exactly and more`);
+    });
+    if (S.calls.join() !== truth.join()) fail('dotturn', key, 'the buttons cannot make the right calls');
+    if (/id="dtaCheck" disabled /.test(S.html())) fail('dotturn', key, 'the check stays shut with every angle called');
+    S.check(); checks++;
+    const deg = P.map(p => Math.round(angOf(p)));
+    const L = ix => ix.map(i => 'ABCD'[i]), list = ix => { const n = L(ix); return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
+    const want = ['Yes: all four are called right.'];
+    if (fl.length) { const [i, j] = fl[0];
+      if (deg[i] + deg[j] !== 180) fail('dotturn', key, `${'ABCD'[i]} and ${'ABCD'[j]} do not add to 180°`);
+      want.push(`${'ABCD'[i]} and ${'ABCD'[j]} share u, and ${'ABCD'[j]}'s v is ${'ABCD'[i]}'s turned round: u·(−v) = −(u·v), so ${'ABCD'[i]}'s ${deg[i]}° becomes 180° − ${deg[i]}° = ${deg[j]}°.`); }
+    if (sq.length) want.push(`${list(sq)} ${sq.length > 1 ? 'are each' : 'is'} square though neither arrow lies on an axis: the two products cancel, ${sq.map(i => { const [u, v] = P[i]; return `(${ng(u[0])})(${ng(v[0])}) + (${ng(u[1])})(${ng(v[1])}) = 0`; }).join(' and ')}.`);
+    if (cl.length) { const i = cl[0]; want.push(`In ${'ABCD'[i]}, u·v is only ${ng(dotOf(P[i]))}, so the angle is ${deg[i]}°, a few degrees ${truth[i] > 0 ? 'short of' : 'past'} square, yet the sign still settles it.`); }
+    want.push(`The angles, to the nearest degree: ${P.map((p, i) => `${'ABCD'[i]} ${deg[i]}°`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('dotturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each pair in its own square, its angle the short way from u to v
+    const svg = S.svg();
+    const us = [...svg.matchAll(/data-k="u" x1="([^"]+)" y1="([^"]+)"/g)], vs = [...svg.matchAll(/data-k="v" x1="([^"]+)" y1="([^"]+)"/g)];
+    if (us.length !== 4 || vs.length !== 4) fail('dotturn', key, 'four u arrows and four v arrows are not drawn');
+    const heads = k => [...svg.matchAll(new RegExp(`data-k="${k}-head" points="([^,]+),([^ ]+) `, 'g'))].map(m => [+m[1], +m[2]]);
+    const hu = heads('u'), hv = heads('v');
+    P.forEach(([u, v], i) => {
+      if (!us[i] || !hu[i] || !hv[i]) return;
+      const cx = +us[i][1], cy = +us[i][2];
+      const dirOK = (h, p) => { const dx = h[0] - cx, dy = cy - h[1]; return Math.abs(dx * p[1] - dy * p[0]) < 0.05 * Math.hypot(dx, dy) * Math.hypot(...p) && dx * p[0] + dy * p[1] > 0; };
+      if (!dirOK(hu[i], u) || !dirOK(hv[i], v)) fail('dotturn', key, `the arrows of ${'ABCD'[i]} do not point along u and v`);
+      if (cx < (i % 2) * 180 || cx > (i % 2) * 180 + 180 || cy < Math.floor(i / 2) * 130 || cy > Math.floor(i / 2) * 130 + 130) fail('dotturn', key, `${'ABCD'[i]} is not in its own square`);
+    });
+    const degs = [...svg.matchAll(/data-k="deg"[^>]*>([^<]+)</g)].map(m => m[1]);
+    if (degs.join() !== deg.map(d => d + '°').join()) fail('dotturn', key, `the angles are labelled ${degs.join()}`);
+    const rights = [...svg.matchAll(/data-k="right" d="M ([^ ]+) ([^ ]+) L ([^ ]+) ([^ ]+) L ([^ ]+) ([^"]+)"/g)];
+    const sqIx = truth.map((t, i) => t === 0 ? i : -1).filter(i => i >= 0);
+    if (rights.length !== sqIx.length) fail('dotturn', key, `${rights.length} square corners are drawn, not one for each of the ${sqIx.length} square pairs`);
+    rights.forEach((m, k) => { const i = sqIx[k]; if (!us[i]) return; const cx = +us[i][1], cy = +us[i][2];
+      const a = [+m[1] - cx, cy - +m[2]], b = [+m[5] - cx, cy - +m[6]], c = [+m[3] - cx, cy - +m[4]];
+      const along = (q, p) => Math.abs(q[0] * p[1] - q[1] * p[0]) < 1e-2 * Math.hypot(...q) * Math.hypot(...p) && q[0] * p[0] + q[1] * p[1] > 0;
+      if (!along(a, P[i][0]) || !along(b, P[i][1]) || Math.abs(c[0] - a[0] - b[0]) > 0.02 || Math.abs(c[1] - a[1] - b[1]) > 0.02) fail('dotturn', key, `the square corner in ${'ABCD'[i]} does not sit between u and v`); });
+    const arcs = [...svg.matchAll(/data-k="arc" d="M ([^ ]+) ([^ ]+) A ([^ ]+) [^ ]+ 0 0 ([01]) ([^ ]+) ([^"]+)"/g)];
+    const nz = truth.map((t, i) => t ? i : -1).filter(i => i >= 0);
+    if (arcs.length !== nz.length) fail('dotturn', key, `${arcs.length} arcs are drawn, not one for each of the ${nz.length} pairs that are not square`);
+    arcs.forEach((m, k) => { const i = nz[k]; if (!us[i]) return; angles++;
+      const cx = +us[i][1], cy = +us[i][2], [x0, y0, x1, y1] = [+m[1], +m[2], +m[5], +m[6]];
+      const a0 = Math.atan2(cy - y0, x0 - cx), a1 = Math.atan2(cy - y1, x1 - cx);
+      let d = a1 - a0; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI;
+      if ((d > 0) !== (m[4] === '0') || Math.abs(Math.abs(d) * 180 / Math.PI - angOf(P[i])) > 0.2) fail('dotturn', key, `the arc in ${'ABCD'[i]} does not run the short way from u to v`);
+      const au = Math.atan2(P[i][0][1], P[i][0][0]), av = Math.atan2(P[i][1][1], P[i][1][0]);
+      if (Math.abs(Math.cos(a0 - au) - 1) > 1e-3 || Math.abs(Math.cos(a1 - av) - 1) > 1e-3) fail('dotturn', key, `the arc in ${'ABCD'[i]} does not start on u and end on v`); });
+    const h = S.html();
+    if (!h.includes('id="dtaNext"') || /onclick="DotTurn\.call/.test(h.replace(/disabled onclick="DotTurn\.call/g, ''))) fail('dotturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? -1 : 1);
+    if (S.calls.join() !== before) fail('dotturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('dotturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('dotturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const P = S.R(); S.calls = P.map(callOf); if (slip) S.calls[1] = S.calls[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, callOf(P[1])); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'close,fix,square'], [false, 'close,fix,flip,one,square'], [false, 'close,fix,flip,one,square'], [false, 'close,fix,flip,one,square,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('dotturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Square without an axis · A hair from square · A slip caught and fixed | ✓ Right on the first check · Turn v round, and the dot turns too') fail('dotturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TRUE AIM / every angle called') fail('dotturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, angles };
+})();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -20737,6 +20885,7 @@ console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)
 console.log(`  mirrors called    ${pad(transSortNotes.checks.toLocaleString(), 12)}  (checks of four square matrices called Aᵀ = A, Aᵀ = −A or neither in the transpose workshop, each transposed here by (Aᵀ)ᵢⱼ = aⱼᵢ; ${transSortNotes.wrongs} of them with one matrix called wrong and caught, and ${transSortNotes.cells} cells drawn and read back)`);
 console.log(`  pressed shown     ${pad(pressedNotes.n.toLocaleString(), 12)}  (buttons a player can press, each a ghost button that turns gold once pressed, so every call in a round shows what was chosen)`);
 console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
+console.log(`  angles called     ${pad(dotTurnNotes.checks.toLocaleString(), 12)}  (checks of four angles called less than, exactly or more than 90° in the dot product workshop, ${dotTurnNotes.wrongs} of them with one pair called wrong and caught, and ${dotTurnNotes.angles} arcs drawn the short way from u to v)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
