@@ -101,6 +101,7 @@ const SUITES = [
   require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
   require('./play/meanvalue'), // match a tangent to the chord by hand
   require('./play/chordpick'), // see a curve and its chord, pick which of four numbers is c
+  require('./play/chordturn'), // see four curves with their chords, call whether each c lies left of the middle, at it, or right
   require('./play/tanline'),   // estimate f(x) from the tangent at a and measure the miss
   require('./play/estpick'),   // see a curve and an x near a, pick which of four numbers is the tangent's estimate
   require('./play/tanturn'),   // see four curves, call each tangent estimate too high, too low or exact

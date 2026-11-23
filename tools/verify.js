@@ -17443,6 +17443,197 @@ const arrowTurnNotes = (() => {
   if (env.banners.join() !== 'DIAGONAL JUDGE / every diagonal weighed') fail('arrowturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Left or right? The chord workshop's third mode, worked again from
+   scratch: every chord's slope and every middle slope worked from the
+   curve alone, f″ checked to keep one sign across the interval, c found
+   by halving the interval until f′ meets the chord's slope, every call
+   and every readout, a slip on every pane both other ways, each pane read
+   back with its curve, chord, middle and tangent at c, and the hunt for
+   every goal. */
+const chordTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const S = new Function('env', 'COL',
+    "const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const MeanValue = {render(){ env.renders++; }};" +
+    cut('const ChordTurn = {', '/* ---------- Which c? The chord workshop turned round') + 'return ChordTurn;')(env, COL);
+  const L = 'ABCD';
+  const WD = { 1: 'right of the middle', 0: 'at the middle', [-1]: 'left of the middle' };
+  const NAME = { 1: 'c is right of the middle', 0: 'c is at the middle', [-1]: 'c is left of the middle' };
+  const MARK = { 1: 'right right ▶', 0: 'middle = middle', [-1]: 'left ◀ left' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const num = v => { const r = Math.round(v * 1e6) / 1e6; return (r < 0 ? '−' : '') + String(Math.abs(r)); };
+  const pn = v => (v < 0 ? `(${num(v)})` : num(v));
+  const SUP = { 2: '²', 3: '³' };
+  const poly = k => {
+    const t = [];
+    for (let d = k.length - 1; d >= 0; d--) { const c = k[d]; if (!c) continue;
+      const x = d === 0 ? '' : d === 1 ? 'x' : 'x' + SUP[d], n = Math.abs(c) === 1 && d > 0 ? '' : String(Math.abs(c));
+      t.push((t.length ? (c < 0 ? ' − ' : ' + ') : (c < 0 ? '−' : '')) + n + x); }
+    return t.join('') || '0';
+  };
+  const work = ri => S.ROUNDS[ri].map(item => {
+    const key = `round ${ri + 1}`;
+    const [c0, c1, c2, c3, a, b] = item;
+    if (!(b > a)) fail('chordturn', key, `[${a}, ${b}] runs backwards`);
+    if (![1, 2, 4].includes(b - a)) fail('chordturn', key, `[${a}, ${b}] is not 1, 2 or 4 long, so its slopes are not short decimals`);
+    if (!c2 && !c3) fail('chordturn', key, 'a straight line has a tangent everywhere along its chord');
+    const f = x => c0 + c1 * x + c2 * x * x + c3 * x * x * x, d1 = x => c1 + 2 * c2 * x + 3 * c3 * x * x, d2 = x => 2 * c2 + 6 * c3 * x;
+    const m = (a + b) / 2, s = (f(b) - f(a)) / (b - a), fm = d1(m);
+    if (Math.round(s * 4) !== s * 4 || Math.round(fm * 4) !== fm * 4) fail('chordturn', key, `the slopes on [${a}, ${b}] are not whole or quarters`);
+    // f″ keeps one sign across the interval, so f′ runs one way only
+    const u = d2(a), w = d2(b);
+    if (u * w < 0 || (c3 && !u && !w)) fail('chordturn', key, `f″ changes sign on [${a}, ${b}]`);
+    const bend = Math.sign(u + w);
+    // c by halving: f′ − s changes sign once between a and b
+    let c;
+    if (!c3) { c = (s - c1) / (2 * c2); if (d1(m) !== s) fail('chordturn', key, 'a parabola\'s middle slope is not its chord\'s'); }
+    else {
+      let lo = a, hi = b, glo = d1(lo) - s;
+      if (glo * (d1(hi) - s) >= 0) fail('chordturn', key, `f′ does not cross the chord's slope on [${a}, ${b}]`);
+      for (let n = 0; n < 80; n++) { const mid = (lo + hi) / 2, g = d1(mid) - s; if ((g < 0) === (glo < 0)) { lo = mid; glo = g; } else hi = mid; }
+      c = (lo + hi) / 2;
+      if (Math.abs(c - m) < 0.02) fail('chordturn', key, `c ${c.toFixed(3)} lies too near the middle ${m} to call by eye`);
+      if (Math.sign(c - m) !== bend * Math.sign(s - fm)) fail('chordturn', key, 'the rule does not place c where halving finds it');
+    }
+    if (!(c > a && c < b)) fail('chordturn', key, `c = ${c} is not strictly inside [${a}, ${b}]`);
+    const t = c3 ? Math.sign(c - m) : 0;
+    const c2s = num(Math.round(c * 100) / 100), cs = t ? `≈ ${c2s}` : `= ${num(c)}`;
+    const head = `the chord's slope is s = (f(${num(b)}) − f(${num(a)}))/(${num(b)} − ${pn(a)}) = (${num(f(b))} − ${pn(f(a))})/${b - a} = ${num(s)}. At the middle, x = ${num(m)}, f′(${num(m)}) = ${num(fm)}`;
+    const why = t === 0 ? `${head}, s already: on a parabola f′ is a straight line, so c is the middle, ${num(m)}.`
+      : `${head}. f″ = ${poly([2 * c2, 6 * c3])} is ${bend > 0 ? 'above' : 'below'} 0 here, so f′ ${bend > 0 ? 'climbs' : 'falls'}, and it must ${s > fm ? 'rise' : 'fall'} from ${num(fm)} to ${num(s)}: c is ${WD[t]}, c ${cs}.`;
+    return { k: [c0, c1, c2, c3], a, b, f, m, s, fm, c, t, bend, cs, c2s, why, mid: !c3, down: !!c3 && bend < 0, fall: s < 0 };
+  });
+  if (S.ROUNDS.length !== 6) fail('chordturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('chordturn', key, `it holds ${Q.length} curves, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('chordturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.truth(i) !== w.t) fail('chordturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (Math.abs(S.s(i) - w.s) > 1e-9 || Math.abs(S.fp(i, w.m) - w.fm) > 1e-9 || Math.abs(S.c(i) - w.c) > 1e-6) fail('chordturn', key, `${L[i]} gives s = ${S.s(i)}, f′(m) = ${S.fp(i, w.m)} and c = ${S.c(i)}, not ${w.s}, ${w.fm} and ${w.c}`);
+      if (S.poly(Q[i].slice(0, 4)) !== poly(w.k)) fail('chordturn', key, `${L[i]} is written ${S.poly(Q[i].slice(0, 4))}, not ${poly(w.k)}`);
+    });
+    if (new Set(truth).size < 3) fail('chordturn', key, 'it does not hold all three calls');
+    const md = [], dn = [], fl = [];
+    W.forEach((w, i) => { if (w.mid) md.push(i); if (w.down) dn.push(i); if (w.fall) fl.push(i); });
+    const tags = [md.length ? 'mid' : null, dn.length ? 'down' : null, fl.length ? 'fall' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('chordturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('chordturn', key, 'it does not hold a parabola, a curve that bends down and a falling chord');
+    // every curve called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f(x) = ${poly(w.k)} on [${num(w.a)}, ${num(w.b)}]: ${w.why} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('chordturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(tan|cpt|cval|right|middle|left)"/.test(svg)) fail('chordturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or c is given away`);
+        if (S.solved || S.streak) fail('chordturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('chordturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('chordturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('chordturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="cdtCheck" disabled /.test(S.html())) fail('chordturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="cdtCheck" disabled /.test(S.html())) fail('chordturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('chordturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="ChordTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('chordturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`ChordTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('chordturn', key, `${L[i]} does not offer left, middle and right`);
+    });
+    if (S.calls.join() !== truth.join()) fail('chordturn', key, 'the buttons cannot make the right calls');
+    if (/id="cdtCheck" disabled /.test(S.html())) fail('chordturn', key, 'the check stays shut with every curve called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    { const w = W[md[0]];
+      want.push(`In ${L[md[0]]}, f(x) = ${poly(w.k)} is a parabola: f′ = ${poly([w.k[1], 2 * w.k[2]])} is a straight line, so its value at the middle is the chord's slope, ${num(w.s)}, and c = ${num(w.m)} sits exactly half way.`); }
+    { const w = W[dn[0]];
+      want.push(`In ${L[dn[0]]}, f bends down, f″ = ${poly([2 * w.k[2], 6 * w.k[3]])} below 0, so f′ falls as x grows: the rule turns round, and with f′(${num(w.m)}) = ${num(w.fm)} ${w.fm > w.s ? 'above' : 'below'} the chord's ${num(w.s)}, c ${w.cs} is ${WD[w.t]}.`); }
+    { const w = W[fl[0]];
+      want.push(`In ${L[fl[0]]}, the chord falls, slope ${num(w.s)}, yet the rule is the same: f′(${num(w.m)}) = ${num(w.fm)} against it puts c ${w.cs} ${WD[w.t]}.`); }
+    want.push(`Each c against its middle: ${W.map((w, i) => `${L[i]} ${w.c2s} against ${num(w.m)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('chordturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the curve, its chord, the middle, and the tangent at c running parallel to the chord
+    const svg = S.svg();
+    const parts = svg.split('data-k="pane"').slice(1);
+    const at = (pg, k, attrs) => { const m = pg.match(new RegExp(`data-k="${k}" ([^>]*)>`)); if (!m) return null;
+      const o = {}; for (const a of attrs) { const v = m[1].match(new RegExp(`(?:^| )${a}="([^"]*)"`)); o[a] = v ? +v[1] : NaN; } return o; };
+    if (parts.length !== 4) fail('chordturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('chordturn', key, `${L[i]}'s pane is out of place`);
+      if (!pg.includes(`fill="blue" font-size="12" text-anchor="end">f = ${poly(w.k)}</text>`)) fail('chordturn', key, `${L[i]}'s curve is not written in blue`);
+      const ticks = [...pg.matchAll(/data-k="tick"[^>]*>([^<]*)</g)].map(m => m[1]).join();
+      if (ticks !== [w.a, w.m, w.b].map(num).join()) fail('chordturn', key, `${L[i]} is marked ${ticks} along the bottom, not a, the middle and b`);
+      const xs = []; let lo = Infinity, hi = -Infinity;
+      for (let j = 0; j <= 48; j++) { const x = w.a + (w.b - w.a) * j / 48, y = w.f(x); xs.push([x, y]); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+      const px = x => X + 14 + (x - w.a) / (w.b - w.a) * 152, py = y => Y + 112 - (y - lo) / (hi - lo) * 70, near = (p, q) => Math.abs(p - q) < 0.011;
+      const pts = (pg.match(/data-k="curve" points="([^"]*)"/) || [, ''])[1].split(' ').map(p => p.split(',').map(Number));
+      if (pts.length !== 49 || pts.some(([x, y], j) => !near(x, px(xs[j][0])) || !near(y, py(xs[j][1])))) fail('chordturn', key, `${L[i]}'s curve is not drawn through f`);
+      const ch = at(pg, 'chord', ['x1', 'y1', 'x2', 'y2']);
+      if (!ch || !near(ch.x1, px(w.a)) || !near(ch.y1, py(w.f(w.a))) || !near(ch.x2, px(w.b)) || !near(ch.y2, py(w.f(w.b)))) fail('chordturn', key, `${L[i]}'s chord does not join the curve's ends`);
+      const md = at(pg, 'mid', ['x1', 'x2']);
+      if (!md || !near(md.x1, px(w.m)) || !near(md.x2, px(w.m))) fail('chordturn', key, `${L[i]}'s middle is not dashed at x = ${num(w.m)}`);
+      const tn = at(pg, 'tan', ['x1', 'y1', 'x2', 'y2']), cp = at(pg, 'cpt', ['cx', 'cy']);
+      if (!cp || !near(cp.cx, px(w.c)) || !near(cp.cy, py(w.f(w.c)))) fail('chordturn', key, `${L[i]}'s point c is not on the curve at ${w.c.toFixed(3)}`);
+      if (!tn || !ch) fail('chordturn', key, `${L[i]}'s tangent at c is not drawn`);
+      else {
+        const sl = (tn.y2 - tn.y1) / (tn.x2 - tn.x1), sc = (ch.y2 - ch.y1) / (ch.x2 - ch.x1);
+        if (Math.abs(sl - sc) > 0.01) fail('chordturn', key, `${L[i]}'s tangent at c does not run parallel to the chord`);
+        if (cp && Math.abs((cp.cy - tn.y1) - sl * (cp.cx - tn.x1)) > 0.05) fail('chordturn', key, `${L[i]}'s tangent does not pass through c`);
+      }
+      if (!pg.includes(`data-k="cval" x="${X + 172}" y="${Y + 35}" fill="gold" font-size="11" text-anchor="end">c ${w.cs}</text>`)) fail('chordturn', key, `${L[i]}'s c is not written in as c ${w.cs}`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(right|middle|left)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('chordturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="cdtNext"') || /onclick="ChordTurn\.call/.test(hh.replace(/disabled onclick="ChordTurn\.call/g, ''))) fail('chordturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('chordturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('chordturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('chordturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'down,fall,fix,mid'], [false, 'down,fall,fix,mid,one'], [false, 'down,fall,fix,mid,one'], [false, 'down,fall,fix,mid,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('chordturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Half way on a parabola · The rule turned round · A falling chord placed · A slip caught and fixed | ✓ Right on the first check') fail('chordturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MIDDLE READER / every c placed') fail('chordturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -18042,13 +18233,13 @@ const chordPickNotes = (() => {
     cut('const ChordPick = {', '/* ---------- The chord workshop: the mean value theorem by hand') + 'return ChordPick;')(R, env);
   // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
   const host = cut('const MeanValue = {', '\n};\n');
-  if (!html.includes('<div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand or pick which number is c"></div>\n    <div class="panel">\n      <div id="mvpBox"></div>')) fail('chordpick', 'host', 'the tabs and the pick box are not on the page');
+  if (!html.includes('<div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand, pick which number is c, or call whether each c lies left or right of the middle"></div>\n    <div class="panel">\n      <div id="mvpBox"></div>')) fail('chordpick', 'host', 'the tabs and the pick box are not on the page');
   for (const id of ['mvtMoveRow', 'mvtGoalPanel', 'mvpBox', 'mvtTab']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('chordpick', 'host', `${id} is not on the page once`);
   if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('chordpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
-  if (!host.includes("[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="MeanValue.setTab(\'${t}\')"')) fail('chordpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c'],['turn','⚖️ Left or right?','See four curves with their chords, and call whether each c lies left of the middle, at it, or right']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="MeanValue.setTab(\'${t}\')"')) fail('chordpick', 'host', 'the two tabs are not drawn and pressed as they should be');
   if (!host.includes("for(const id of ['mvtSets','mvtFig','mvtMoveRow','mvtRead','mvtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('chordpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
-  if (!host.includes("document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';\n    if(pick) return;")) fail('chordpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
-  if (!html.includes('On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>')) fail('chordpick', 'tome', 'the Tome does not tell of the pick');
+  if (!host.includes("const pick=this.tab!=='hand';") || !host.includes("document.getElementById('mvpBox').innerHTML=!pick ? '' : this.tab==='pick' ? ChordPick.html() : ChordTurn.html();\n    if(pick) return;")) fail('chordpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c. Or call it:')) fail('chordpick', 'tome', 'the Tome does not tell of the pick');
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
   const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
@@ -24946,6 +25137,7 @@ console.log(`  splits weighed    ${pad(partsTurnNotes.checks.toLocaleString(), 1
 console.log(`  splits compared   ${pad(coverTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions called as A bigger than B, the same or smaller in the cover-up workshop, ${coverTurnNotes.wrongs} of them with one called wrong and caught, and ${coverTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  boxes weighed     ${pad(sliceTurnNotes.checks.toLocaleString(), 12)}  (checks of four solids under planes called as more than a box, the same or less in the slice workshop, ${sliceTurnNotes.wrongs} of them with one called wrong and caught, and ${sliceTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  diagonals weighed ${pad(arrowTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as u + v longer, the same or u − v longer in the arrow workshop, ${arrowTurnNotes.wrongs} of them with one called wrong and caught, and ${arrowTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  every c placed    ${pad(chordTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves whose c is called left of the middle, at it or right of it in the chord workshop, ${chordTurnNotes.wrongs} of them with one called wrong and caught, and ${chordTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);

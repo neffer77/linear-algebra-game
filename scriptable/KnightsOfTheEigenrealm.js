@@ -2048,7 +2048,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ CHORD WORKSHOP ============ -->
   <div class="screen" id="s-mvt">
     <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
-    <div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand or pick which number is c"></div>
+    <div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand, pick which number is c, or call whether each c lies left or right of the middle"></div>
     <div class="panel">
       <div id="mvpBox"></div>
       <div id="mvtSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
@@ -15673,7 +15673,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c. Or call it: see four curves with their chords, and say whether each c lies left of the middle, at it, or right of it.</div>
          <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -35913,6 +35913,194 @@ const Doubling = {
   }
 };
 
+/* ---------- Left or right? The chord workshop's third mode ----------
+   Four curves, each on an interval [a, b] with its chord drawn and its
+   middle m dashed in. The player calls whether c, the point the mean
+   value theorem promises, where the tangent's slope matches the chord's,
+   lies left of the middle, at it, or right of it. The rule comes first:
+   work f′(m) and set it against the chord's slope s; where the curve bends
+   up f′ climbs, so a middle slope below s puts c to the right, and where it
+   bends down the rule turns round. On a parabola f′(m) is s exactly. Every
+   round holds a parabola, a curve that bends down and a chord that falls.
+   Once the round is right, each tangent at c is drawn with c written in.
+   A slip rings that pane and works f′(m) and s through. Nothing is saved,
+   and there is no clock. */
+const ChordTurn = {
+  // [c₀, c₁, c₂, c₃, a, b]: f(x) = c₀ + c₁x + c₂x² + c₃x³ on [a, b]
+  ROUNDS:[
+    [[0,0,0,1,0,2], [0,4,-1,0,0,2], [0,0,0,1,-2,0], [8,0,0,-1,0,2]],
+    [[0,0,1,0,1,3], [0,-3,0,1,1,3], [2,0,0,1,-3,-1], [4,0,-1,0,0,2]],
+    [[0,0,0,-1,-2,0], [0,0,0,1,1,2], [0,-6,1,0,1,5], [0,0,3,-1,3,5]],
+    [[0,0,-6,1,-2,0], [0,-1,2,0,-1,1], [0,1,0,1,0,4], [1,0,0,-1,-2,-1]],
+    [[0,2,1,0,-3,1], [0,0,0,-1,1,3], [0,0,-3,1,2,4], [0,0,0,1,-1,0]],
+    [[0,0,0,2,-2,0], [9,0,-1,0,-1,3], [0,-12,0,1,0,2], [0,0,6,-1,0,2]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four curves right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'mid',  t:'Call a parabola, whose c falls exactly half way.', toast:'Half way on a parabola',
+     ok:K=>K.kinds.has('mid')},
+    {id:'down', t:'Call a curve that bends down, where the rule turns round.', toast:'The rule turned round',
+     ok:K=>K.kinds.has('down')},
+    {id:'fall', t:'Call a curve whose chord falls.', toast:'A falling chord placed',
+     ok:K=>K.kinds.has('fall')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The mean value theorem promises a c between a and b where the tangent\\'s slope f′(c) equals the chord\\'s slope s. To place c against the middle m, work f′(m) and set it against s. Where the curve bends up, f″ above 0, f′ climbs as x grows: a middle slope below s must climb further, so c is right of m, and one above s puts c left of it. Where the curve bends down, f′ falls, and both turn round. On a parabola f′ is a straight line, f′(m) is s exactly, and c is the middle.',
+  L:'ABCD',
+  SUP:['⁰','¹','²','³'],
+  WORD:{1:'right of the middle', 0:'at the middle', [-1]:'left of the middle'},
+  NAMES:{1:'c is right of the middle', 0:'c is at the middle', [-1]:'c is left of the middle'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [c0,c1,c2,c3,a,b]=this.R()[i]; return {k:[c0,c1,c2,c3],a,b}; },
+  // a number written out: whole, or to the two places a quarter needs
+  fx(v){ const r=Math.round(v*1e6)/1e6; return (r<0?'−':'')+String(Math.abs(r)); },
+  // a polynomial from its coefficients, highest power first: x³ − 3x, −x² + 4x, 6x − 12
+  poly(k){
+    const t=[];
+    for(let d=k.length-1;d>=0;d--){ const c=k[d]; if(!c) continue;
+      const w=d===0 ? '' : d===1 ? 'x' : 'x'+this.SUP[d], n=Math.abs(c)===1 && d>0 ? '' : String(Math.abs(c));
+      t.push([c<0, n+w]); }
+    if(!t.length) return '0';
+    return t.map(([m,s],j)=>j===0 ? (m?'−':'')+s : (m?' − ':' + ')+s).join('');
+  },
+  f(i,x){ const {k}=this.Q(i); return k[0]+k[1]*x+k[2]*x*x+k[3]*x*x*x; },
+  d1(i){ const {k}=this.Q(i); return [k[1],2*k[2],3*k[3]]; },
+  d2(i){ const {k}=this.Q(i); return [2*k[2],6*k[3]]; },
+  fp(i,x){ const [p,q,r]=this.d1(i); return p+q*x+r*x*x; },
+  m(i){ const {a,b}=this.Q(i); return (a+b)/2; },
+  s(i){ const {a,b}=this.Q(i); return (this.f(i,b)-this.f(i,a))/(b-a); },
+  // the c in (a, b) where f′(c) = s: the root of 3c₃x² + 2c₂x + c₁ − s inside the interval
+  c(i){ const {a,b}=this.Q(i), [p,q,r]=this.d1(i), s=this.s(i);
+    if(!r) return (s-p)/q;
+    const D=Math.sqrt(q*q-4*r*(p-s));
+    return [(-q+D)/(2*r),(-q-D)/(2*r)].find(x=>x>a+1e-9 && x<b-1e-9); },
+  // f″ has one sign across the interval, the sign at its middle
+  bend(i){ const [u,v]=this.d2(i); return Math.sign(u+v*this.m(i)); },
+  // 1 right of the middle, 0 at it, −1 left of it
+  truth(i){ const t=this.c(i)-this.m(i); return Math.abs(t)<1e-9 ? 0 : Math.sign(t); },
+  cs(i){ return this.truth(i) ? '≈ '+this.fx(Math.round(this.c(i)*100)/100) : '= '+this.fx(this.c(i)); },
+  mids(){ return [0,1,2,3].filter(i=>!this.Q(i).k[3]); },
+  downs(){ return [0,1,2,3].filter(i=>this.Q(i).k[3] && this.bend(i)<0); },
+  falls(){ return [0,1,2,3].filter(i=>this.s(i)<0); },
+  tags(){ const t=[]; if(this.mids().length) t.push('mid'); if(this.downs().length) t.push('down'); if(this.falls().length) t.push('fall'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  sLine(i){ const {a,b}=this.Q(i), A=this.f(i,a), B=this.f(i,b);
+    return \`the chord's slope is s = (f(\${this.fx(b)}) − f(\${this.fx(a)}))/(\${this.fx(b)} − \${a<0?\`(\${this.fx(a)})\`:this.fx(a)}) = (\${this.fx(B)} − \${A<0?\`(\${this.fx(A)})\`:this.fx(A)})/\${b-a} = \${this.fx(this.s(i))}\`; },
+  why(i){
+    const m=this.m(i), fm=this.fp(i,m), s=this.s(i), t=this.truth(i), head=\`\${this.sLine(i)}. At the middle, x = \${this.fx(m)}, f′(\${this.fx(m)}) = \${this.fx(fm)}\`;
+    if(!t) return \`\${head}, s already: on a parabola f′ is a straight line, so c is the middle, \${this.fx(m)}.\`;
+    const up=this.bend(i)>0;
+    return \`\${head}. f″ = \${this.poly(this.d2(i))} is \${up?'above':'below'} 0 here, so f′ \${up?'climbs':'falls'}, and it must \${s>fm?'rise':'fall'} from \${this.fx(fm)} to \${this.fx(s)}: c is \${this.WORD[t]}, c \${this.cs(i)}.\`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const md=this.mids(), dn=this.downs(), fl=this.falls();
+      if(md.length){ const i=md[0];
+        out.push(\`In \${this.L[i]}, f(x) = \${this.poly(this.Q(i).k)} is a parabola: f′ = \${this.poly(this.d1(i))} is a straight line, so its value at the middle is the chord's slope, \${this.fx(this.s(i))}, and c = \${this.fx(this.m(i))} sits exactly half way.\`); }
+      if(dn.length){ const i=dn[0], fm=this.fp(i,this.m(i));
+        out.push(\`In \${this.L[i]}, f bends down, f″ = \${this.poly(this.d2(i))} below 0, so f′ falls as x grows: the rule turns round, and with f′(\${this.fx(this.m(i))}) = \${this.fx(fm)} \${fm>this.s(i)?'above':'below'} the chord's \${this.fx(this.s(i))}, c \${this.cs(i)} is \${this.WORD[this.truth(i)]}.\`); }
+      if(fl.length){ const i=fl[0];
+        out.push(\`In \${this.L[i]}, the chord falls, slope \${this.fx(this.s(i))}, yet the rule is the same: f′(\${this.fx(this.m(i))}) = \${this.fx(this.fp(i,this.m(i)))} against it puts c \${this.cs(i)} \${this.WORD[this.truth(i)]}.\`); }
+      out.push(\`Each c against its middle: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.fx(Math.round(this.c(i)*100)/100)} against \${this.fx(this.m(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const {k,a,b}=this.Q(i);
+        out.push(\`In \${this.L[i]}, f(x) = \${this.poly(k)} on [\${this.fx(a)}, \${this.fx(b)}]: \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: f across [a, b] in blue, its chord dashed between the two
+     ends, and the middle m dashed straight up, with a, m and b along the
+     bottom. Once the round is right, the tangent at c is drawn in gold
+     through a gold point, with c written in and the side it falls on. */
+  svg(){
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with its chord and its middle: \${[0,1,2,3].map(i=>{ const {k,a,b}=this.Q(i); return \`\${this.L[i]}, f(x) = \${this.poly(k)} on \${this.fx(a)} to \${this.fx(b)}\`; }).join('; ')}\${this.solved?', each with its tangent at c drawn':''}">\`;
+    for(let i=0;i<4;i++){
+      const {k,a,b}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, g=v=>v.toFixed(2);
+      let lo=Infinity, hi=-Infinity; const xs=[];
+      for(let j=0;j<=48;j++){ const x=a+(b-a)*j/48, y=this.f(i,x); xs.push([x,y]); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+      const px=x=>X+14+(x-a)/(b-a)*152, py=y=>Y+112-(y-lo)/(hi-lo)*70, m=this.m(i);
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.b}" font-size="12" text-anchor="end">f = \${this.poly(k)}</text>\`;
+      out+=\`<line data-k="mid" x1="\${g(px(m))}" y1="\${Y+38}" x2="\${g(px(m))}" y2="\${Y+114}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="2 3"/>\`;
+      for(const [x,w] of [[a,'start'],[m,'middle'],[b,'end']]) out+=\`<text data-k="tick" x="\${g(px(x))}" y="\${Y+124}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="\${w}">\${this.fx(x)}</text>\`;
+      out+=\`<polyline data-k="curve" points="\${xs.map(([x,y])=>\`\${g(px(x))},\${g(py(y))}\`).join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+      out+=\`<line data-k="chord" x1="\${g(px(a))}" y1="\${g(py(this.f(i,a)))}" x2="\${g(px(b))}" y2="\${g(py(this.f(i,b)))}" stroke="\${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="4 4"/>\`;
+      for(const x of [a,b]) out+=\`<circle cx="\${g(px(x))}" cy="\${g(py(this.f(i,x)))}" r="2.5" fill="\${FIG_COL.dim}"/>\`;
+      if(this.solved){ const t=this.truth(i), c=this.c(i), y=this.f(i,c), s=this.s(i), h=(b-a)*0.18;
+        const t1=Math.max(a,c-h), t2=Math.min(b,c+h);
+        out+=\`<line data-k="tan" x1="\${g(px(t1))}" y1="\${g(py(y+s*(t1-c)))}" x2="\${g(px(t2))}" y2="\${g(py(y+s*(t2-c)))}" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+        out+=\`<circle data-k="cpt" cx="\${g(px(c))}" cy="\${g(py(y))}" r="3.5" fill="\${FIG_COL.a}"/>\`;
+        out+=\`<text data-k="cval" x="\${X+172}" y="\${Y+35}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">c \${this.cs(i)}</text>\`;
+        out+=\`<text data-k="\${{1:'right',0:'middle',[-1]:'left'}[t]}" x="\${X+26}" y="\${Y+21}" fill="\${FIG_COL.c}" font-size="12" font-weight="700">\${{1:'right ▶',0:'= middle',[-1]:'◀ left'}[t]}</text>\`; }
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    MeanValue.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    MeanValue.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; MeanValue.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="ChordTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each with its chord and its middle. Is c, where the tangent runs parallel to the chord, left of the middle, at it, or right of it?</div>\`;
+    out+=\`<div id="cdtFig">\${this.svg()}<div class="figcap">Each pane draws f in blue across [a, b], the chord dashed between the ends and the middle dashed straight up. Once all four are called right, the tangent at c is drawn in gold with c written in.</div></div>\`;
+    out+=\`<div id="cdtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null, {k,a,b}=this.Q(i);
+      return \`<div class="cdtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span style="font-weight:400;font-size:12px;color:var(--ink)">\${this.poly(k)} on [\${this.fx(a)}, \${this.fx(b)}]</span></b>\`+
+        this.btn(i,-1,'◀ Left')+this.btn(i,0,'= Middle')+this.btn(i,1,'Right ▶')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="cdtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cdtNext" onclick="ChordTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cdtCheck" \${this.ready()?'':'disabled '}onclick="ChordTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="cdtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cdtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MIDDLE READER','every c placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which c? The chord workshop turned round ----------
    A curve f on [a, b] is drawn with its chord, and four numbers offered, one
    of them the c strictly between a and b where the tangent runs parallel to
@@ -37908,11 +38096,11 @@ const MeanValue = {
   move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.touched=true; this.render(); },
   again(){ this.k=this.set().k0; this.prev=null; this.touched=true; this.render(); },
   render(){
-    document.getElementById('mvtTab').innerHTML=[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c']]
+    document.getElementById('mvtTab').innerHTML=[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c'],['turn','⚖️ Left or right?','See four curves with their chords, and call whether each c lies left of the middle, at it, or right']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="MeanValue.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['mvtSets','mvtFig','mvtMoveRow','mvtRead','mvtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';
+    document.getElementById('mvpBox').innerHTML=!pick ? '' : this.tab==='pick' ? ChordPick.html() : ChordTurn.html();
     if(pick) return;
     document.getElementById('mvtSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="MeanValue.pick(\${i})" aria-label="f(x) = \${s.name}">\${s.btn}</button>\`).join('');
