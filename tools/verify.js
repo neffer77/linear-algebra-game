@@ -17983,6 +17983,179 @@ const antiTurnNotes = (() => {
   if (env.banners.join() !== 'SLOPE WEIGHER / every F weighed') fail('antiturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Sign or size? The trig integral workshop's third mode, worked again from
+   scratch: every guess's slope found by nudging x across a whole turn, with
+   no chain rule at all, and set against f to see how many f's it makes;
+   every number on screen a simple fraction; every call and every readout, a
+   slip on every pane both other ways, each pane read back with f before and
+   F′ over it after, and the hunt for every goal. */
+const trigTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const S = new Function('env', 'COL',
+    "const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TrigInt = {render(){ env.renders++; }};" +
+    cut('const TrigTurn = {', '/* ---------- Which c? The trig integral workshop turned round ----------') + 'return TrigTurn;')(env, COL);
+  const L = 'ABCD';
+  const WD = { 1: 'right', [-1]: 'flipped', 0: 'the wrong size' };
+  const NAME = { 1: 'F is right', [-1]: 'F has its sign flipped', 0: 'F has its size off' };
+  const MARK = { 1: 'right ✓ right', [-1]: 'flip ± flipped', 0: 'size × size off' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // a number as it is written: whole, or over 2, 3, 4, 6 or 8, with a true minus
+  const fr = v => { for (const d of [1, 2, 3, 4, 6, 8]) { const n = Math.round(Math.abs(v) * d); if (Math.abs(Math.abs(v) * d - n) < 1e-9) return (v < 0 ? '−' : '') + (d === 1 ? n : `${n}/${d}`); } return null; };
+  const par = v => (v < 0 || !Number.isInteger(v) ? `(${fr(v)})` : fr(v));
+  const kx = k => (k === 1 ? 'x' : k === 0.5 ? 'x/2' : `${fr(k)}x`);
+  const wave = (c, g, k) => (c === 1 ? '' : c === -1 ? '−' : Number.isInteger(c) ? fr(c) : `(${fr(c)})`) + `${g}(${kx(k)})`;
+  const XS = Array.from({ length: 97 }, (_, j) => 2 * Math.PI * j / 96);
+  const work = ri => S.ROUNDS[ri].map(q => {
+    const key = `round ${ri + 1}`;
+    const [g, a, k, c] = q, G = g === 'cos' ? 'sin' : 'cos';
+    if (q.length !== 4 || !['sin', 'cos'].includes(g) || [a, k, c].some(v => typeof v !== 'number' || !isFinite(v))) fail('trigturn', key, `${JSON.stringify(q)} is not a wave and a guess`);
+    if (![a, k, c].every(v => fr(v) !== null)) fail('trigturn', key, `${JSON.stringify(q)} has a number that is not a simple fraction`);
+    if (!a || !c || !(k > 0)) fail('trigturn', key, `${JSON.stringify(q)} has a 0 in front or no k inside`);
+    const f = u => a * Math[g](k * u), F = u => c * Math[G](k * u), h = 1e-5;
+    // F′ by nudging, across a whole turn, as a number of f's
+    const Fp = u => (F(u + h) - F(u - h)) / (2 * h);
+    const top = XS.reduce((b, u) => (Math.abs(f(u)) > Math.abs(f(b)) ? u : b), XS[1]);
+    const r = Fp(top) / f(top);
+    if (XS.some(u => Math.abs(Fp(u) - r * f(u)) > 1e-4 * Math.max(1, Math.abs(a * r)))) fail('trigturn', key, `the slope of F = ${wave(c, G, k)} is not a steady number of f's, so the wave is not swapped right`);
+    const rr = Math.round(r * 24) / 24;
+    if (Math.abs(rr - r) > 1e-5 || fr(rr) === null) fail('trigturn', key, `the slope of F = ${wave(c, G, k)} is ${r} f's, not a simple fraction`);
+    if (rr < 0 && rr !== -1) fail('trigturn', key, `the slope of F = ${wave(c, G, k)} is ${fr(rr)} f's: both flipped and the wrong size`);
+    const t = rr === 1 ? 1 : rr === -1 ? -1 : 0;
+    const fs = wave(a, g, k), Fs = wave(c, G, k);
+    const sl = G === 'sin' ? `F′ = ${par(c)} · ${par(k)} · cos(${kx(k)}) = ${wave(c * k, 'cos', k)}` : `F′ = −${par(c)} · ${par(k)} · sin(${kx(k)}) = ${wave(-c * k, 'sin', k)}`;
+    const times = rr === 1 ? 'exactly f' : rr === -1 ? 'minus f' : `${fr(rr)} × f`;
+    const why = `${sl}, which is ${times}: ${t === 1 ? 'F is right.' : t === -1 ? 'its sign is flipped.' : 'its size is off.'}`;
+    return { g, a, k, c, G, f, Fp, r: rr, t, fs, Fs, sl, times, why,
+      sine: g === 'sin' && t === 1, half: k === 0.5, mult: Math.abs(c - (g === 'cos' ? 1 : -1) * a * k) < 1e-12 };
+  });
+  if (S.ROUNDS.length !== 6) fail('trigturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('trigturn', key, `it holds ${Q.length} guesses, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('trigturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.truth(i) !== w.t) fail('trigturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.fs(i) !== w.fs || S.Fs(i) !== w.Fs || S.times(i) !== w.times) fail('trigturn', key, `${L[i]} is written f = ${S.fs(i)}, F = ${S.Fs(i)}, F′ = ${S.times(i)}, not ${w.fs}, ${w.Fs}, ${w.times}`);
+      if (S.fr(S.ratio(i)) !== fr(w.r)) fail('trigturn', key, `${L[i]}'s F′ is told as ${S.fr(S.ratio(i))} f's, not ${fr(w.r)}`);
+    });
+    if (new Set(truth).size < 3) fail('trigturn', key, 'it does not hold all three calls');
+    const sn = [], hf = [], mu = [];
+    W.forEach((w, i) => { if (w.sine) sn.push(i); if (w.half) hf.push(i); if (w.mult) mu.push(i); });
+    mu.forEach(i => { if (W[i].t !== 0 || Math.abs(W[i].r - W[i].k ** 2) > 1e-9) fail('trigturn', key, `${L[i]} multiplies by k yet its slope is not k² f's`); });
+    const tags = [sn.length ? 'sine' : null, hf.length ? 'half' : null, mu.length ? 'mult' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('trigturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('trigturn', key, 'it does not hold a right F for a sine, a wave with 1/2 inside, and a guess that multiplied by k');
+    // every guess called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, -1, 0]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f = ${w.fs} and F = ${w.Fs}: ${w.why} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('trigturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(slope|ratio|right|flip|size)"/.test(svg)) fail('trigturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or F′ is given away`);
+        if (S.solved || S.streak) fail('trigturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('trigturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('trigturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('trigturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // the panes before anything is called: f alone, through its own values
+    reset(); S.ri = ri;
+    const pts = (pg, k) => (pg.match(new RegExp(`data-k="${k}" points="([^"]*)"`)) || [, ''])[1].split(' ').filter(Boolean).map(p => p.split(',').map(Number));
+    const near = (p, q, e = 0.011) => Math.abs(p - q) < e;
+    const frame = (fs, X, Y) => { let big = 0; for (const F of fs) for (const u of XS) big = Math.max(big, Math.abs(F(u)));
+      return { px: u => X + 14 + u / (2 * Math.PI) * 152, py: v => Y + 83 - v / big * 31 }; };
+    const inPane = (p, X, Y) => p.every(([u, v]) => u >= X + 3 && u <= X + 177 && v >= Y + 3 && v <= Y + 127);
+    const pre = S.svg().split('data-k="pane"').slice(1);
+    W.forEach((w, i) => {
+      const pg = pre[i] || '', X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, fm = frame([w.f], X, Y), p = pts(pg, 'target');
+      if (p.length !== 97 || p.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j])))) || !inPane(p, X, Y)) fail('trigturn', key, `${L[i]}'s f is not drawn through its own values`);
+      if (/data-k="(slope|ratio|right|flip|size)"/.test(pg)) fail('trigturn', key, `${L[i]} shows F′ before it is called`);
+      if (!pg.includes(`>f = ${w.fs}</text>`) || !pg.includes(`>F = ${w.Fs}</text>`)) fail('trigturn', key, `${L[i]}'s f and F are not written in`);
+    });
+    // all four right on the first check, called with the buttons
+    if (!/id="tqtCheck" disabled /.test(S.html())) fail('trigturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="tqtCheck" disabled /.test(S.html())) fail('trigturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('trigturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="TrigTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('trigturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`TrigTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('trigturn', key, `${L[i]} does not offer right, flipped and the wrong size`);
+    });
+    if (S.calls.join() !== truth.join()) fail('trigturn', key, 'the buttons cannot make the right calls');
+    if (/id="tqtCheck" disabled /.test(S.html())) fail('trigturn', key, 'the check stays shut with every guess called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    // each explanation on its own guess where the round allows: the half picked first, then the multiplied one, then the sine
+    const used = [], pick = l => { const i = l.find(j => !used.includes(j)) ?? l[0]; used.push(i); return i; };
+    const ih = pick(hf), im = pick(mu), is = pick(sn);
+    if (new Set([ih, im, is]).size !== 3) fail('trigturn', key, 'the half, the multiplied guess and the sine cannot each be told on a guess of its own');
+    { const w = W[is]; want.push(`In ${L[is]}, f is a sine, so F is a cosine, and the slope of cos carries a minus: ${w.sl}. F's own minus cancels it, and F is right.`); }
+    { const w = W[ih]; want.push(`In ${L[ih]}, the k inside is 1/2, and dividing by 1/2 doubles: ${w.sl}, which is ${w.times}${w.t === 1 ? '.' : w.t === -1 ? ', the size doubled right but the sign flipped.' : ', so the size is off.'}`); }
+    { const w = W[im]; want.push(`In ${L[im]}, F multiplies by the k inside, ${fr(w.k)}, instead of dividing: ${w.sl}, which is ${w.times}, k² times too ${w.k > 1 ? 'big' : 'small'}.`); }
+    want.push(`Each F′ against f: ${W.map((w, i) => `${L[i]} ${fr(w.r)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('trigturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes once called: F′ in green over f, both through their own values, F′ found by nudging F
+    const parts = S.svg().split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('trigturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, Fp = w.Fp;
+      const fm = frame([w.f, Fp], X, Y);
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('trigturn', key, `${L[i]}'s pane is out of place`);
+      const pf = pts(pg, 'target'), ps = pts(pg, 'slope');
+      if (pf.length !== 97 || pf.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j]))))) fail('trigturn', key, `${L[i]}'s f is not redrawn on the shared scale`);
+      if (ps.length !== 97 || ps.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(Fp(XS[j])), 0.02)) || !inPane(ps, X, Y)) fail('trigturn', key, `${L[i]}'s F′ is not drawn as the slope of F`);
+      if (!pg.includes(`data-k="ratio" x="${X + 172}" y="${Y + 47}" fill="green" font-size="11" text-anchor="end">F′ = ${w.times}</text>`)) fail('trigturn', key, `${L[i]}'s F′ is not written in as ${w.times}`);
+      panes++;
+    });
+    const marks = [...S.svg().matchAll(/data-k="(right|flip|size)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('trigturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="tqtNext"') || /onclick="TrigTurn\.call/.test(hh.replace(/disabled onclick="TrigTurn\.call/g, ''))) fail('trigturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('trigturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('trigturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('trigturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,half,mult,sine'], [false, 'fix,half,mult,one,sine'], [false, 'fix,half,mult,one,sine'], [false, 'fix,half,mult,one,sine,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('trigturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ The minus kept · Halved inside, doubled out · Multiplied, not divided · A slip caught and fixed | ✓ Right on the first check') fail('trigturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'WAVE UNWINDER / every F unwound') fail('trigturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -25489,6 +25662,7 @@ console.log(`  diagonals weighed ${pad(arrowTurnNotes.checks.toLocaleString(), 1
 console.log(`  every c placed    ${pad(chordTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves whose c is called left of the middle, at it or right of it in the chord workshop, ${chordTurnNotes.wrongs} of them with one called wrong and caught, and ${chordTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  every slope signed${pad(quotTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions y = f/g called rising, flat or falling at a point in the quotient rule workshop, ${quotTurnNotes.wrongs} of them with one called wrong and caught, and ${quotTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  every F weighed   ${pad(antiTurnNotes.checks.toLocaleString(), 12)}  (checks of four guesses F called too steep, right or too shallow for their f in the antiderivative workshop, ${antiTurnNotes.wrongs} of them with one called wrong and caught, and ${antiTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  every F unwound   ${pad(trigTurnNotes.checks.toLocaleString(), 12)}  (checks of four guesses F called right, flipped or the wrong size for their wave f in the trig integral workshop, ${trigTurnNotes.wrongs} of them with one called wrong and caught, and ${trigTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
