@@ -1,68 +1,68 @@
 {
-  "change": "Add a Sign or size mode to the trig integral workshop",
+  "change": "Add a Bestiary of every campaign foe",
   "mutations": [
     {
-      "name": "the slope of cos loses its minus",
+      "name": "a beaten foe stays a shadow",
       "file": "index.html",
-      "find": "return (G==='sin' ? c*k : -c*k)/a; },",
-      "replace": "return (c*k)/a; },",
+      "find": "beaten:!!(g.cleared&&g.cleared[ri+':'+fi])})));",
+      "replace": "beaten:false})));",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the shadow keeps its colours",
+      "file": "index.html",
+      "find": "    if(!known){ o.globalCompositeOperation='source-in';",
+      "replace": "    if(false){ o.globalCompositeOperation='source-in';",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the scene canvas is left at the portrait's size",
+      "file": "index.html",
+      "find": "    cv.width=w0; cv.height=h0; fitCanvas();\n",
+      "replace": "",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "a shadow gives its name away",
+      "file": "index.html",
+      "find": "          : `<div style=\"font-weight:800;opacity:.6\">${f.boss?'👑 ':''}???</div>",
+      "replace": "          : `<div style=\"font-weight:800;opacity:.6\">${f.boss?'👑 ':''}${f.nm}</div>",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "fighting again starts the realm's first foe",
+      "file": "index.html",
+      "find": "onclick=\"Battle.begin(${ri},${fi})\" aria-label=\"Fight ${f.nm} again\"",
+      "replace": "onclick=\"Battle.begin(${ri},0)\" aria-label=\"Fight ${f.nm} again\"",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the count leaves out the last realm",
+      "file": "index.html",
+      "find": "return REALMS.flatMap((r,ri)=>r.foes.map(",
+      "replace": "return REALMS.slice(0,-1).flatMap((r,ri)=>r.foes.map(",
       "run": "verify"
     },
     {
-      "name": "the k inside divides the slope",
+      "name": "a realm names its topics by their keys",
       "file": "index.html",
-      "find": "return (G==='sin' ? c*k : -c*k)/a; },\n  times(i)",
-      "replace": "return (G==='sin' ? c/k : -c/k)/a; },\n  times(i)",
+      "find": "return [...new Set(r.pool.map(k=>TOPIC_LABEL[k]||k))];",
+      "replace": "return [...new Set(r.pool)];",
       "run": "verify"
     },
     {
-      "name": "right and flipped are swapped",
+      "name": "a tale goes missing",
       "file": "index.html",
-      "find": "return Math.abs(r-1)<1e-9 ? 1 : Math.abs(r+1)<1e-9 ? -1 : 0; },",
-      "replace": "return Math.abs(r-1)<1e-9 ? -1 : Math.abs(r+1)<1e-9 ? 1 : 0; },",
+      "find": "   \"Riemann Shade\": \"It builds itself out of thin strips and grows truer the thinner they get.\",\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "any sine counts as the minus kept",
+      "name": "a stagger lets the wind-up start again at once",
       "file": "index.html",
-      "find": "filter(i=>this.Q(i).g==='sin' && this.truth(i)===1); },",
-      "replace": "filter(i=>this.Q(i).g==='sin'); },",
-      "run": "verify"
-    },
-    {
-      "name": "a multiplied guess is looked for without its sign",
-      "file": "index.html",
-      "find": "return c===(g==='cos'?1:-1)*a*k; }); },",
-      "replace": "return c===a*k; }); },",
-      "run": "verify"
-    },
-    {
-      "name": "x/2 is written as 2x",
-      "file": "index.html",
-      "find": "k===0.5 ? 'x/2' : `${this.fr(k)}x`; },",
-      "replace": "k===0.5 ? '2x' : `${this.fr(k)}x`; },",
-      "run": "verify"
-    },
-    {
-      "name": "F′ is drawn before the round is right",
-      "file": "index.html",
-      "find": "if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "replace": "if(true) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "run": "verify"
-    },
-    {
-      "name": "F′ is drawn without its k inside",
-      "file": "index.html",
-      "find": "curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "replace": "curves.push(['slope',xs.map(u=>m*a*W(u))",
-      "run": "verify"
-    },
-    {
-      "name": "a call still moves once the round is right",
-      "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
-      "run": "verify"
+      "find": "    } else if(!staggered && ++this.charge >= this.chargeMax){",
+      "replace": "    } else if(++this.charge >= this.chargeMax){",
+      "run": "play:phase"
     }
   ]
 }
