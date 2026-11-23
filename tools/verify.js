@@ -14274,6 +14274,152 @@ const impTurnNotes = (() => {
   if (env.banners.join() !== 'TRUE TANGENT / every tangent called') fail('impturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, tangents };
 })();
+const gramTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Gram = {render(){ env.renders++; }};" +
+    cut('const GramTurn = {', 'const Gram = {') + 'return GramTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const par = n => (n < 0 ? `(${neg(n)})` : neg(n));
+  const vec = p => `⟨${neg(p[0])}, ${neg(p[1])}⟩`;
+  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+  const red = (p, q) => { const k = gcd(Math.abs(p), q) || 1; return q / k === 1 ? neg(p / k) : `${neg(p / k)}/${q / k}`; };
+  const WD = { 1: 'too low', 0: 'just right', [-1]: 'too high' };
+  const NAME = { 1: 'c is too low', 0: 'c is just right', [-1]: 'c is too high' };
+  const MARK = { 1: 'low', 0: 'right', [-1]: 'high' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // each pair worked afresh: w taken away by hand, then measured against u₁
+  const work = ri => S.ROUNDS[ri].map(([u, v, c]) => {
+    const w = [v[0] - c * u[0], v[1] - c * u[1]], wu = w[0] * u[0] + w[1] * u[1], dp = v[0] * u[0] + v[1] * u[1], nn = u[0] * u[0] + u[1] * u[1];
+    return { u, v, c, w, wu, dp, nn, t: Math.sign(wu) };
+  });
+  if (S.ROUNDS.length !== 6) fail('gramturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, arrows = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('gramturn', key, `it holds ${P.length} pairs, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = JSON.stringify(P[i]); if (seen.has(s)) fail('gramturn', key, `${L[i]} comes round twice`); seen.add(s);
+      if (![...w.u, ...w.v].every(Number.isInteger) || !Number.isInteger(w.c * 2) || !w.nn) fail('gramturn', key, `${L[i]} is not whole arrows with c in halves`);
+      if (Math.abs(w.wu - (w.dp - w.c * w.nn)) > 1e-9) fail('gramturn', key, `${L[i]}: w · u₁ is not u₂ · u₁ − c × (u₁ · u₁)`);
+      if ([...w.u, ...w.v, ...w.w, w.c * w.u[0], w.c * w.u[1]].some(n => Math.abs(n) > 4.6)) fail('gramturn', key, `${L[i]}'s arrows run out of their pane`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('gramturn', key, `its pairs are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('gramturn', key, 'every pair is called the same');
+    // what the round holds, found afresh
+    const co = [], ba = [], ze = [];
+    W.forEach((w, i) => { if (w.t === -1 && w.c < w.dp) co.push(i); if (w.dp < 0) ba.push(i); if (w.dp === 0) ze.push(i); });
+    const tags = [co.length ? 'cost' : null, ba.length ? 'back' : null, ze.length ? 'zero' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('gramturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every pair called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      const how = w.t > 0 ? 'more than 0, so w still leans along u₁ and c is too low'
+        : w.t < 0 ? 'less than 0, so w leans back against u₁ and c is too high'
+        : 'w stands at a right angle to u₁, so c is just right';
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, u₂ · u₁ = ${par(w.v[0])} × ${par(w.u[0])} + ${par(w.v[1])} × ${par(w.u[1])} = ${neg(w.dp)} and u₁ · u₁ = ${w.nn}, so w · u₁ = ${neg(w.dp)} − ${par(w.c)} × ${w.nn} = ${neg(w.wu)}: ${how}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('gramturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(w|cu|low|right|high)"/.test(svg)) fail('gramturn', key, `with ${L[i]} wrong, the wrong pair is not ringed alone or w is given away`);
+        if (S.solved || S.streak) fail('gramturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('gramturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('gramturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('gramturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="gtCheck" disabled /.test(S.html())) fail('gramturn', key, 'the check is open before the pairs are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="gtCheck" disabled /.test(S.html())) fail('gramturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('gramturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="GramTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('gramturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`GramTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('gramturn', key, `${L[i]} does not offer low, right and high`);
+    });
+    if (S.calls.join() !== truth.join()) fail('gramturn', key, 'the buttons cannot make the right calls');
+    if (/id="gtCheck" disabled /.test(S.html())) fail('gramturn', key, 'the check stays shut with every pair called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (co.length) { const w = W[co[0]]; want.push(`In ${L[co[0]]}, c = ${neg(w.c)} is smaller than u₂ · u₁ = ${w.dp}, yet it is too high: each copy takes away u₁ · u₁ = ${w.nn}, not 1.`); }
+    if (ba.length) { const w = W[ba[0]]; want.push(`In ${L[ba[0]]}, u₂ · u₁ = ${neg(w.dp)} is below 0: u₂’s shadow points back along u₁, so the right c, ${red(w.dp, w.nn)}, is below 0 too.`); }
+    if (ze.length) want.push(`In ${L[ze[0]]}, u₂ · u₁ = 0: u₂ casts no shadow on u₁, so the right c is 0.`);
+    want.push(`The right c, (u₂ · u₁)/(u₁ · u₁), for each: ${W.map((w, i) => `${L[i]} ${red(w.dp, w.nn)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('gramturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: every arrow from its pane's origin, to one scale, and w the gap from c·u₁ to u₂, square to u₁ just when c is right
+    const svg = S.svg();
+    const segs = k => [...svg.matchAll(new RegExp(`data-k="${k}" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"`, 'g'))].map(m => m.slice(1).map(Number));
+    const s1 = segs('u1'), s2 = segs('u2'), sc = segs('cu'), sw = segs('w');
+    const nc = W.filter(w => w.c !== 0).length, nw = W.filter(w => w.w[0] || w.w[1]).length;
+    if (s1.length !== 4 || s2.length !== 4 || sc.length !== nc || sw.length !== nw) fail('gramturn', key, `not every pair has u₁, u₂, c·u₁ and w drawn (${s1.length}, ${s2.length}, ${sc.length}, ${sw.length})`);
+    else {
+      let ci = 0, wi = 0;
+      W.forEach((w, i) => {
+        const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, o = s1[i].slice(0, 2), k = 11;
+        const tip = s => [(s[2] - o[0]) / k, (o[1] - s[3]) / k];
+        const near = (a, b) => Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01;
+        if (Math.abs(o[0] - (X + 90)) > 0.01 || Math.abs(o[1] - (Y + 70)) > 0.01) fail('gramturn', key, `${L[i]}'s origin is not in the middle of its pane`);
+        const all = [s1[i], s2[i]];
+        if (!near(tip(s1[i]), w.u) || !near(tip(s2[i]), w.v) || s2[i][0] !== o[0] || s2[i][1] !== o[1]) fail('gramturn', key, `${L[i]}'s u₁ or u₂ is not drawn from the origin to scale`);
+        if (w.c !== 0) { const s = sc[ci++]; all.push(s); if (!near(tip(s), [w.c * w.u[0], w.c * w.u[1]])) fail('gramturn', key, `${L[i]}'s c copies of u₁ are not c × u₁`); }
+        if (w.w[0] || w.w[1]) { const s = sw[wi++], t = tip(s); all.push(s);
+          if (!near([t[0] + w.c * w.u[0], t[1] + w.c * w.u[1]], w.v)) fail('gramturn', key, `${L[i]}'s w does not close the gap from c·u₁ to u₂`);
+          const d = t[0] * w.u[0] + t[1] * w.u[1];
+          if ((Math.abs(d) < 0.01) !== (w.t === 0) || Math.sign(Math.round(d * 100)) !== w.t) fail('gramturn', key, `${L[i]}'s w, read off the drawing, leans the wrong way against u₁`); }
+        if (all.some(s => [s[0], s[2]].some(x => x < X + 4 || x > X + 176) || [s[1], s[3]].some(y => y < Y + 4 || y > Y + 126))) fail('gramturn', key, `${L[i]}'s arrows run out of their pane`);
+        arrows++;
+      });
+    }
+    const marks = [...svg.matchAll(/data-k="(low|right|high)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => `${MARK[w.t]} w · u₁ = ${neg(w.wu)}`).join()) fail('gramturn', key, `the panes are marked ${marks.join()}`);
+    const cs = [...svg.matchAll(/data-k="c"[^>]*>([^<]*)</g)].map(m => m[1]);
+    if (cs.join() !== W.map(w => `c = ${neg(w.c)}`).join()) fail('gramturn', key, `the panes are labelled ${cs.join()}`);
+    if (!svg.includes(`u₁ ${vec(W[0].u)}</tspan> <tspan fill="blue">u₂ ${vec(W[0].v)}`)) fail('gramturn', key, 'A does not name its arrows');
+    const hh = S.html();
+    if (!hh.includes('id="gtNext"') || /onclick="GramTurn\.call/.test(hh.replace(/disabled onclick="GramTurn\.call/g, ''))) fail('gramturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('gramturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('gramturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('gramturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 0 ? 1 : 0;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'cost,fix,zero'], [false, 'back,cost,fix,one,zero'], [false, 'back,cost,fix,one,zero'], [false, 'back,cost,fix,one,three,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('gramturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Each copy costs u₁ · u₁ · No shadow at all · A slip caught and fixed | ✓ Right on the first check · A shadow that points backward') fail('gramturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SHADOW TAKER / every c called') fail('gramturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, arrows };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21758,6 +21904,7 @@ console.log(`  spans called      ${pad(spanTurnNotes.checks.toLocaleString(), 12
 console.log(`  arrows called     ${pad(eigTurnNotes.checks.toLocaleString(), 12)}  (checks of four arrows called kept, turned round or knocked off in the eigenvector hunt, ${eigTurnNotes.wrongs} of them with one arrow called wrong and caught, and ${eigTurnNotes.drawn} arrows drawn beside where their matrix sends them)`);
 console.log(`  nights called     ${pad(castleTurnNotes.checks.toLocaleString(), 12)}  (checks of four castle pairs called gaining, holding or losing in the two castles workshop, ${castleTurnNotes.wrongs} of them with one castle called wrong and caught, and ${castleTurnNotes.nights} next nights drawn to the same scale as tonight)`);
 console.log(`  ways called       ${pad(impTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves' tangents called rising, falling, flat or upright in the implicit slope workshop, ${impTurnNotes.wrongs} of them with one tangent called wrong and caught, and ${impTurnNotes.tangents} tangents read back off the drawing along y′)`);
+console.log(`  shadows called    ${pad(gramTurnNotes.checks.toLocaleString(), 12)}  (checks of four c's called too low, just right or too high in the Gram–Schmidt workshop, ${gramTurnNotes.wrongs} of them with one c called wrong and caught, and ${gramTurnNotes.arrows} pairs whose u₁, u₂, c·u₁ and w are read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

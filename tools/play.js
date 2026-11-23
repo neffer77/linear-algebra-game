@@ -139,6 +139,7 @@ const SUITES = [
   require('./play/nullpick'), // see a flat A, pick which of four arrows it crushes
   require('./play/kermatch'), // see four flat matrices and four arrows, and match each matrix to the arrow it crushes
   require('./play/grampick'), // see u₁ and u₂, pick which of four numbers is c
+  require('./play/gramturn'), // see four pairs of arrows with a c each, call each c too low, just right or too high
   require('./play/cofpick'), // see a 3×3 matrix, pick which of four numbers is det A
   require('./play/elimpick'), // see two rows, pick which of four numbers k clears x
   require('./play/hoppick'), // see a 0/0 ratio, pick which of four numbers is its limit
