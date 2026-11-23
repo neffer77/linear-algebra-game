@@ -1,68 +1,75 @@
 {
-  "change": "Add a Sign or size mode to the trig integral workshop",
+  "change": "Add elite rematches: a beaten foe comes back with one twist",
   "mutations": [
     {
-      "name": "the slope of cos loses its minus",
+      "name": "the armour cracks on a streak of two",
       "file": "index.html",
-      "find": "return (G==='sin' ? c*k : -c*k)/a; },",
-      "replace": "return (c*k)/a; },",
+      "find": "    if(B.combo>=3){ B.armour=0;",
+      "replace": "    if(B.combo>=2){ B.armour=0;",
       "run": "verify"
     },
     {
-      "name": "the k inside divides the slope",
+      "name": "the armour lets a third through, not half",
       "file": "index.html",
-      "find": "return (G==='sin' ? c*k : -c*k)/a; },\n  times(i)",
-      "replace": "return (G==='sin' ? c/k : -c/k)/a; },\n  times(i)",
+      "find": "    return Math.max(1, Math.round(dmg/2));\n  }\n};",
+      "replace": "    return Math.max(1, Math.round(dmg/3));\n  }\n};",
       "run": "verify"
     },
     {
-      "name": "right and flipped are swapped",
+      "name": "a frenzied elite keeps the elite's full health",
       "file": "index.html",
-      "find": "return Math.abs(r-1)<1e-9 ? 1 : Math.abs(r+1)<1e-9 ? -1 : 0; },",
-      "replace": "return Math.abs(r-1)<1e-9 ? -1 : Math.abs(r+1)<1e-9 ? 1 : 0; },",
+      "find": "const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));",
+      "replace": "const hp=Math.round(foe.hp*1.25);",
       "run": "verify"
     },
     {
-      "name": "any sine counts as the minus kept",
+      "name": "a first meeting can come back elite",
       "file": "index.html",
-      "find": "filter(i=>this.Q(i).g==='sin' && this.truth(i)===1); },",
-      "replace": "filter(i=>this.Q(i).g==='sin'); },",
+      "find": "    if(!beaten || !R.chance(this.CHANCE)) return foe;",
+      "replace": "    if(!R.chance(this.CHANCE)) return foe;",
       "run": "verify"
     },
     {
-      "name": "a multiplied guess is looked for without its sign",
+      "name": "a forced twist is never spent",
       "file": "index.html",
-      "find": "return c===(g==='cos'?1:-1)*a*k; }); },",
-      "replace": "return c===a*k; }); },",
+      "find": "    if(this.force){ const k=this.force; this.force=null; return this.make(foe, k); }",
+      "replace": "    if(this.force){ const k=this.force; return this.make(foe, k); }",
       "run": "verify"
     },
     {
-      "name": "x/2 is written as 2x",
+      "name": "every foe counts as already beaten",
       "file": "index.html",
-      "find": "k===0.5 ? 'x/2' : `${this.fr(k)}x`; },",
-      "replace": "k===0.5 ? '2x' : `${this.fr(k)}x`; },",
-      "run": "verify"
+      "find": "    this._start(Elite.roll(this.realm.foes[fi], !!(Game.s && Game.s.cleared[ri+':'+fi])));",
+      "replace": "    this._start(Elite.roll(this.realm.foes[fi], true));",
+      "run": "play:elite"
     },
     {
-      "name": "F′ is drawn before the round is right",
+      "name": "a swift elite winds up no sooner",
       "file": "index.html",
-      "find": "if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "replace": "if(true) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "run": "verify"
+      "find": "- (f.elite==='swift'?1:0));",
+      "replace": "- 0);",
+      "run": "play:elite"
     },
     {
-      "name": "F′ is drawn without its k inside",
+      "name": "the armour is never put on",
       "file": "index.html",
-      "find": "curves.push(['slope',xs.map(u=>m*a*W(k*u))",
-      "replace": "curves.push(['slope',xs.map(u=>m*a*W(u))",
-      "run": "verify"
+      "find": "    this.armour = f.elite==='armoured' ? 1 : 0;",
+      "replace": "    this.armour = 0;",
+      "run": "play:elite"
     },
     {
-      "name": "a call still moves once the round is right",
+      "name": "a vampiric elite drinks nothing",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
-      "run": "verify"
+      "find": "    if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
+      "replace": "    if(false && this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
+      "run": "play:elite"
+    },
+    {
+      "name": "an elite pays like a rematch",
+      "file": "index.html",
+      "find": "    const full=first || !!this.foe.elite;",
+      "replace": "    const full=first;",
+      "run": "play:elite"
     }
   ]
 }

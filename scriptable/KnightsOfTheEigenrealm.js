@@ -8008,6 +8008,11 @@ const Anim = {
     }
     if(B.foe){
       const eLunge=Anim.el>0?Math.sin(Anim.el*Math.PI):0;
+      if(B.foe.elite && !B.over){
+        const r=1+Math.sin(Anim.t*3)*.5;
+        cx.save(); cx.globalAlpha=.18+r*.12; cx.strokeStyle='#ffd166'; cx.lineWidth=5;
+        cx.beginPath(); cx.ellipse(605, gy-70, 66+r*4, 88+r*4, 0, 0, 7); cx.stroke(); cx.restore();
+      }
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                               eLunge, Anim.eh, B.over==='win'));
     }
@@ -8727,6 +8732,49 @@ const Talk = {
   }
 };
 
+/* ---------- Elite rematches ----------
+   A campaign foe you have already beaten comes back, one fight in four, as
+   an elite with one twist. Each twist leans on something worth practising.
+   Armoured shrugs off half of every blow until three answers in a row crack
+   its armour. Vampiric drinks back the blow it lands when you miss. Swift
+   winds up its slam a turn sooner, so bracing matters more. Frenzied hits
+   half again as hard on a quarter less health. An elite has a quarter more
+   health than the foe it was, and beating one pays the first-clear reward
+   again with a sure chest, where a plain rematch pays under half and drops
+   loot only sometimes. Nothing is saved: the twist is rolled as the fight
+   begins and gone when it ends. */
+const Elite = {
+  CHANCE:0.25,
+  force:null,          // a twist to roll next instead of the dice; spent on use
+  ORDER:['armoured','vampiric','swift','frenzied'],
+  KINDS:{
+    armoured:{ic:'🛡️', nm:'Armoured', say:'it shrugs off half of every blow until you land three answers in a row.'},
+    vampiric:{ic:'🩸', nm:'Vampiric', say:'every miss feeds it, healing it by the blow it lands.'},
+    swift:   {ic:'💨', nm:'Swift',    say:'it winds up its slam a turn sooner, so brace for it.'},
+    frenzied:{ic:'🔥', nm:'Frenzied', say:'it hits half again as hard, on a quarter less health.'}
+  },
+  // the foe to fight: itself on a first meeting, sometimes an elite once beaten
+  roll(foe, beaten){
+    if(this.force){ const k=this.force; this.force=null; return this.make(foe, k); }
+    if(!beaten || !R.chance(this.CHANCE)) return foe;
+    return this.make(foe, R.pick(this.ORDER));
+  },
+  make(foe, k){
+    if(!this.KINDS[k]) return foe;
+    const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));
+    return Object.assign({}, foe, {hp, atk:k==='frenzied' ? Math.round(foe.atk*1.5) : foe.atk, elite:k});
+  },
+  label(f){ const K=f && this.KINDS[f.elite]; return K ? \`\${K.ic} \${K.nm}\` : ''; },
+  // the line that opens an elite fight
+  intro(f){ const K=this.KINDS[f.elite]; return \`⭐ Elite! \${K.ic} \${K.nm} \${f.nm}: \${K.say}\`; },
+  // what an elite's armour lets through of a blow, on the streak that landed it
+  through(B, dmg){
+    if(!B.armour) return dmg;
+    if(B.combo>=3){ B.armour=0; Anim.float(610, H-300, 'ARMOUR CRACKED', '#ffd166', true); Sfx.milestone(); return dmg; }
+    return Math.max(1, Math.round(dmg/2));
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -8735,7 +8783,8 @@ const Battle = {
   begin(ri, fi){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
-    this._start(this.realm.foes[fi]);
+    // A foe already beaten here may come back as an elite with one twist.
+    this._start(Elite.roll(this.realm.foes[fi], !!(Game.s && Game.s.cleared[ri+':'+fi])));
   },
   beginDaily(){
     this.mode='daily';
@@ -8780,7 +8829,8 @@ const Battle = {
     this.beastLeft=Passage.guard();
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
-    this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
+    this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
+    this.armour = f.elite==='armoured' ? 1 : 0;
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -8791,6 +8841,7 @@ const Battle = {
     this.updateBars();
     this.nextQuestion();
     Talk.say('meet');
+    if(f.elite) UI.toast(Elite.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
@@ -8817,7 +8868,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
       (this.mode==='dungeon' ? \`⛏️ Depth \${Dungeon.run.depth}  ·  \` : '') +
@@ -9347,8 +9398,9 @@ const Battle = {
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
-      this.ehp=Math.max(0,this.ehp-dmg);
-      Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      const hit=Elite.through(this, dmg);
+      this.ehp=Math.max(0,this.ehp-hit);
+      Anim.strike('p',hit,crit,null,this.ehp<=0);
       // The foe answers the blow: nearly beaten (once), rattled by a streak of
       // five, or stung by a crit; and the killing blow draws its last words.
       if(this.ehp<=0) Talk.say('fall');
@@ -9423,6 +9475,11 @@ const Battle = {
         dmg += this.takeHit(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
+      // A vampiric elite drinks back the blow it lands.
+      if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){
+        this.ehp=Math.min(this.emax, this.ehp+dmg);
+        Anim.float(610, H-300, '+'+dmg+' DRAINED', '#ff6b8b', true);
+      }
       if(Game.s.hp>0) Talk.say('gloat');
       this.settleMs = 820;
       Sfx.bad();
@@ -9676,13 +9733,15 @@ const Battle = {
     g.cleared[key]=true; g.stats.wins++;
     Bounty.bump('wins',1);
     if(this.missed===0) Bounty.bump('flaw',1);
-    const gold=Math.round(this.foe.gold*(first?1:0.45));
-    const xp=Math.round(this.foe.xp*(first?1:0.4));
+    // An elite pays like a first clear, and always drops a chest.
+    const full=first || !!this.foe.elite;
+    const gold=Math.round(this.foe.gold*(full?1:0.45));
+    const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
-    const drop = R.chance(this.foe.boss?1:.5)
+    const drop = R.chance(this.foe.boss || this.foe.elite ? 1 : .5)
       ? Loot.roll({boss:this.foe.boss, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
@@ -9696,7 +9755,8 @@ const Battle = {
         <div class="center crest">🏆</div>
         <div class="panel center">
           <h1 style="font-size:22px">Victory!</h1>
-          <div class="sub" style="margin-top:6px">\${this.foe.nm} falls before your blade.</div>
+          <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
+          \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
             <div class="coin">+<span id="rGold">0</span> gold</div>

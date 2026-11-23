@@ -2406,6 +2406,56 @@ const bankTell = (() => {
    different, the one to pick is the diagnosis of the answer shown, the shown
    answer is wrong, no mistake quotes an answer on offer (that would hand the
    match over), and the verdict lays every mistake beside the answer it gives. */
+/* Elite rematches: the twist an elite brings is plain arithmetic on the foe
+   it was, so it is checked here on every foe in the game. The dice are this
+   file's own, so how often an elite comes is counted, not hoped for. */
+const eliteNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Elite = {'), html.indexOf('const Battle = {'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const dice = { _r: Math.random, chance: p => dice._r() < p, pick: a => a[Math.floor(dice._r() * a.length)] };
+  const floats = [];
+  const E = new Function('R', 'Anim', 'Sfx', 'H', src + realms + ';return {Elite, REALMS};')(
+    dice, { float: (x, y, t) => floats.push(t) }, { milestone() {} }, 600);
+  const { Elite } = E, foes = E.REALMS.flatMap(r => r.foes);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('elite', key, msg); };
+  want(Elite.ORDER.join() === Object.keys(Elite.KINDS).join(), 'kinds', 'the twists the dice pick are not the twists described');
+  for (const f of foes) {
+    const was = JSON.stringify(f);
+    for (const k of Elite.ORDER) {
+      const e = Elite.make(f, k);
+      const hp = Math.round(f.hp * 1.25 * (k === 'frenzied' ? 0.75 : 1)), atk = k === 'frenzied' ? Math.round(f.atk * 1.5) : f.atk;
+      want(e.hp === hp && e.atk === atk && e.elite === k, f.nm + ':' + k, `the elite has ${e.hp} health and ${e.atk} attack, not ${hp} and ${atk}`);
+      want(e.nm === f.nm && e.gold === f.gold && e.xp === f.xp && e.boss === f.boss, f.nm + ':' + k, 'the elite is not the same foe underneath');
+      want(Elite.intro(e) === `⭐ Elite! ${Elite.KINDS[k].ic} ${Elite.KINDS[k].nm} ${f.nm}: ${Elite.KINDS[k].say}`, f.nm + ':' + k, 'the opening line does not name the foe and its twist');
+    }
+    want(JSON.stringify(f) === was, f.nm, 'making an elite changed the foe it came from');
+    want(Elite.make(f, 'gilded') === f, f.nm, 'a twist the game does not have makes an elite');
+  }
+  // how often: a first meeting never, a beaten foe one fight in four, each twist as often as the next
+  const N = 8000, seen = {};
+  let first = 0, beaten = 0;
+  for (let i = 0; i < N; i++) {
+    if (Elite.roll(foes[1], false).elite) first++;
+    const e = Elite.roll(foes[1], true);
+    if (e.elite) { beaten++; seen[e.elite] = (seen[e.elite] || 0) + 1; }
+  }
+  want(first === 0, 'dice', `a first meeting came back elite ${first} times`);
+  want(Math.abs(beaten / N - 0.25) < 0.03, 'dice', `a beaten foe was elite ${(beaten / N * 100).toFixed(1)}% of the time`);
+  want(Elite.ORDER.every(k => Math.abs((seen[k] || 0) / beaten - 0.25) < 0.05), 'dice', `the twists came ${JSON.stringify(seen)}`);
+  Elite.force = 'swift';
+  want(Elite.roll(foes[0], false).elite === 'swift' && Elite.force === null, 'force', 'a forced twist is not used, or not spent');
+  // the armour: half of every blow, at least one, until the third answer in a row lands in full
+  for (let dmg = 1; dmg <= 60; dmg++) for (let combo = 0; combo <= 5; combo++) {
+    const B = { armour: 1, combo }, got = Elite.through(B, dmg);
+    if (combo >= 3) want(got === dmg && B.armour === 0, 'armour', `a blow of ${dmg} on a streak of ${combo} lands ${got}, with the armour ${B.armour ? 'still up' : 'down'}`);
+    else want(got === Math.max(1, Math.round(dmg / 2)) && B.armour === 1, 'armour', `a blow of ${dmg} on a streak of ${combo} lands ${got}`);
+    want(Elite.through({ armour: 0, combo }, dmg) === dmg, 'armour', 'a foe with no armour has a blow cut');
+  }
+  want(floats.length && floats.every(t => t === 'ARMOUR CRACKED'), 'armour', 'cracking the armour does not say so');
+  return { checks, foes: foes.length };
+})();
 const slipNotes = (() => {
   const plain = h => String(h).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
@@ -25487,6 +25537,7 @@ console.log(`  algebraic identities       ${pad(algebraChecks.toLocaleString(), 
 console.log(`  determinants explained     ${pad(detMeaning.toLocaleString(), 10)}  (area or volume, flipped, or pressed flat)`);
 console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(), 10)}`);
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
+console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
 {
