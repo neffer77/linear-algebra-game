@@ -1278,7 +1278,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ PRODUCT RULE WORKSHOP ============ -->
   <div class="screen" id="s-product">
     <div class="panel"><h2>🌾 Product Rule Workshop</h2><div class="sub">A field f(x) wide and g(x) deep has area f × g. Move x on by h and watch where the new area comes from: a strip down the side, a strip along the top and a corner. Close h in and the corner vanishes, leaving f′g + fg′.</div></div>
-    <div id="pdMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Grow the field or pick dy/dx"></div>
+    <div id="pdMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Grow the field, pick dy/dx, or call each slope"></div>
     <div class="panel">
       <div id="pdPick"></div>
       <div id="pdSets" class="wsModes" role="group" aria-label="Which field"></div>
@@ -15512,7 +15512,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌾 Product Rule Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Grow a field f wide and g deep, and see its new area arrive as two strips and a corner. The corner vanishes, and the strips are f′g + fg′. Then turn it round: see y = f(x) · g(x), and pick which of four formulas is its slope.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Grow a field f wide and g deep, and see its new area arrive as two strips and a corner. The corner vanishes, and the strips are f′g + fg′. Then turn it round: see y = f(x) · g(x), and pick which of four formulas is its slope. Or call it: see four products, each at a point, and say whether each is rising, flat or falling there.</div>
          <button class="btn sm" id="tomeProduct" style="width:auto;margin-top:8px" onclick="Product.open()">Open the product rule workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -22678,6 +22678,192 @@ const HopSort = {
  * of h the strips head for f′g and fg′ and the corner for 0, which is the
  * product rule; f′ × g′ only sizes the corner, which is why it is wrong.
  */
+/* ---------- Rising or falling? The product rule workshop's third mode ----------
+   Four products y = f(x) · g(x), each at a point a, and the player calls y
+   rising, flat or falling there. The slope is f′g + fg′, so its sign is the
+   call, worked from f, g and their slopes at a. Each pane draws f and g as
+   they cross a, but not y. Rounds hold two rising factors whose product
+   falls, because one of them is below 0; two strips that cancel, so y is
+   flat while neither factor is; and a factor that is 0 at a, so only one
+   strip counts. A slip rings that pane and works f′g + fg′ through; once all
+   four are right, y is drawn in green with its tangent at a. Nothing is
+   saved, and there is no clock. */
+const ProductTurn = {
+  FACTORS:{
+    x:  {s:'x',      d:'1',  f:x=>x,       fp:x=>1},
+    x1: {s:'x + 1',  d:'1',  f:x=>x+1,     fp:x=>1},
+    xm1:{s:'x − 1',  d:'1',  f:x=>x-1,     fp:x=>1},
+    xm2:{s:'x − 2',  d:'1',  f:x=>x-2,     fp:x=>1},
+    xm3:{s:'x − 3',  d:'1',  f:x=>x-3,     fp:x=>1},
+    m3: {s:'3 − x',  d:'−1', f:x=>3-x,     fp:x=>-1},
+    m1: {s:'1 − x',  d:'−1', f:x=>1-x,     fp:x=>-1},
+    sq: {s:'x²',     d:'2x', f:x=>x*x,     fp:x=>2*x},
+    sq1:{s:'x² + 1', d:'2x', f:x=>x*x+1,   fp:x=>2*x},
+    tw: {s:'2x − 1', d:'2',  f:x=>2*x-1,   fp:x=>2}
+  },
+  // [f, g, a]
+  ROUNDS:[
+    [['x','x1',1], ['x','xm3',1], ['x','xm2',1], ['xm2','x1',2]],
+    [['sq','x1',1], ['m3','x',1], ['x1','xm3',0], ['xm2','m1',2]],
+    [['sq','xm3',2], ['x','m3',2], ['xm1','xm1',1], ['x1','x1',-3]],
+    [['x','xm2',0], ['sq','m1',1], ['x1','xm3',1], ['m3','m1',3]],
+    [['sq1','x',-1], ['x','xm3',2], ['xm2','xm2',1], ['x','m3',1.5]],
+    [['sq','xm3',1], ['tw','x1',0], ['sq','x1',0], ['m1','x1',0]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four products right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'both', t:'Call a product that falls though both its factors rise.', toast:'Two climbs, one fall',
+     ok:K=>K.kinds.has('both')},
+    {id:'flat', t:'Call a product that is flat where neither factor is.', toast:'Two strips that cancel',
+     ok:K=>K.kinds.has('flat')},
+    {id:'zero', t:'Call a product where one factor is 0, so only one strip counts.', toast:'One strip gone',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The product rule: y = f(x) · g(x) has slope dy/dx = f′g + fg′. Work f, g and their slopes at a, add the two strips, and read the sign: above 0 y rises, below 0 it falls, and at exactly 0 it is flat. A factor below 0 turns its strip round, so two rising factors can still make a falling product.',
+  L:'ABCD',
+  WORD:{1:'rising', 0:'flat', [-1]:'falling'},
+  NAMES:{1:'y is rising', 0:'y is flat', [-1]:'y is falling'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Fn(i){ return this.FACTORS[this.R()[i][0]]; },
+  Gn(i){ return this.FACTORS[this.R()[i][1]]; },
+  a(i){ return this.R()[i][2]; },
+  fa(i){ return this.Fn(i).f(this.a(i)); },
+  ga(i){ return this.Gn(i).f(this.a(i)); },
+  fp(i){ return this.Fn(i).fp(this.a(i)); },
+  gp(i){ return this.Gn(i).fp(this.a(i)); },
+  y(i,x){ return this.Fn(i).f(x)*this.Gn(i).f(x); },
+  slope(i){ return this.fp(i)*this.ga(i)+this.fa(i)*this.gp(i); },
+  truth(i){ return Math.sign(this.slope(i)); },
+  wr(s){ return s.includes(' ') ? `(${s})` : s; },
+  name(i){ return `${this.wr(this.Fn(i).s)} · ${this.wr(this.Gn(i).s)}`; },
+  /* an exact number as a whole number or a fraction: every value here is a ratio of small whole numbers */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : `${neg(n)}/${d}`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? `(${this.q(v)})` : this.q(v); },
+  /* what a round holds: a fall from two rises, two strips that cancel, and a factor at 0 */
+  boths(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.fp(i)>0 && this.gp(i)>0); },
+  flats(){ return [0,1,2,3].filter(i=>this.truth(i)===0 && this.fp(i)!==0 && this.gp(i)!==0 && this.fa(i)!==0 && this.ga(i)!==0); },
+  zeros(){ return [0,1,2,3].filter(i=>this.fa(i)===0 || this.ga(i)===0); },
+  tags(){ const t=[]; if(this.boths().length) t.push('both'); if(this.flats().length) t.push('flat'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  der(n,F,v){ return F.d===this.q(v) ? `${n} = ${F.d}` : `${n} = ${F.d} = ${this.q(v)}`; },
+  sum(i){ const a=this.q(this.a(i)); return `f′g + fg′ = ${this.pq(this.fp(i))} × ${this.pq(this.ga(i))} + ${this.pq(this.fa(i))} × ${this.pq(this.gp(i))} = ${this.q(this.fp(i)*this.ga(i))} + ${this.pq(this.fa(i)*this.gp(i))} = ${this.q(this.slope(i))}`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const bo=this.boths(), fl=this.flats(), ze=this.zeros();
+      if(bo.length){ const i=bo[0], a=this.q(this.a(i));
+        const bl=[this.ga(i)<0 ? `g(${a}) = ${this.q(this.ga(i))}` : null, this.fa(i)<0 ? `f(${a}) = ${this.q(this.fa(i))}` : null].filter(Boolean);
+        out.push(`In ${this.L[i]}, f and g both rise at x = ${a}, yet y falls: ${bl.join(' and ')} ${bl.length>1?'are':'is'} below 0, so ${bl.length>1?'both strips pull':'its strip pulls'} the slope down.`); }
+      if(fl.length){ const i=fl[0];
+        out.push(`In ${this.L[i]}, the two strips cancel: f′g = ${this.q(this.fp(i)*this.ga(i))} and fg′ = ${this.q(this.fa(i)*this.gp(i))}, so y is flat at x = ${this.q(this.a(i))} though neither factor is.`); }
+      if(ze.length){ const i=ze[0], a=this.q(this.a(i)), fz=this.fa(i)===0;
+        out.push(this.fa(i)===0 && this.ga(i)===0
+          ? `In ${this.L[i]}, f(${a}) and g(${a}) are both 0, so both strips are 0 and y is flat, touching the axis.`
+          : `In ${this.L[i]}, ${fz?'f':'g'}(${a}) = 0, so the strip ${fz?'fg′':'f′g'} is 0 and only ${fz?'f′g':'fg′'} = ${this.q(fz?this.fp(i)*this.ga(i):this.fa(i)*this.gp(i))} counts.`); }
+      out.push(`Each slope: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.q(this.slope(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const a=this.q(this.a(i)), t=this.truth(i);
+        out.push(`In ${this.L[i]}, y = ${this.name(i)} at a = ${a}: f(${a}) = ${this.q(this.fa(i))} with ${this.der('f′',this.Fn(i),this.fp(i))}, and g(${a}) = ${this.q(this.ga(i))} with ${this.der('g′',this.Gn(i),this.gp(i))}. So ${this.sum(i)}: ${t>0?'above 0, so y rises':t<0?'below 0, so y falls':'exactly 0, so y is flat'}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: x from a − 2 to a + 2, f in gold and g in blue crossing the
+     dashed line at a; once the round is right, y = f · g in green with its
+     tangent at a */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2), kx=40, ky=8;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four products, each with its two factors drawn near a point: ${P.map((r,i)=>`${this.L[i]}, y = ${this.name(i)} at a = ${this.q(this.a(i))}`).join('; ')}${this.solved?', each with y and its tangent drawn':''}">`;
+    P.forEach((r,i)=>{
+      const a=this.a(i), X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, cy=Y+72, px=v=>cx+(v-a)*kx, py=v=>cy-v*ky;
+      const line=(k,fn,col,w)=>{ const pts=[]; for(let j=0;j<=80;j++){ const x=a-2.1+4.2*j/80; pts.push([x,fn(x)]); }
+        return `<path data-k="${k}" d="${pts.map(([x,y],j)=>(j?'L':'M')+f(px(x))+' '+f(py(Math.max(-30,Math.min(30,y))))).join('')}" fill="none" stroke="${col}" stroke-width="${w}"/>`; };
+      out+=`<clipPath id="ptClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#ptClip${i})"><line x1="${X+4}" y1="${cy}" x2="${X+176}" y2="${cy}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line x1="${cx}" y1="${Y+4}" x2="${cx}" y2="${Y+126}" stroke="${FIG_COL.grid}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      out+=line('f',x=>this.Fn(i).f(x),FIG_COL.b,1.5)+line('g',x=>this.Gn(i).f(x),FIG_COL.a,1.5);
+      if(this.solved){
+        out+=line('y',x=>this.y(i,x),FIG_COL.c,2.5);
+        const m=this.slope(i), y0=this.y(i,a);
+        out+=`<line data-k="tan" x1="${f(px(a-0.8))}" y1="${f(py(y0-0.8*m))}" x2="${f(px(a+0.8))}" y2="${f(py(y0+0.8*m))}" stroke="${FIG_COL.ink}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+        out+=`<circle data-k="ya" cx="${f(px(a))}" cy="${f(py(y0))}" r="3.5" fill="${FIG_COL.c}"/>`;
+      }
+      out+=`<circle data-k="fa" cx="${f(px(a))}" cy="${f(py(this.fa(i)))}" r="3" fill="${FIG_COL.b}"/><circle data-k="ga" cx="${f(px(a))}" cy="${f(py(this.ga(i)))}" r="3" fill="${FIG_COL.a}"/></g>`;
+      out+=`<text x="${cx}" y="${Y+122}" fill="${FIG_COL.ink}" font-size="11" text-anchor="middle">a = ${this.q(a)}</text>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+18}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end"><tspan fill="${FIG_COL.b}">${this.wr(this.Fn(i).s)}</tspan> · <tspan fill="${FIG_COL.a}">${this.wr(this.Gn(i).s)}</tspan></text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'rise',0:'flat',[-1]:'fall'}[t]}" x="${X+172}" y="${Y+34}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ rising',0:'= flat',[-1]:'▼ falling'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Product.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Product.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Product.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="ProductTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const P=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four products y = f(x) · g(x), each at a point a. Is y rising, flat or falling there?</div>`;
+    out+=`<div id="ptFig">${this.svg()}<div class="figcap">Each pane shows f in gold and g in blue crossing the dashed line at a. Once all four are called right, y = f · g is drawn in green with its tangent at a.</div></div>`;
+    out+=`<div id="ptStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+P.map((r,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="ptStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.name(i)}, a = ${this.q(this.a(i))}</span></b>`+
+        this.btn(i,1,'▲ Rises')+this.btn(i,0,'= Flat')+this.btn(i,-1,'▼ Falls')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="ptRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ptNext" onclick="ProductTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ptCheck" ${this.ready()?'':'disabled '}onclick="ProductTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four products to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="ptGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ptGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('FIELD READER','every slope called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Product = {
   SETS:[
     {id:'lin', btn:'Line', a:2, q:'(x + 1)(2x + 1)', fs:'x + 1', gs:'2x + 1', dfs:'1', dgs:'2', fpw:'1', gpw:'2', fp:1, gp:2,
@@ -22752,11 +22938,11 @@ const Product = {
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },
   render(){
-    document.getElementById('pdMode').innerHTML=[['field','🌾 Grow the field','Grow the field and watch its new area arrive as two strips and a corner'],['pick','🎯 Which dy/dx?','See y = f(x) · g(x) and pick which of four formulas is its slope']]
+    document.getElementById('pdMode').innerHTML=[['field','🌾 Grow the field','Grow the field and watch its new area arrive as two strips and a corner'],['pick','🎯 Which dy/dx?','See y = f(x) · g(x) and pick which of four formulas is its slope'],['turn','📉 Rising or falling?','See four products y = f(x) · g(x), each at a point, and call each rising, flat or falling']]
       .map(([m,t,l])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Product.setMode('${m}')" aria-label="${l}">${t}</button>`).join('');
-    const pick=this.mode==='pick';
+    const pick=this.mode!=='field';
     for(const id of ['pdSets','pdFig','pdHs','pdRead','pdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('pdPick').innerHTML=pick ? ProductPick.html() : '';
+    document.getElementById('pdPick').innerHTML=!pick ? '' : this.mode==='pick' ? ProductPick.html() : ProductTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('pdSets').innerHTML=this.SETS.map((s,i)=>

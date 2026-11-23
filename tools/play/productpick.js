@@ -31,11 +31,11 @@ module.exports = {
       /Then turn it round: see y = f\(x\) · g\(x\), and pick which of four formulas is its slope\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeProduct');
     t.eq('the product rule workshop opens', await t.screen(), 's-product');
-    t.eq('growing the field is the pressed mode', await pressed(t), 'true,false');
+    t.eq('growing the field is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7373));
     await t.tapText(/Which dy\/dx\?/);
-    t.eq('which dy/dx is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which dy/dx is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the field and its goals step aside', await hidden(t, 'pdSets') && await hidden(t, 'pdFig') && await hidden(t, 'pdHs') && await hidden(t, 'pdRead') && await hidden(t, 'pdGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('pdPick').innerText)).startsWith(
       'The product rule: if y = f(x) · g(x), then dy/dx = f′g + fg′.'));
