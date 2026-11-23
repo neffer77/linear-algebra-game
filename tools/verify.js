@@ -15707,6 +15707,189 @@ const invTurnNotes = (() => {
   for (const m of html.matchAll(/Celebrate\.banner\('([A-Z0-9 ]+)'/g)) seen.set(m[1], (seen.get(m[1]) || 0) + 1);
   for (const [k, n] of seen) if (n > 1 && !k.startsWith('LEVEL')) fail('banners', k, `${n} workshops share this banner`);
 })();
+/* More or less? The slope workshop's third mode, worked again from scratch:
+   every secant's slope off its own two heights and every f′(a) off the
+   curve by a nudge, every call and every readout, a slip on every pane
+   both other ways, what each round holds, the drawing read back off each
+   pane, and the hunt for every goal played through. */
+const secTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Slope = {render(){ env.renders++; }};" +
+    cut('const SecTurn = {', '/* ---------- Which slope? The slope workshop turned round') + 'return SecTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const r4 = v => { const r = Math.round(v * 1e4) / 1e4; return Object.is(r, -0) ? 0 : r; };
+  const nm = v => neg(r4(v)), pn = v => (v < 0 && r4(v) !== 0 ? `(${nm(v)})` : nm(v));
+  const WD = { 1: 'more than f′(a)', 0: 'equal to f′(a)', [-1]: 'less than f′(a)' };
+  const NAME = { 1: 'the secant’s slope is more than f′(a)', 0: 'the secant’s slope equals f′(a)', [-1]: 'the secant’s slope is less than f′(a)' };
+  const MARK = { 1: 'more ▲ more', 0: 'equal = equal', [-1]: 'less ▼ less' };
+  const L = 'ABCD';
+  // each curve written out on its own, with f′ as text and whether it is a line
+  const FN = {
+    sq: ['x²', '2x', x => x * x, false],
+    cap: ['4 − x²', '−2x', x => 4 - x * x, false],
+    half: ['x²/2', 'x', x => x * x / 2, false],
+    lin: ['2x + 1', '2', x => 2 * x + 1, true],
+    nlin: ['3 − x', '−1', x => 3 - x, true],
+    cube: ['x³', '3x²', x => x * x * x, false],
+    cub3: ['x³ − 3x', '3x² − 3', x => x * x * x - 3 * x, false]
+  };
+  const D = (g, t) => (g(t + 1e-5) - g(t - 1e-5)) / 2e-5;
+  const D2 = (g, t) => (g(t + 1e-3) - 2 * g(t) + g(t - 1e-3)) / 1e-6;
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([id, a, h]) => {
+    const [ft, fpt, f, line] = FN[id], b = a + h;
+    // rise over run straight off the curve, and f′(a) by a nudge, not through the formula on screen
+    const s = (f(b) - f(a)) / h, d = D(f, a), g = s - d, t = Math.abs(g) < 1e-6 ? 0 : g > 0 ? 1 : -1;
+    return { id, a, h, b, ft, fpt, f, line, s, d, t, bend: D2(f, a) };
+  });
+  if (S.ROUNDS.length !== 6) fail('secturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('secturn', key, `it holds ${Q.length} secants, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const k = `${w.id} ${w.a} ${w.h}`; if (seen.has(k)) fail('secturn', key, `${L[i]} comes round twice`); seen.add(k);
+      const F = S.F[w.id];
+      if (!F || F.f !== w.ft || F.fp !== w.fpt) { fail('secturn', key, `${L[i]}'s f or f′ is not written as ${w.ft}, ${w.fpt}`); return; }
+      for (let j = -12; j <= 12; j++) { const x = w.a + j / 4;
+        if (Math.abs(S.fn(F, x) - w.f(x)) > 1e-9 || Math.abs(S.d(F, x) - D(w.f, x)) > 1e-5) { fail('secturn', key, `${L[i]}'s f or f′ is worked wrong at x = ${x}`); break; } }
+      // a, h and a + h are whole or halves, so every number on screen is exact, and no call sits on a knife edge
+      if (!w.h || [w.a, w.h].some(v => Math.abs(v * 2 - Math.round(v * 2)) > 1e-12)) fail('secturn', key, `${L[i]}'s a or h is not a whole number or a half`);
+      if (w.t !== 0 && Math.abs(w.s - w.d) < 0.25) fail('secturn', key, `${L[i]}'s secant is too near f′(a) to call`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('secturn', key, `its calls are ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('secturn', key, 'every secant is called the same');
+    // what the round holds, found afresh: a step to the left, a straight line, a curve bending down, a bend crossed evenly
+    const lf = [], ln = [], dn = [], ev = [];
+    W.forEach((w, i) => { if (w.h < 0 && !w.line) lf.push(i); if (w.line) ln.push(i); if (!w.line && w.bend < -1e-3) dn.push(i); if (!w.line && w.t === 0) ev.push(i); });
+    const tags = [lf.length ? 'left' : null, ln.length ? 'line' : null, dn.length ? 'down' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('secturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // the rule the player is told holds here: off a line and off a crossed bend, bending up and stepping right (or down and left) gives more
+    W.forEach((w, i) => { if (w.line || w.t === 0) return;
+      const want = (w.bend > 0) === (w.h > 0) ? 1 : -1;
+      if (w.t !== want) fail('secturn', key, `${L[i]} goes against the rule the player is told`); });
+    // every secant called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f(x) = ${w.ft}, and the secant runs from x = ${nm(w.a)} to x = ${nm(w.b)}. Its slope is (f(${nm(w.b)}) − f(${nm(w.a)})) ÷ ${pn(w.h)} = (${nm(w.f(w.b))} − ${pn(w.f(w.a))}) ÷ ${pn(w.h)} = ${nm(w.s)}, and f′(x) = ${w.fpt} gives f′(${nm(w.a)}) = ${nm(w.d)}: the secant’s slope is ${WD[w.t]}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('secturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(sec|tan|more|equal|less)"/.test(svg)) fail('secturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a line is given away`);
+        if (S.solved || S.streak) fail('secturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('secturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('secturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('secturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="sttCheck" disabled /.test(S.html())) fail('secturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="sttCheck" disabled /.test(S.html())) fail('secturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('secturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="SecTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t].replace(/[()]/g, '\\$&')}"`));
+      if (!m || +m[1] !== t) fail('secturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`SecTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('secturn', key, `${L[i]} does not offer more, equal and less`);
+      if (!h0.includes(`${L[i]} <span class="small">${W[i].ft}, a = ${nm(W[i].a)}, h = ${nm(W[i].h)}</span>`)) fail('secturn', key, `${L[i]}'s buttons are not labelled with its curve, a and h`);
+    });
+    if (S.calls.join() !== truth.join()) fail('secturn', key, 'the buttons cannot make the right calls');
+    if (/id="sttCheck" disabled /.test(S.html())) fail('secturn', key, 'the check stays shut with every secant called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (lf.length) { const w = W[lf[0]];
+      want.push(`In ${L[lf[0]]}, the step goes left, from x = ${nm(w.a)} back to ${nm(w.b)}, which flips the call: the curve bends ${w.bend < 0 ? 'down' : 'up'} there, and the secant’s slope, ${nm(w.s)}, is ${WD[w.t].replace('(a)', `(${nm(w.a)})`)} = ${nm(w.d)}.`); }
+    if (ln.length) { const w = W[ln[0]]; want.push(`In ${L[ln[0]]}, f(x) = ${w.ft} is a straight line, so every secant lies along it: its slope is ${nm(w.s)}, the same as f′(${nm(w.a)}).`); }
+    const di = dn.find(i => !lf.includes(i));
+    if (di !== undefined) { const w = W[di]; want.push(`In ${L[di]}, the curve bends down at x = ${nm(w.a)}, so f′ falls as x grows: f′(${nm(w.a)}) = ${nm(w.d)} against a secant slope of ${nm(w.s)}.`); }
+    if (ev.length) { const w = W[ev[0]];
+      if (!(Math.min(w.a, w.b) < 0 && Math.max(w.a, w.b) > 0)) fail('secturn', key, `${L[ev[0]]} is told as crossing the bend at x = 0 but does not`);
+      want.push(`In ${L[ev[0]]}, the secant crosses the bend at x = 0, and the two sides balance: its slope, ${nm(w.s)}, equals f′(${nm(w.a)}) exactly.`); }
+    want.push(`Each secant against f′(a): ${W.map((w, i) => `${L[i]} ${nm(w.s)} against ${nm(w.d)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('secturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: the curve, both dots, the secant and the tangent read back off each pane through its window
+    const svg = S.svg();
+    const groups = [...svg.matchAll(/<g clip-path="url\(#sttClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], m[2]]);
+    if (groups.length !== 4) fail('secturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const g = groups[i][1], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      const fr = svg.match(new RegExp(`<clipPath id="sttClip${i}"><rect x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"`));
+      const pf = g.match(/data-k="f" d="([^"]+)"/);
+      const ad = g.match(/data-k="adot" cx="([^"]+)" cy="([^"]+)"/), bd = g.match(/data-k="bdot" cx="([^"]+)" cy="([^"]+)"/);
+      const sl = g.match(/data-k="sec" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/), tl = g.match(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/);
+      if (groups[i][0] !== i || !fr || !pf || !ad || !bd || !sl || !tl) { fail('secturn', key, `${L[i]} is missing its window, the curve, a dot or a line`); return; }
+      const X0 = +fr[1], Y0 = +fr[2], PW = +fr[3], PH = +fr[4];
+      if (X0 < X + 4 || X0 + PW > X + 176 || Y0 < Y + 33 || Y0 + PH > Y + 112) fail('secturn', key, `${L[i]}'s window runs into its pane's labels`);
+      // the window's own reach, worked again: 0.8 past both ends of the step, and the curve's height over it with room
+      const lo = Math.min(w.a, w.b) - 0.8, hi = Math.max(w.a, w.b) + 0.8;
+      let ylo = Infinity, yhi = -Infinity;
+      for (let j = 0; j <= 600; j++) { const v = w.f(lo + (hi - lo) * j / 600); ylo = Math.min(ylo, v); yhi = Math.max(yhi, v); }
+      const A = sx => lo + (sx - X0) / PW * (hi - lo);
+      const PF0 = [...pf[1].matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(m => [+m[1], +m[2]]);
+      const sy = PF0.map(p => p[1]), top = Math.min(...sy), bot = Math.max(...sy);
+      if (top < Y0 - 0.01 || bot > Y0 + PH + 0.01 || top - Y0 < 2 || Y0 + PH - bot < 2) fail('secturn', key, `${L[i]}'s curve does not sit inside its window with room`);
+      // heights read back by the curve's own top and bottom on screen
+      const B = s2 => ylo + (bot - s2) / (bot - top) * (yhi - ylo);
+      const tx = (hi - lo) / PW * 0.02, ty = (yhi - ylo) / (bot - top) * 0.02;
+      const onF = ([x, y]) => Math.abs(B(y) - w.f(A(x))) <= ty * 2 + tx * Math.abs(D(w.f, A(x))) * 2;
+      if (PF0.length < 60 || !PF0.every(onF)) fail('secturn', key, `${L[i]}'s gold curve, read back off the drawing, is not f(x) = ${w.ft}`);
+      const tol = (xx, yy) => Math.abs(A(xx[0]) - xx[1]) <= tx * 2 && Math.abs(B(yy[0]) - yy[1]) <= ty * 2;
+      if (!tol([+ad[1], w.a], [+ad[2], w.f(w.a)])) fail('secturn', key, `${L[i]}'s red dot is not at (a, f(a))`);
+      if (!tol([+bd[1], w.b], [+bd[2], w.f(w.b)])) fail('secturn', key, `${L[i]}'s blue dot is not at (a + h, f(a + h))`);
+      // each line runs the window's width, through (a, f(a)), with the slope it stands for
+      const line = (m, k, what) => { const x1 = A(+m[1]), y1 = B(+m[2]), x2 = A(+m[3]), y2 = B(+m[4]);
+        if (Math.abs(x1 - lo) > tx * 2 || Math.abs(x2 - hi) > tx * 2) fail('secturn', key, `${L[i]}'s ${what} does not run the window's width`);
+        else if (Math.abs((y2 - y1) / (x2 - x1) - k) > 0.02 * Math.max(1, Math.abs(k)) || Math.abs(y1 + (y2 - y1) / (x2 - x1) * (w.a - x1) - w.f(w.a)) > ty * 4) fail('secturn', key, `${L[i]}'s ${what}, read back off the drawing, is not the line of slope ${nm(k)} through (a, f(a))`); };
+      line(sl, w.s, 'secant'); line(tl, w.d, 'tangent');
+      if (!svg.includes(`>f(x) = ${w.ft}</text>`) || !svg.includes(`>a = ${nm(w.a)}, h = ${nm(w.h)}</text>`)) fail('secturn', key, `${L[i]}'s curve, a and h are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(more|equal|less)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('secturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="sttNext"') || /onclick="SecTurn\.call/.test(hh.replace(/disabled onclick="SecTurn\.call/g, ''))) fail('secturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('secturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('secturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('secturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'down,fix,left,line'], [false, 'down,fix,left,line,one'], [false, 'down,fix,left,line,one'], [false, 'down,fix,left,line,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('secturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Stepping left flips it · On a line, secant is tangent · Bending down · A slip caught and fixed | ✓ Right on the first check') fail('secturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SECANT JUDGE / every secant called') fail('secturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -23200,6 +23383,7 @@ console.log(`  sums called      ${pad(areaTurnNotes.checks.toLocaleString(), 12)
 console.log(`  guesses called    ${pad(taylorTurnNotes.checks.toLocaleString(), 12)}  (checks of four cut-off series called over, exact or under the function in the Taylor workshop, ${taylorTurnNotes.wrongs} of them with one guess called wrong and caught, and ${taylorTurnNotes.panes} functions and polynomials read back off the drawing)`);
 console.log(`  flat spots called ${pad(optTurnNotes.checks.toLocaleString(), 12)}  (checks of four flat spots called a peak, a valley or neither in the biggest build workshop, ${optTurnNotes.wrongs} of them with one called wrong and caught, and ${optTurnNotes.panes} slopes and their f read back off the drawing)`);
 console.log(`  inverses called   ${pad(invTurnNotes.checks.toLocaleString(), 12)}  (checks of four inverse slopes called steeper than 1, exactly 1 or gentler in the inverse slope workshop, ${invTurnNotes.wrongs} of them with one called wrong and caught, and ${invTurnNotes.panes} curves and their mirrors read back off the drawing)`);
+console.log(`  secants called    ${pad(secTurnNotes.checks.toLocaleString(), 12)}  (checks of four secants called more than f′(a), equal to it or less in the slope workshop, ${secTurnNotes.wrongs} of them with one called wrong and caught, and ${secTurnNotes.panes} curves, secants and tangents read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

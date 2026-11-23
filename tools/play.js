@@ -190,6 +190,7 @@ const SUITES = [
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
+  require('./play/secturn'), // see four curves with a secant each, call its slope more than f′(a), equal to it or less
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on
   require('./play/contourmatch'), // see a contour map and pick which of four functions f(x, y) drew it
   require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v

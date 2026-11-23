@@ -2138,7 +2138,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
-    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the secant's slope"></div>
+    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand, pick the secant's slope, or call it more or less than f′(a)"></div>
     <div class="panel">
       <div id="sqBox"></div>
       <div id="slCurves" class="wsModes" role="group" aria-label="Curve"></div>
@@ -15526,7 +15526,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope. Or call it: see four secants, and say whether each slope is more than f′(a), equal to it, or less.</div>
          <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -16704,6 +16704,201 @@ const MatPick = {
   }
 };
 
+/* ---------- More or less? The slope workshop's third mode ----------
+   Four curves, each with a secant from x = a to x = a + h, and the player
+   calls whether the secant's slope is more than the tangent's slope f′(a),
+   equal to it, or less. Where a curve bends up it climbs faster to the
+   right, so a secant stepping right has more slope than f′(a) and one
+   stepping left has less; where it bends down it is the other way round;
+   on a straight line the secant is the tangent. Each pane draws the curve
+   with a red dot at a and a blue one at a + h; the secant and the tangent
+   stay hidden until the round is right. Rounds hold steps to the left,
+   straight lines and curves that bend down. A slip rings that pane and
+   works the secant's slope and f′(a) through. Nothing is saved, and there
+   is no clock. */
+const SecTurn = {
+  // each curve as c0 + c1·x + c2·x² + c3·x³, with f′ as written
+  F:{
+    sq:  {f:'x²', fp:'2x', c:[0,0,1,0]},
+    cap: {f:'4 − x²', fp:'−2x', c:[4,0,-1,0]},
+    half:{f:'x²/2', fp:'x', c:[0,0,0.5,0]},
+    lin: {f:'2x + 1', fp:'2', c:[1,2,0,0]},
+    nlin:{f:'3 − x', fp:'−1', c:[3,-1,0,0]},
+    cube:{f:'x³', fp:'3x²', c:[0,0,0,1]},
+    cub3:{f:'x³ − 3x', fp:'3x² − 3', c:[0,-3,0,1]}
+  },
+  // [curve, a, h]
+  ROUNDS:[
+    [['sq',1,1], ['cap',0,1], ['lin',2,-1], ['sq',-1,-1]],
+    [['cube',1,1], ['cap',1,-1], ['nlin',0,2], ['half',-2,-2]],
+    [['cub3',-1,1], ['sq',0,2], ['cap',-1,-1], ['lin',-1,2]],
+    [['nlin',1,-1], ['cube',-1,-1], ['cap',2,1], ['half',1,-2]],
+    [['sq',2,-1], ['cub3',1,-1], ['lin',0,1], ['cap',-2,-2]],
+    [['cube',2,1], ['cap',1,2], ['half',0,-1], ['cube',-1,3]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four secants right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'left', t:'Call a secant that steps to the left.', toast:'Stepping left flips it',
+     ok:K=>K.kinds.has('left')},
+    {id:'line', t:'Call a secant on a straight line.', toast:'On a line, secant is tangent',
+     ok:K=>K.kinds.has('line')},
+    {id:'down', t:'Call a secant on a curve that bends down.', toast:'Bending down',
+     ok:K=>K.kinds.has('down')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A secant from x = a to x = a + h has slope (f(a + h) − f(a)) ÷ h, and the tangent at a has slope f′(a). Where a curve bends up, like x², it climbs faster to the right, so a secant stepping right has more slope than f′(a) and one stepping left has less. Where it bends down, it is the other way round. On a straight line the secant is the tangent, so the two are equal.',
+  L:'ABCD',
+  WORD:{1:'more than f′(a)', 0:'equal to f′(a)', [-1]:'less than f′(a)'},
+  NAMES:{1:'the secant’s slope is more than f′(a)', 0:'the secant’s slope equals f′(a)', [-1]:'the secant’s slope is less than f′(a)'},
+  R(){ return this.ROUNDS[this.ri]; },
+  S(i){ return this.F[this.R()[i][0]]; },
+  a(i){ return this.R()[i][1]; },
+  h(i){ return this.R()[i][2]; },
+  b(i){ return this.a(i)+this.h(i); },
+  fn(S,x){ const c=S.c; return c[0]+c[1]*x+c[2]*x*x+c[3]*x*x*x; },
+  d(S,x){ const c=S.c; return c[1]+2*c[2]*x+3*c[3]*x*x; },
+  dd(S,x){ const c=S.c; return 2*c[2]+6*c[3]*x; },
+  sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/h; },
+  tan(i){ return this.d(this.S(i),this.a(i)); },
+  // 1 more, 0 equal, −1 less, from the secant's slope against f′(a)
+  truth(i){ const g=this.sec(i)-this.tan(i); return Math.abs(g)<1e-9 ? 0 : g>0 ? 1 : -1; },
+  flat(i){ const c=this.S(i).c; return !c[2] && !c[3]; },
+  lefts(){ return [0,1,2,3].filter(i=>this.h(i)<0 && !this.flat(i)); },
+  lines(){ return [0,1,2,3].filter(i=>this.flat(i)); },
+  downs(){ return [0,1,2,3].filter(i=>!this.flat(i) && this.dd(this.S(i),this.a(i))<0); },
+  // a curve that is not a line, yet its secant matches f′(a): it crosses the bend and the two sides balance
+  evens(){ return [0,1,2,3].filter(i=>!this.flat(i) && this.truth(i)===0); },
+  tags(){ const t=[]; if(this.lefts().length) t.push('left'); if(this.lines().length) t.push('line'); if(this.downs().length) t.push('down'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  pn(v){ const t=this.num(v); return t.startsWith('−') ? `(${t})` : t; },
+  bend(i){ return this.dd(this.S(i),this.a(i))<0 ? 'down' : 'up'; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const lf=this.lefts(), ln=this.lines(), dn=this.downs(), ev=this.evens();
+      if(lf.length){ const i=lf[0];
+        out.push(`In ${this.L[i]}, the step goes left, from x = ${this.num(this.a(i))} back to ${this.num(this.b(i))}, which flips the call: the curve bends ${this.bend(i)} there, and the secant’s slope, ${this.num(this.sec(i))}, is ${this.WORD[this.truth(i)].replace('(a)',`(${this.num(this.a(i))})`)} = ${this.num(this.tan(i))}.`); }
+      if(ln.length){ const i=ln[0];
+        out.push(`In ${this.L[i]}, f(x) = ${this.S(i).f} is a straight line, so every secant lies along it: its slope is ${this.num(this.sec(i))}, the same as f′(${this.num(this.a(i))}).`); }
+      // a curve bending down, told on its own unless the only one is the step to the left, which says so already
+      const di=dn.find(i=>!lf.includes(i));
+      if(di!==undefined){ const i=di;
+        out.push(`In ${this.L[i]}, the curve bends down at x = ${this.num(this.a(i))}, so f′ falls as x grows: f′(${this.num(this.a(i))}) = ${this.num(this.tan(i))} against a secant slope of ${this.num(this.sec(i))}.`); }
+      if(ev.length){ const i=ev[0];
+        out.push(`In ${this.L[i]}, the secant crosses the bend at x = 0, and the two sides balance: its slope, ${this.num(this.sec(i))}, equals f′(${this.num(this.a(i))}) exactly.`); }
+      out.push(`Each secant against f′(a): ${[0,1,2,3].map(i=>`${this.L[i]} ${this.num(this.sec(i))} against ${this.num(this.tan(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const S=this.S(i), a=this.num(this.a(i)), b=this.num(this.b(i)), h=this.pn(this.h(i));
+        out.push(`In ${this.L[i]}, f(x) = ${S.f}, and the secant runs from x = ${a} to x = ${b}. Its slope is (f(${b}) − f(${a})) ÷ ${h} = (${this.num(this.fn(S,this.b(i)))} − ${this.pn(this.fn(S,this.a(i)))}) ÷ ${h} = ${this.num(this.sec(i))}, and f′(x) = ${S.fp} gives f′(${a}) = ${this.num(this.tan(i))}: the secant’s slope is ${this.WORD[this.truth(i)]}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: a window running 0.8 past both ends of the step, as tall as
+     the curve over it with a little room; the curve in gold, a red dot at a
+     and a blue one at a + h; once the round is right, the secant in blue
+     through both and the tangent dashed red at a */
+  PW:156, PH:72,
+  win(i){
+    const S=this.S(i), a=this.a(i), b=this.b(i), lo=Math.min(a,b)-0.8, hi=Math.max(a,b)+0.8;
+    let ylo=Infinity, yhi=-Infinity;
+    for(let j=0;j<=60;j++){ const v=this.fn(S,lo+(hi-lo)*j/60); ylo=Math.min(ylo,v); yhi=Math.max(yhi,v); }
+    const pad=Math.max(0.5,(yhi-ylo)*0.12);
+    return {lo, hi, ylo:ylo-pad, yhi:yhi+pad};
+  },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2), PW=this.PW, PH=this.PH;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with a secant from a to a + h: ${Q.map((q,i)=>`${this.L[i]}, f(x) = ${this.S(i).f}, a = ${this.num(this.a(i))}, h = ${this.num(this.h(i))}`).join('; ')}${this.solved?', each with its secant and tangent drawn':''}">`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, S=this.S(i), a=this.a(i), b=this.b(i), W=this.win(i);
+      const X0=X+12, Y0=Y+38, px=v=>X0+(v-W.lo)/(W.hi-W.lo)*PW, py=v=>Y0+PH-(v-W.ylo)/(W.yhi-W.ylo)*PH;
+      out+=`<clipPath id="sttClip${i}"><rect x="${X0}" y="${Y0}" width="${PW}" height="${PH}"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<rect data-k="frame" x="${X0}" y="${Y0}" width="${PW}" height="${PH}" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#sttClip${i})">`;
+      const pts=[];
+      for(let j=0;j<=120;j++){ const t=W.lo+(W.hi-W.lo)*j/120; pts.push((j?'L':'M')+f(px(t))+' '+f(py(this.fn(S,t)))); }
+      out+=`<path data-k="f" d="${pts.join('')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      if(this.solved){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);
+        out+=`<line data-k="sec" x1="${f(px(W.lo))}" y1="${f(py(fa+m*(W.lo-a)))}" x2="${f(px(W.hi))}" y2="${f(py(fa+m*(W.hi-a)))}" stroke="${FIG_COL.a}" stroke-width="1.6"/>`;
+        out+=`<line data-k="tan" x1="${f(px(W.lo))}" y1="${f(py(fa+k*(W.lo-a)))}" x2="${f(px(W.hi))}" y2="${f(py(fa+k*(W.hi-a)))}" stroke="${FIG_COL.d}" stroke-width="1.6" stroke-dasharray="5 3"/>`; }
+      out+=`<circle data-k="adot" cx="${f(px(a))}" cy="${f(py(this.fn(S,a)))}" r="3.5" fill="${FIG_COL.d}"/>`;
+      out+=`<circle data-k="bdot" cx="${f(px(b))}" cy="${f(py(this.fn(S,b)))}" r="3.5" fill="${FIG_COL.a}"/>`;
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = ${S.f}</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">a = ${this.num(a)}, h = ${this.num(this.h(i))}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'more',0:'equal',[-1]:'less'}[t]}" x="${X+172}" y="${Y+123}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ more',0:'= equal',[-1]:'▼ less'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Slope.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Slope.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Slope.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="SecTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves, each with a secant from x = a to x = a + h. Is the secant’s slope more than the tangent’s slope f′(a), equal to it, or less?</div>`;
+    out+=`<div id="sttFig">${this.svg()}<div class="figcap">Each pane draws the curve in gold, with a red dot at a and a blue one at a + h. Once all four are called right, each secant is drawn in blue and each tangent dashed in red.</div></div>`;
+    out+=`<div id="sttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="sttStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.S(i).f}, a = ${this.num(this.a(i))}, h = ${this.num(this.h(i))}</span></b>`+
+        this.btn(i,1,'▲ More')+this.btn(i,0,'= Equal')+this.btn(i,-1,'▼ Less')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="sttRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sttNext" onclick="SecTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sttCheck" ${this.ready()?'':'disabled '}onclick="SecTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="sttGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="sttGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SECANT JUDGE','every secant called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which slope? The slope workshop turned round ----------
    A curve f(x) = cx² + px + q with whole c, p and q, a point a and a step h,
    and four numbers, one of them the slope of the secant from a to a + h,
@@ -16894,11 +17089,11 @@ const Slope = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\'s slope']]
+    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\'s slope'],['turn','⚖️ More or less?','See four curves, each with a secant, and call whether its slope is more than the tangent’s slope f′(a), equal to it, or less']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Slope.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['slCurves','slFig','slStep','slSide','slRead','slGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('sqBox').innerHTML=pick ? SecantPick.html() : '';
+    document.getElementById('sqBox').innerHTML=!pick ? '' : this.tab==='pick' ? SecantPick.html() : SecTurn.html();
     if(pick) return;
     const C=this.curve(), a=this.a, h=this.h(), b=a+h, fa=this.f(a), fb=this.f(b), m=this.secant(), d=this.dfa();
     const near=this.hi===this.HS.length-1;

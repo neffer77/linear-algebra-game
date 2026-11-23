@@ -1,18 +1,60 @@
 {
-  "change": "Give each workshop's finishing banner a name of its own",
+  "change": "Add a More or less mode to the slope workshop",
   "mutations": [
     {
-      "name": "two growth workshops share a banner again",
+      "name": "the step's direction is ignored",
       "file": "index.html",
-      "find": "Celebrate.banner('MASTER OF LOGS','every exponential undone'",
-      "replace": "Celebrate.banner('MASTER OF GROWTH','every exponential undone'",
+      "find": "sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/h; },",
+      "replace": "sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/Math.abs(h); },",
       "run": "verify"
     },
     {
-      "name": "the endless area banner is the series banner again",
+      "name": "f′ is taken at a + h",
       "file": "index.html",
-      "find": "Celebrate.banner('AREA TAMER', this.matched+' endless areas measured'",
-      "replace": "Celebrate.banner('TAIL TAMER', this.matched+' endless areas measured'",
+      "find": "tan(i){ return this.d(this.S(i),this.a(i)); },",
+      "replace": "tan(i){ return this.d(this.S(i),this.b(i)); },",
+      "run": "verify"
+    },
+    {
+      "name": "equal is never called",
+      "file": "index.html",
+      "find": "truth(i){ const g=this.sec(i)-this.tan(i); return Math.abs(g)<1e-9 ? 0 : g>0 ? 1 : -1; },",
+      "replace": "truth(i){ const g=this.sec(i)-this.tan(i); return g>0 ? 1 : -1; },",
+      "run": "verify"
+    },
+    {
+      "name": "a straight line is not looked for",
+      "file": "index.html",
+      "find": "lines(){ return [0,1,2,3].filter(i=>this.flat(i)); },",
+      "replace": "lines(){ return []; },",
+      "run": "verify"
+    },
+    {
+      "name": "a step to the left is not looked for",
+      "file": "index.html",
+      "find": "lefts(){ return [0,1,2,3].filter(i=>this.h(i)<0 && !this.flat(i)); },",
+      "replace": "lefts(){ return []; },",
+      "run": "verify"
+    },
+    {
+      "name": "the lines are drawn before the round is right",
+      "file": "index.html",
+      "find": "if(this.solved){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);",
+      "replace": "if(true){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);",
+      "run": "verify"
+    },
+    {
+      "name": "the blue dot sits at a",
+      "file": "index.html",
+      "find": "out+=`<circle data-k=\"bdot\" cx=\"${f(px(b))}\" cy=\"${f(py(this.fn(S,b)))}\"",
+      "replace": "out+=`<circle data-k=\"bdot\" cx=\"${f(px(a))}\" cy=\"${f(py(this.fn(S,a)))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "a call still moves once the round is right",
+      "file": "index.html",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slope.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slope.render();",
       "run": "verify"
     }
   ]
