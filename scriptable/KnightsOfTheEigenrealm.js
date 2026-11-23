@@ -1126,7 +1126,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
-    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>
+    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves, pick the matrix that does both, or call whether the order makes a difference"></div>
     <div class="panel">
       <div id="oqBox"></div>
       <div class="small" id="cmFirstL" style="margin-bottom:4px">First</div>
@@ -1423,7 +1423,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ WATER LEVEL WORKSHOP ============ -->
   <div class="screen" id="s-avg">
     <div class="panel"><h2>🌊 Water Level Workshop</h2><div class="sub">Pour the area under a curve into a flat tank of the same width and it settles at one height: the curve's average value. Raise or lower the level until the part of the curve sticking up above it exactly fills the gaps beneath it.</div></div>
-    <div id="avTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Level the tank by hand or pick the average"></div>
+    <div id="avTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Level the tank by hand, pick the average, or call where it sits against the middle"></div>
     <div class="panel">
       <div id="agBox"></div>
       <div id="avSets" class="wsModes" role="group" aria-label="Which curve"></div>
@@ -1843,7 +1843,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TANGENT PLANE WORKSHOP ============ -->
   <div class="screen" id="s-tanplane">
     <div class="panel"><h2>🪁 Tangent Plane Workshop</h2><div class="sub">A tangent plane is built from three numbers: the height at the point and a slope along each axis. Set them by hand and watch two slices through the surface, one along x and one along y, to see whether the plane touches.</div></div>
-    <div id="tqTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build a plane by hand or pick the one that touches"></div>
+    <div id="tqTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build a plane by hand, pick the one that touches, or call whether a surface stays above it"></div>
     <div class="panel">
       <div id="tnBox"></div>
       <div id="tqSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which surface"></div>
@@ -2157,7 +2157,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
-    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the secant's slope"></div>
+    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand, pick the secant's slope, or call it more or less than f′(a)"></div>
     <div class="panel">
       <div id="sqBox"></div>
       <div id="slCurves" class="wsModes" role="group" aria-label="Curve"></div>
@@ -15485,7 +15485,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B. Or call four pairs: does the order make a difference to each?</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15545,7 +15545,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope. Or call it: see four secants, and say whether each slope is more than f′(a), equal to it, or less.</div>
          <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15640,7 +15640,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪁 Tangent Plane Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once. Then turn it round: see a surface and a point, and pick which of four planes touches it there.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once. Then turn it round: see a surface and a point, and pick which of four planes touches it there. Or call four surfaces: does each stay above its tangent plane, below it, or cross it?</div>
          <button class="btn sm" id="tomeTanPlane" style="width:auto;margin-top:8px" onclick="TanPlane.open()">Open the tangent plane workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15720,7 +15720,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌊 Water Level Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line. Then turn it round: see a curve and its area, and pick which of four numbers is its average value.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line. Then turn it round: see a curve and its area, and pick which of four numbers is its average value. Or call four curves: does each average sit above f at the middle, equal it, or sit below it?</div>
          <button class="btn sm" id="tomeAvg" style="width:auto;margin-top:8px" onclick="Avg.open()">Open the water level workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -16723,6 +16723,201 @@ const MatPick = {
   }
 };
 
+/* ---------- More or less? The slope workshop's third mode ----------
+   Four curves, each with a secant from x = a to x = a + h, and the player
+   calls whether the secant's slope is more than the tangent's slope f′(a),
+   equal to it, or less. Where a curve bends up it climbs faster to the
+   right, so a secant stepping right has more slope than f′(a) and one
+   stepping left has less; where it bends down it is the other way round;
+   on a straight line the secant is the tangent. Each pane draws the curve
+   with a red dot at a and a blue one at a + h; the secant and the tangent
+   stay hidden until the round is right. Rounds hold steps to the left,
+   straight lines and curves that bend down. A slip rings that pane and
+   works the secant's slope and f′(a) through. Nothing is saved, and there
+   is no clock. */
+const SecTurn = {
+  // each curve as c0 + c1·x + c2·x² + c3·x³, with f′ as written
+  F:{
+    sq:  {f:'x²', fp:'2x', c:[0,0,1,0]},
+    cap: {f:'4 − x²', fp:'−2x', c:[4,0,-1,0]},
+    half:{f:'x²/2', fp:'x', c:[0,0,0.5,0]},
+    lin: {f:'2x + 1', fp:'2', c:[1,2,0,0]},
+    nlin:{f:'3 − x', fp:'−1', c:[3,-1,0,0]},
+    cube:{f:'x³', fp:'3x²', c:[0,0,0,1]},
+    cub3:{f:'x³ − 3x', fp:'3x² − 3', c:[0,-3,0,1]}
+  },
+  // [curve, a, h]
+  ROUNDS:[
+    [['sq',1,1], ['cap',0,1], ['lin',2,-1], ['sq',-1,-1]],
+    [['cube',1,1], ['cap',1,-1], ['nlin',0,2], ['half',-2,-2]],
+    [['cub3',-1,1], ['sq',0,2], ['cap',-1,-1], ['lin',-1,2]],
+    [['nlin',1,-1], ['cube',-1,-1], ['cap',2,1], ['half',1,-2]],
+    [['sq',2,-1], ['cub3',1,-1], ['lin',0,1], ['cap',-2,-2]],
+    [['cube',2,1], ['cap',1,2], ['half',0,-1], ['cube',-1,3]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four secants right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'left', t:'Call a secant that steps to the left.', toast:'Stepping left flips it',
+     ok:K=>K.kinds.has('left')},
+    {id:'line', t:'Call a secant on a straight line.', toast:'On a line, secant is tangent',
+     ok:K=>K.kinds.has('line')},
+    {id:'down', t:'Call a secant on a curve that bends down.', toast:'Bending down',
+     ok:K=>K.kinds.has('down')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A secant from x = a to x = a + h has slope (f(a + h) − f(a)) ÷ h, and the tangent at a has slope f′(a). Where a curve bends up, like x², it climbs faster to the right, so a secant stepping right has more slope than f′(a) and one stepping left has less. Where it bends down, it is the other way round. On a straight line the secant is the tangent, so the two are equal.',
+  L:'ABCD',
+  WORD:{1:'more than f′(a)', 0:'equal to f′(a)', [-1]:'less than f′(a)'},
+  NAMES:{1:'the secant’s slope is more than f′(a)', 0:'the secant’s slope equals f′(a)', [-1]:'the secant’s slope is less than f′(a)'},
+  R(){ return this.ROUNDS[this.ri]; },
+  S(i){ return this.F[this.R()[i][0]]; },
+  a(i){ return this.R()[i][1]; },
+  h(i){ return this.R()[i][2]; },
+  b(i){ return this.a(i)+this.h(i); },
+  fn(S,x){ const c=S.c; return c[0]+c[1]*x+c[2]*x*x+c[3]*x*x*x; },
+  d(S,x){ const c=S.c; return c[1]+2*c[2]*x+3*c[3]*x*x; },
+  dd(S,x){ const c=S.c; return 2*c[2]+6*c[3]*x; },
+  sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/h; },
+  tan(i){ return this.d(this.S(i),this.a(i)); },
+  // 1 more, 0 equal, −1 less, from the secant's slope against f′(a)
+  truth(i){ const g=this.sec(i)-this.tan(i); return Math.abs(g)<1e-9 ? 0 : g>0 ? 1 : -1; },
+  flat(i){ const c=this.S(i).c; return !c[2] && !c[3]; },
+  lefts(){ return [0,1,2,3].filter(i=>this.h(i)<0 && !this.flat(i)); },
+  lines(){ return [0,1,2,3].filter(i=>this.flat(i)); },
+  downs(){ return [0,1,2,3].filter(i=>!this.flat(i) && this.dd(this.S(i),this.a(i))<0); },
+  // a curve that is not a line, yet its secant matches f′(a): it crosses the bend and the two sides balance
+  evens(){ return [0,1,2,3].filter(i=>!this.flat(i) && this.truth(i)===0); },
+  tags(){ const t=[]; if(this.lefts().length) t.push('left'); if(this.lines().length) t.push('line'); if(this.downs().length) t.push('down'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  pn(v){ const t=this.num(v); return t.startsWith('−') ? \`(\${t})\` : t; },
+  bend(i){ return this.dd(this.S(i),this.a(i))<0 ? 'down' : 'up'; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const lf=this.lefts(), ln=this.lines(), dn=this.downs(), ev=this.evens();
+      if(lf.length){ const i=lf[0];
+        out.push(\`In \${this.L[i]}, the step goes left, from x = \${this.num(this.a(i))} back to \${this.num(this.b(i))}, which flips the call: the curve bends \${this.bend(i)} there, and the secant’s slope, \${this.num(this.sec(i))}, is \${this.WORD[this.truth(i)].replace('(a)',\`(\${this.num(this.a(i))})\`)} = \${this.num(this.tan(i))}.\`); }
+      if(ln.length){ const i=ln[0];
+        out.push(\`In \${this.L[i]}, f(x) = \${this.S(i).f} is a straight line, so every secant lies along it: its slope is \${this.num(this.sec(i))}, the same as f′(\${this.num(this.a(i))}).\`); }
+      // a curve bending down, told on its own unless the only one is the step to the left, which says so already
+      const di=dn.find(i=>!lf.includes(i));
+      if(di!==undefined){ const i=di;
+        out.push(\`In \${this.L[i]}, the curve bends down at x = \${this.num(this.a(i))}, so f′ falls as x grows: f′(\${this.num(this.a(i))}) = \${this.num(this.tan(i))} against a secant slope of \${this.num(this.sec(i))}.\`); }
+      if(ev.length){ const i=ev[0];
+        out.push(\`In \${this.L[i]}, the secant crosses the bend at x = 0, and the two sides balance: its slope, \${this.num(this.sec(i))}, equals f′(\${this.num(this.a(i))}) exactly.\`); }
+      out.push(\`Each secant against f′(a): \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.num(this.sec(i))} against \${this.num(this.tan(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const S=this.S(i), a=this.num(this.a(i)), b=this.num(this.b(i)), h=this.pn(this.h(i));
+        out.push(\`In \${this.L[i]}, f(x) = \${S.f}, and the secant runs from x = \${a} to x = \${b}. Its slope is (f(\${b}) − f(\${a})) ÷ \${h} = (\${this.num(this.fn(S,this.b(i)))} − \${this.pn(this.fn(S,this.a(i)))}) ÷ \${h} = \${this.num(this.sec(i))}, and f′(x) = \${S.fp} gives f′(\${a}) = \${this.num(this.tan(i))}: the secant’s slope is \${this.WORD[this.truth(i)]}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: a window running 0.8 past both ends of the step, as tall as
+     the curve over it with a little room; the curve in gold, a red dot at a
+     and a blue one at a + h; once the round is right, the secant in blue
+     through both and the tangent dashed red at a */
+  PW:156, PH:72,
+  win(i){
+    const S=this.S(i), a=this.a(i), b=this.b(i), lo=Math.min(a,b)-0.8, hi=Math.max(a,b)+0.8;
+    let ylo=Infinity, yhi=-Infinity;
+    for(let j=0;j<=60;j++){ const v=this.fn(S,lo+(hi-lo)*j/60); ylo=Math.min(ylo,v); yhi=Math.max(yhi,v); }
+    const pad=Math.max(0.5,(yhi-ylo)*0.12);
+    return {lo, hi, ylo:ylo-pad, yhi:yhi+pad};
+  },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2), PW=this.PW, PH=this.PH;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with a secant from a to a + h: \${Q.map((q,i)=>\`\${this.L[i]}, f(x) = \${this.S(i).f}, a = \${this.num(this.a(i))}, h = \${this.num(this.h(i))}\`).join('; ')}\${this.solved?', each with its secant and tangent drawn':''}">\`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, S=this.S(i), a=this.a(i), b=this.b(i), W=this.win(i);
+      const X0=X+12, Y0=Y+38, px=v=>X0+(v-W.lo)/(W.hi-W.lo)*PW, py=v=>Y0+PH-(v-W.ylo)/(W.yhi-W.ylo)*PH;
+      out+=\`<clipPath id="sttClip\${i}"><rect x="\${X0}" y="\${Y0}" width="\${PW}" height="\${PH}"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="frame" x="\${X0}" y="\${Y0}" width="\${PW}" height="\${PH}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#sttClip\${i})">\`;
+      const pts=[];
+      for(let j=0;j<=120;j++){ const t=W.lo+(W.hi-W.lo)*j/120; pts.push((j?'L':'M')+f(px(t))+' '+f(py(this.fn(S,t)))); }
+      out+=\`<path data-k="f" d="\${pts.join('')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+      if(this.solved){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);
+        out+=\`<line data-k="sec" x1="\${f(px(W.lo))}" y1="\${f(py(fa+m*(W.lo-a)))}" x2="\${f(px(W.hi))}" y2="\${f(py(fa+m*(W.hi-a)))}" stroke="\${FIG_COL.a}" stroke-width="1.6"/>\`;
+        out+=\`<line data-k="tan" x1="\${f(px(W.lo))}" y1="\${f(py(fa+k*(W.lo-a)))}" x2="\${f(px(W.hi))}" y2="\${f(py(fa+k*(W.hi-a)))}" stroke="\${FIG_COL.d}" stroke-width="1.6" stroke-dasharray="5 3"/>\`; }
+      out+=\`<circle data-k="adot" cx="\${f(px(a))}" cy="\${f(py(this.fn(S,a)))}" r="3.5" fill="\${FIG_COL.d}"/>\`;
+      out+=\`<circle data-k="bdot" cx="\${f(px(b))}" cy="\${f(py(this.fn(S,b)))}" r="3.5" fill="\${FIG_COL.a}"/>\`;
+      out+=\`</g>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+17}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = \${S.f}</text>\`;
+      out+=\`<text data-k="how" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.dim}" font-size="11" text-anchor="end">a = \${this.num(a)}, h = \${this.num(this.h(i))}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'more',0:'equal',[-1]:'less'}[t]}" x="\${X+172}" y="\${Y+123}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'▲ more',0:'= equal',[-1]:'▼ less'}[t]}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Slope.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Slope.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Slope.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="SecTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const Q=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each with a secant from x = a to x = a + h. Is the secant’s slope more than the tangent’s slope f′(a), equal to it, or less?</div>\`;
+    out+=\`<div id="sttFig">\${this.svg()}<div class="figcap">Each pane draws the curve in gold, with a red dot at a and a blue one at a + h. Once all four are called right, each secant is drawn in blue and each tangent dashed in red.</div></div>\`;
+    out+=\`<div id="sttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="sttStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.S(i).f}, a = \${this.num(this.a(i))}, h = \${this.num(this.h(i))}</span></b>\`+
+        this.btn(i,1,'▲ More')+this.btn(i,0,'= Equal')+this.btn(i,-1,'▼ Less')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="sttRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sttNext" onclick="SecTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sttCheck" \${this.ready()?'':'disabled '}onclick="SecTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="sttGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="sttGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SECANT JUDGE','every secant called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which slope? The slope workshop turned round ----------
    A curve f(x) = cx² + px + q with whole c, p and q, a point a and a step h,
    and four numbers, one of them the slope of the secant from a to a + h,
@@ -16913,11 +17108,11 @@ const Slope = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\\'s slope']]
+    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\\'s slope'],['turn','⚖️ More or less?','See four curves, each with a secant, and call whether its slope is more than the tangent’s slope f′(a), equal to it, or less']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Slope.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['slCurves','slFig','slStep','slSide','slRead','slGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('sqBox').innerHTML=pick ? SecantPick.html() : '';
+    document.getElementById('sqBox').innerHTML=!pick ? '' : this.tab==='pick' ? SecantPick.html() : SecTurn.html();
     if(pick) return;
     const C=this.curve(), a=this.a, h=this.h(), b=a+h, fa=this.f(a), fb=this.f(b), m=this.secant(), d=this.dfa();
     const near=this.hi===this.HS.length-1;
@@ -19772,6 +19967,205 @@ const FitRank = {
    built column by column from where they land, never from a recipe to
    remember; the other order is drawn dashed beside it, so the player sees
    for themselves that it usually lands somewhere else. */
+/* ---------- Same or not? Order Matters' third mode ----------
+   Four pairs of whole-number 2×2 matrices, and the player calls whether the
+   order makes a difference to each: AB = BA, or not. The rule is stated
+   first and can be worked on the page: write three numbers for each matrix,
+   its top-right entry, its bottom-left entry and its top-left minus its
+   bottom-right; a plain scale has all three 0 and goes either way, and
+   otherwise the order makes no difference exactly when B's three are a
+   multiple of A's, so that B = pA + qI is built from A alone. Each pane draws
+   where the unit square lands under A and under B. A slip rings that pane and
+   works it through: the multiple and B written from A, or the first entry
+   where AB and BA part. Nothing is saved, and there is no clock. */
+const ComposeTurn = {
+  // each pair is [A, B], each matrix its rows run together: [a, b, c, d] for rows (a, b) and (c, d)
+  ROUNDS:[
+    [[[2,0,0,3],[-1,0,0,4]], [[1,1,0,1],[0,-1,1,0]], [[1,2,3,0],[3,4,6,1]], [[1,0,0,-1],[0,1,1,0]]],
+    [[[0,-1,1,0],[2,-1,1,2]], [[2,0,0,1],[1,1,0,1]], [[1,0,2,1],[1,2,0,1]], [[1,2,2,1],[2,1,1,2]]],
+    [[[1,0,0,2],[3,0,0,-1]], [[0,1,-1,0],[1,0,0,-1]], [[2,1,1,0],[5,2,2,1]], [[1,2,0,3],[2,4,0,5]]],
+    [[[1,2,0,1],[1,-4,0,1]], [[0,1,1,0],[-1,0,0,1]], [[2,0,0,-1],[1,0,1,1]], [[-2,0,0,-2],[0,3,1,2]]],
+    [[[1,1,1,2],[2,1,1,3]], [[3,0,0,1],[1,0,0,-2]], [[0,-1,1,0],[0,1,1,0]], [[1,2,3,4],[2,1,4,3]]],
+    [[[2,1,0,2],[1,1,0,2]], [[1,-1,1,1],[0,-1,1,0]], [[0,1,1,0],[0,-1,-1,0]], [[1,0,0,4],[1,3,0,4]]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four pairs right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'diag', t:'Call a pair of diagonal matrices, each a stretch along the axes.', toast:'Diagonals go either way',
+     ok:K=>K.kinds.has('diag')},
+    {id:'built',t:'Call a pair where B is built from A, and the order makes no difference.', toast:'Built from A, it goes either way',
+     ok:K=>K.kinds.has('built')},
+    {id:'flip', t:'Call two flips over different lines, whose order matters.', toast:'Two flips turn opposite ways',
+     ok:K=>K.kinds.has('flip')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'AB and BA are usually different, but not always. To tell, write three numbers for each matrix: its top-right entry, its bottom-left entry, and its top-left minus its bottom-right. If one matrix has all three 0, it is a plain scale, kI, and goes either way. Otherwise the order makes no difference exactly when B\\'s three are a multiple of A\\'s: then B = pA + qI, built from A alone, and anything built from A goes with A.',
+  WORD:{1:'the order making no difference', 0:'the order mattering'},
+  NAMES:{1:'the order makes no difference', 0:'the order matters'},
+  R(){ return this.ROUNDS[this.ri]; },
+  M:([a,b,c,d])=>[[a,b],[c,d]],
+  Q(i){ const [A,B]=this.R()[i]; return {A:this.M(A), B:this.M(B)}; },
+  mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],
+  key:M=>JSON.stringify(M),
+  // 1 the order makes no difference, 0 it matters
+  truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(B,A)) ? 1 : 0; },
+  // the three numbers the rule reads off a matrix
+  tell:([[a,b],[c,d]])=>[b,c,a-d],
+  zero:t=>t.every(x=>x===0),
+  diagonal:([[,b],[c]])=>b===0 && c===0,
+  scale(M){ return this.zero(this.tell(M)); },
+  // a flip over a line through the origin: it undoes itself and keeps lengths, and is not ±I
+  flipper(M){ const [[a,b],[c,d]]=M; return b===c && this.key(this.mul(M,M))===this.key([[1,0],[0,1]]) && !(b===0 && a===d); },
+  diags(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.diagonal(A) && this.diagonal(B) && !this.scale(A) && !this.scale(B); }); },
+  builts(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.truth(i)===1 && !(this.diagonal(A) && this.diagonal(B)) && !this.scale(A) && !this.scale(B); }); },
+  flips(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.flipper(A) && this.flipper(B) && this.truth(i)===0; }); },
+  tags(){ const t=[]; if(this.diags().length) t.push('diag'); if(this.builts().length) t.push('built'); if(this.flips().length) t.push('flip'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  rows:M=>M.map(row=>row.map(neg).join(', ')).join('; '),
+  // how B's three numbers stand to A's
+  times(p){ return p.n===1&&p.d===1 ? "B's are the same as A's" : \`B's are \${p.s} times A's\`; },
+  three(t){ return \`(\${t.map(neg).join(', ')})\`; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  // n/d in lowest terms, with the sign in front
+  frac(n,d){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); n/=g; d/=g; return {n,d,s:d===1 ? neg(n) : \`\${n<0?'−':''}\${Math.abs(n)}/\${d}\`}; },
+  // B = pA + qI, worked from the first of A's three numbers that is not 0
+  built(i){
+    const {A,B}=this.Q(i), a=this.tell(A), b=this.tell(B), k=a.findIndex(x=>x!==0);
+    const p=this.frac(b[k],a[k]), q=this.frac(B[0][0]*a[k]-b[k]*A[0][0],a[k]);
+    const coef=(f,s,first)=>{ const m=Math.abs(f.n)===1&&f.d===1 ? '' : f.d===1 ? String(Math.abs(f.n)) : \`(\${Math.abs(f.n)}/\${f.d})\`;
+      return (first ? (f.n<0?'−':'') : (f.n<0?' − ':' + '))+m+s; };
+    return {p, q, txt:'B = '+coef(p,'A',true)+(q.n ? coef(q,'I',false) : '')};
+  },
+  // the first entry where AB and BA part, each worked as a row times a column
+  part(i){
+    const {A,B}=this.Q(i), P=this.mul(A,B), Q=this.mul(B,A);
+    for(const [r,c] of [[0,0],[0,1],[1,0],[1,1]]) if(P[r][c]!==Q[r][c]){
+      const dot=(X,Y)=>\`\${this.pn(X[r][0])} × \${this.pn(Y[0][c])} + \${this.pn(X[r][1])} × \${this.pn(Y[1][c])}\`;
+      return \`At row \${r+1}, column \${c+1}, AB has \${dot(A,B)} = \${neg(P[r][c])}, but BA has \${dot(B,A)} = \${neg(Q[r][c])}.\`;
+    }
+    return '';
+  },
+  why(i){
+    const {A,B}=this.Q(i), a=this.tell(A), b=this.tell(B);
+    if(this.scale(A)) return \`A's three numbers are all 0: A is a plain scale, \${neg(A[0][0])}I, so it goes either way and the order makes no difference.\`;
+    if(this.scale(B)) return \`B's three numbers are all 0: B is a plain scale, \${neg(B[0][0])}I, so it goes either way and the order makes no difference.\`;
+    if(this.truth(i)===0) return \`A's three numbers are \${this.three(a)} and B's are \${this.three(b)}: no one number turns A's into B's, so the order matters. \${this.part(i)}\`;
+    if(this.diagonal(A) && this.diagonal(B)) return \`Both are diagonal, so each only stretches along the axes: A's three numbers are \${this.three(a)} and B's are \${this.three(b)}, always in proportion, so the order makes no difference.\`;
+    const w=this.built(i);
+    return \`A's three numbers are \${this.three(a)} and B's are \${this.three(b)}: \${this.times(w.p)}, so \${w.txt}, built from A alone, and the order makes no difference.\`;
+  },
+  working(){
+    const out=[], n=i=>\`Pair \${i+1}\`;
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const dg=this.diags(), bt=this.builts(), fl=this.flips();
+      if(dg.length){ const i=dg[0], {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, both are diagonal: each stretches along the axes, so either order gives AB = BA, with rows \${this.rows(this.mul(A,B))}.\`); }
+      if(bt.length){ const i=bt[0], {A,B}=this.Q(i), w=this.built(i);
+        out.push(\`In \${n(i)}, \${this.times(w.p).replace("B's","B's three numbers")}, so \${w.txt}: built from A alone, it goes either way, and AB = BA, with rows \${this.rows(this.mul(A,B))}.\`); }
+      if(fl.length){ const i=fl[0], {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, both are flips, over different lines: AB, with rows \${this.rows(this.mul(A,B))}, turns the plane one way, and BA, with rows \${this.rows(this.mul(B,A))}, turns it back the other way.\`); }
+      const d=[0,1,2,3].filter(i=>this.truth(i)===0).map(i=>i+1);
+      out.push(\`The order matters in Pair\${d.length>1?'s':''} \${d.length>1 ? d.slice(0,-1).join(', ')+' and '+d[d.length-1] : d[0]}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, A has rows \${this.rows(A)} and B has rows \${this.rows(B)}. \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the pair's number, where the unit square lands under A (gold)
+     and under B (blue) on the left, both drawn to one scale so they can be
+     compared, and A and B written out on the right. Once the round is right,
+     each pane is marked same or differ. */
+  corners:([[a,b],[c,d]])=>[[0,0],[a,c],[a+b,c+d],[b,d]],
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four pairs of matrices: \${[0,1,2,3].map(i=>{ const {A,B}=this.Q(i); return \`Pair \${i+1}, A with rows \${this.rows(A)} and B with rows \${this.rows(B)}\`; }).join('; ')}\${this.solved?', each marked':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, {A,B}=this.Q(i);
+      const cx=X+52, cy=Y+72, H=40;
+      const S=Math.max(1,...[A,B].flatMap(M=>this.corners(M).flat().map(Math.abs)));
+      const px=x=>cx+x/S*(H-4), py=y=>cy-y/S*(H-4);
+      const shape=(M,key,col)=>\`<path data-k="\${key}" d="\${this.corners(M).map(([x,y],j)=>(j?'L':'M')+f(px(x))+' '+f(py(y))).join('')}Z" fill="\${col}" fill-opacity="0.18" stroke="\${col}" stroke-width="2"/>\`;
+      const mat=(M,top,nm,col,key)=>{ const xl=X+118, xr=X+172, y1=top, y2=top+16;
+        return \`<text x="\${X+106}" y="\${y1+9}" fill="\${col}" font-size="14" font-weight="700" text-anchor="middle">\${nm}</text>\`+
+          \`<path d="M\${xl+4} \${y1-12}L\${xl} \${y1-12}L\${xl} \${y2+4}L\${xl+4} \${y2+4}M\${xr-4} \${y1-12}L\${xr} \${y1-12}L\${xr} \${y2+4}L\${xr-4} \${y2+4}" fill="none" stroke="\${FIG_COL.dim}" stroke-width="1.2"/>\`+
+          M.map((row,r)=>row.map((x,c)=>\`<text data-k="\${key}" data-cell="\${r},\${c}" x="\${X+[132,158][c]}" y="\${[y1,y2][r]}" fill="\${FIG_COL.ink}" font-size="12" text-anchor="middle">\${neg(x)}</text>\`).join('')).join(''); };
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="frame" x="\${cx-H}" y="\${cy-H}" width="\${2*H}" height="\${2*H}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line data-k="axis" x1="\${cx-H}" y1="\${cy}" x2="\${cx+H}" y2="\${cy}" stroke="\${FIG_COL.dim}" stroke-width="1"/><line data-k="axis" x1="\${cx}" y1="\${cy-H}" x2="\${cx}" y2="\${cy+H}" stroke="\${FIG_COL.dim}" stroke-width="1"/>\`;
+      out+=shape(A,'sqA',FIG_COL.b)+shape(B,'sqB',FIG_COL.a);
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${i+1}</text>\`;
+      out+=mat(A,Y+46,'A',FIG_COL.b,'mA')+mat(B,Y+92,'B',FIG_COL.a,'mB');
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${t?'same':'differ'}" x="\${X+172}" y="\${Y+21}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${t?'= same':'≠ differ'}</text>\`; }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Compose.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Compose.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Compose.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="ComposeTurn.call(\${i},\${c})" aria-label="Pair \${i+1}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four pairs of matrices. For each pair, is AB the same as BA, or does the order make a difference?</div>\`;
+    out+=\`<div id="cptFig">\${this.svg()}<div class="figcap">Each pane draws where the unit square lands under A in gold and under B in blue, and writes A and B out beside it.</div></div>\`;
+    out+=\`<div id="cptStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="cptStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">Pair \${i+1}</b>\`+
+        this.btn(i,1,'= Same')+this.btn(i,0,'≠ Differ')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="cptRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cptNext" onclick="ComposeTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cptCheck" \${this.ready()?'':'disabled '}onclick="ComposeTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="cptGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cptGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ORDER SPOTTER','every pair called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which matrix? Order Matters turned round ----------
    Two whole-number 2×2 matrices, A done first and B done second, and four
    matrices, one of them BA, the one move that does both. The rule is stated
@@ -19957,11 +20351,11 @@ const Compose = {
   setTab(t){ this.tab=t; this.render(); },
   pick(which, i){ if(which==='first') this.fi=i; else this.si=i; this.touched=true; this.render(); },
   render(){
-    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]
+    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B'],['turn','⚖️ Same or not?','See four pairs of matrices and call whether the order makes a difference to each']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Compose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='moves';
     for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';
+    document.getElementById('oqBox').innerHTML=!pick ? '' : this.tab==='pick' ? ComposePick.html() : ComposeTurn.html();
     if(pick) return;
     const row=(which, sel)=>this.MOVES.map((m,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===sel}" aria-label="\${which==='first'?'First':'Then'}: \${m.is}" onclick="Compose.pick('\${which}',\${i})">\${m.btn}</button>\`).join('');
@@ -23843,7 +24237,7 @@ const LadderTurn = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('LADDER READER','every speed called','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('SPEED READER','every speed called','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
     return out;
@@ -25474,7 +25868,7 @@ const ShapeRead = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('SHAPE READER','every rise and bend named','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('CURVE READER','every rise and bend named','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
     return out;
@@ -25487,6 +25881,187 @@ const ShapeRead = {
    compare the part of the curve sticking up above it with the gaps under it.
    They match exactly when c × width equals the area, c = (1/(b − a))∫f.
    Only for a straight line is that the average of the two ends. Nothing is saved. */
+/* ---------- Above or below? The water level workshop's third mode ----------
+   Four curves, each on a whole-number interval [a, b] with middle m, and the
+   player calls whether the average value sits above f(m), equals it, or sits
+   below it. Pair each step t right of m with the same step left: the average
+   is the mean of the pairs' means, and for a cubic or anything simpler each
+   pair's mean is f(m) + f″(m)·t²/2, so the call goes by the sign of f″ at the
+   middle, and the average itself is f(m) + f″(m)·h²/6 with h the half-width.
+   Rounds hold curves that bend down, cubics that curve yet sit level because
+   f″(m) = 0, and cubics that bend both ways on the interval, where only
+   f″(m) counts. Each pane draws the curve with f(m) as a dashed level; the
+   average is drawn in once the round is right. A slip rings that pane and
+   works it through. Nothing is saved, and there is no clock. */
+const AvgTurn = {
+  // [c₃, c₂, c₁, c₀, a, b] for f(x) = c₃x³ + c₂x² + c₁x + c₀ on [a, b]
+  ROUNDS:[
+    [[0,1,0,0,-1,3], [0,-1,4,0,0,2], [1,-3,3,1,0,2], [1,-3,0,0,0,4]],
+    [[1,0,0,0,-1,3], [0,0,3,-2,1,5], [0,-2,1,0,-2,0], [1,-6,0,0,0,2]],
+    [[-1,0,0,0,-2,2], [0,1,-2,0,0,4], [-1,3,0,0,-1,5], [0,-1,0,0,1,3]],
+    [[1,0,1,0,0,2], [0,-1,0,2,-3,1], [1,-3,0,2,-1,3], [0,0,-1,4,0,6]],
+    [[-1,0,0,0,0,2], [1,0,-9,0,-2,4], [0,2,0,-3,-2,0], [0,0,1,3,-2,2]],
+    [[1,3,0,0,-3,1], [-1,0,0,0,-3,1], [0,1,0,1,1,3], [0,-3,6,0,0,4]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four curves right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'down', t:'Call a curve whose average sits below its middle.', toast:'Bends down, sits below',
+     ok:K=>K.kinds.has('down')},
+    {id:'flat', t:'Call a curving cubic whose average still equals its middle.', toast:'Curved, yet level',
+     ok:K=>K.kinds.has('flat')},
+    {id:'twist',t:'Call a curve that bends both ways on its interval.', toast:'Only f″ at the middle counts',
+     ok:K=>K.kinds.has('twist')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Pair each step t to the right of the middle m with the same step to the left: the average value is the mean of all the pairs\\' means, (f(m + t) + f(m − t))/2. For a cubic or anything simpler, each pair\\'s mean is f(m) + f″(m)·t²/2, so it all comes down to f″ at the middle. If f″(m) > 0 the average sits above f(m), if f″(m) < 0 it sits below, and if f″(m) = 0 it equals f(m), even when the curve bends. The average itself is f(m) + f″(m)·h²/6, where h is half the width.',
+  L:'ABCD',
+  WORD:{1:'sitting above f(m)', 0:'equal to f(m)', [-1]:'sitting below f(m)'},
+  REL:{1:'above', 0:'equal to', [-1]:'below'},
+  NAMES:{1:'the average sits above f at the middle', 0:'the average equals f at the middle', [-1]:'the average sits below f at the middle'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [c3,c2,c1,c0,a,b]=this.R()[i]; return {c3,c2,c1,c0,a,b,m:(a+b)/2,h:(b-a)/2}; },
+  f(i,x){ const {c3,c2,c1,c0}=this.Q(i); return ((c3*x+c2)*x+c1)*x+c0; },
+  f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },
+  f2m(i){ return this.f2(i,this.Q(i).m); },
+  // 1 above, 0 equal, −1 below
+  truth(i){ return Math.sign(this.f2m(i)); },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : \`\${n<0?'−':''}\${Math.abs(n)}/\${d}\`; },
+  // the average minus f(m), f″(m)·h²/6, as a fraction
+  gapN(i){ const {h}=this.Q(i); return this.f2m(i)*h*h; },
+  gap(i){ return this.fr(this.gapN(i),6); },
+  avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },
+  // where f″ is 0 strictly inside the interval, if it is
+  zero(i){ const {c3,c2,a,b}=this.Q(i); if(!c3) return null; const z=-c2/(3*c3); return z>a && z<b ? this.fr(-c2,3*c3) : null; },
+  lines(){ return [0,1,2,3].filter(i=>{ const {c3,c2}=this.Q(i); return !c3 && !c2; }); },
+  downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },
+  twists(){ return [0,1,2,3].filter(i=>this.truth(i)!==0 && this.zero(i)!==null); },
+  tags(){ const t=[]; if(this.downs().length) t.push('down'); if(this.flats().length) t.push('flat'); if(this.twists().length) t.push('twist'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  // c₃x³ + c₂x² + c₁x + c₀, written the usual way
+  poly(T){ const S=T.filter(([k])=>k);
+    return S.length ? S.map(([k,s],j)=>{ const m=Math.abs(k)===1&&s ? '' : String(Math.abs(k));
+      return j ? \`\${k<0?' − ':' + '}\${m}\${s}\` : \`\${k<0?'−':''}\${m}\${s}\`; }).join('') : '0'; },
+  fs(i){ const {c3,c2,c1,c0}=this.Q(i); return this.poly([[c3,'x³'],[c2,'x²'],[c1,'x'],[c0,'']]); },
+  f2s(i){ const {c3,c2}=this.Q(i); return this.poly([[6*c3,'x'],[2*c2,'']]); },
+  span(i){ const {a,b}=this.Q(i); return \`[\${neg(a)}, \${neg(b)}]\`; },
+  why(i){
+    const {m}=this.Q(i), t=this.truth(i), v=this.f2m(i), fm=neg(this.f(i,m));
+    if(t===0) return \`f″(x) = \${this.f2s(i)}, so f″(\${neg(m)}) = 0: each step right of m is matched by the same step left, every pair's mean is f(m) exactly, and the average equals f(\${neg(m)}) = \${fm}.\`;
+    return \`f″(x) = \${this.f2s(i)}, so f″(\${neg(m)}) = \${neg(v)}, \${t>0?'above':'below'} 0: every pair's mean is f(m) + f″(m)·t²/2, \${t>0?'above':'below'} f(m), and the average is f(m) + f″(m)·h²/6 = \${fm} \${t>0?'+':'−'} \${this.fr(Math.abs(this.gapN(i)),6)} = \${this.avg(i)}, \${t>0?'above':'below'} f(\${neg(m)}) = \${fm}.\`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const tw=this.twists(), fl=this.flats(), dn=this.downs();
+      if(tw.length){ const i=tw[0], {m}=this.Q(i), t=this.truth(i), w=t>0?'above':'below';
+        out.push(\`In \${this.L[i]}, f bends both ways on \${this.span(i)}: f″ is 0 at x = \${this.zero(i)}, inside it. Still, f″(\${neg(m)}) = \${neg(this.f2m(i))}, so every pair's mean sits \${w} f(m), and the average, \${this.avg(i)}, is \${w} f(\${neg(m)}) = \${neg(this.f(i,m))}.\`); }
+      if(fl.length){ const i=fl[0], {m}=this.Q(i);
+        out.push(\`In \${this.L[i]}, f curves, but f″(\${neg(m)}) = 0: each step right of m is undone by the same step left, so the average is f(\${neg(m)}) = \${neg(this.f(i,m))} exactly.\`); }
+      if(dn.length){ const i=dn[0], {m}=this.Q(i);
+        out.push(\`In \${this.L[i]}, f″(\${neg(m)}) = \${neg(this.f2m(i))}, below 0: every pair's mean sits below f(m), and the average, \${this.avg(i)}, is below f(\${neg(m)}) = \${neg(this.f(i,m))}.\`); }
+      out.push(\`The average minus f(m) for each: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.gap(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const {m,h}=this.Q(i);
+        out.push(\`In \${this.L[i]}, f(x) = \${this.fs(i)} on \${this.span(i)}: the middle is m = \${neg(m)} and half the width is h = \${h}. \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the curve in gold across its interval, with f at the middle
+     as a dashed level and a dot. The window's height is set by the curve,
+     its middle level and its average together, so nothing moves when the
+     average is drawn in, in red, once the round is right. */
+  PW:156, PH:72,
+  svg(){
+    const f=n=>n.toFixed(2), PW=this.PW, PH=this.PH;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each on an interval: \${[0,1,2,3].map(i=>\`\${this.L[i]}, f(x) = \${this.fs(i)} on \${this.span(i)}\`).join('; ')}\${this.solved?', each with its average drawn':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, {a,b,m}=this.Q(i), N=48;
+      const ys=[]; for(let j=0;j<=N;j++) ys.push(this.f(i,a+(b-a)*j/N));
+      const fm=this.f(i,m), av=fm+this.gapN(i)/6;
+      let lo=Math.min(...ys,fm,av), hi=Math.max(...ys,fm,av); if(hi-lo<1e-9){ lo-=1; hi+=1; }
+      const X0=X+12, Y0=Y+38, px=x=>X0+(x-a)/(b-a)*PW, py=v=>Y0+PH-4-(v-lo)/(hi-lo)*(PH-8);
+      const lvl=(v,key,col,dash)=>\`<line data-k="\${key}" x1="\${X0}" y1="\${f(py(v))}" x2="\${X0+PW}" y2="\${f(py(v))}" stroke="\${col}" stroke-width="1.6" stroke-dasharray="\${dash}"/>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="frame" x="\${X0}" y="\${Y0}" width="\${PW}" height="\${PH}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=lvl(fm,'mid',FIG_COL.dim,'4 3');
+      if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');
+      out+=\`<path data-k="f" d="\${ys.map((v,j)=>(j?'L':'M')+f(px(a+(b-a)*j/N))+' '+f(py(v))).join('')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+      out+=\`<circle data-k="pt" cx="\${f(px(m))}" cy="\${f(py(fm))}" r="3.5" fill="\${FIG_COL.ink}"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+17}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="on" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.dim}" font-size="11" text-anchor="end">on \${this.span(i)}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'above',0:'equal',[-1]:'below'}[t]}" x="\${X+172}" y="\${Y+123}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'▲ above',0:'= equal',[-1]:'▼ below'}[t]}</text>\`; }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Avg.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Avg.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Avg.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="AvgTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each on an interval. Does the average value sit above f at the middle, equal it, or sit below it?</div>\`;
+    out+=\`<div id="avtFig">\${this.svg()}<div class="figcap">Each pane draws the curve in gold, with f at the middle as a dashed level and a dot. Once all four are called right, the average is drawn in red.</div></div>\`;
+    out+=\`<div id="avtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="avtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.fs(i)}</span></b>\`+
+        this.btn(i,1,'▲ Above')+this.btn(i,0,'= Equal')+this.btn(i,-1,'▼ Below')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="avtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="avtNext" onclick="AvgTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="avtCheck" \${this.ready()?'':'disabled '}onclick="AvgTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="avtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="avtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LEVEL READER','every middle weighed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which level? The water level workshop turned round ----------
  * A quadratic f on a whole-number interval [a, b], its area there worked
  * out, and four numbers. The average value is the area spread across the
@@ -25698,11 +26273,11 @@ const Avg = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('avTab').innerHTML=[['hand','🌊 Level it by hand','Raise and lower the level by hand until it holds the area'],['pick','🎯 Which level?','See a curve and its area, and pick which of four numbers is its average value']]
+    document.getElementById('avTab').innerHTML=[['hand','🌊 Level it by hand','Raise and lower the level by hand until it holds the area'],['pick','🎯 Which level?','See a curve and its area, and pick which of four numbers is its average value'],['turn','📏 Above or below?','See four curves and call whether each average sits above f at the middle, equals it, or sits below it']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Avg.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['avSets','avFig','avStep','avRead','avGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('agBox').innerHTML=pick ? AvgPick.html() : '';
+    document.getElementById('agBox').innerHTML=!pick ? '' : this.tab==='pick' ? AvgPick.html() : AvgTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('avSets').innerHTML=this.SETS.map((s,i)=>
@@ -25801,7 +26376,7 @@ const TailPick = {
       const tries=this.misses+1;
       Sfx.good();
       if(this.matched===5||this.matched===10||this.matched===25)
-        Celebrate.banner('TAIL TAMER', this.matched+' endless areas measured','var(--gold)',()=>Sfx.milestone());
+        Celebrate.banner('AREA TAMER', this.matched+' endless areas measured','var(--gold)',()=>Sfx.milestone());
       else UI.toast(\`✓ \${'ABCD'[i]} is where it closes in, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
       this.last={S:r.S};
       this.newRound();
@@ -32437,6 +33012,188 @@ const TrigInt = {
   }
 };
 
+/* ---------- Bowl or saddle? The tangent plane workshop's third mode ----------
+   Four surfaces f = ax² + cxy + by², each with a point, and the player calls
+   whether the surface stays above its tangent plane there, stays below it,
+   or crosses it. Take the plane away and what is left is au² + cuv + bv²,
+   with u and v the steps from the point, the same at every point. Opposite
+   signs on x² and y² cross at once; shared signs go by 4ab − c², and when
+   that falls below 0 the xy term wins along a diagonal and the surface
+   crosses after all. Each pane draws what is left along x and along y, with
+   the plane as the middle line; the two diagonals stay hidden until the
+   round is right. A slip rings that pane and works it through. Nothing is
+   saved, and there is no clock. */
+const PlaneTurn = {
+  // [a, c, b, x₀, y₀] for f = ax² + cxy + by² at (x₀, y₀)
+  ROUNDS:[
+    [[1,0,1,1,0], [1,3,1,0,1], [-1,1,-2,1,1], [2,1,-1,-1,2]],
+    [[-2,0,-1,0,1], [1,-1,2,2,1], [1,4,2,1,-1], [-1,2,3,1,0]],
+    [[2,-3,2,1,1], [-1,-3,-1,0,2], [3,2,-1,2,0], [-1,-1,-1,-1,1]],
+    [[1,2,2,0,-1], [-2,5,-2,1,1], [-1,0,-3,2,1], [2,0,-2,1,2]],
+    [[-1,1,-1,1,0], [2,-6,3,1,1], [1,1,1,-1,-1], [-3,1,1,0,1]],
+    [[1,-3,3,1,-1], [-2,-2,-1,1,0], [1,-4,2,2,1], [2,1,-3,0,0]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four surfaces right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'opp',  t:'Call a surface whose x² and y² lean opposite ways.', toast:'Opposite signs cross',
+     ok:K=>K.kinds.has('opp')},
+    {id:'twist',t:'Call a saddle whose x² and y² both lean the same way.', toast:'The xy term can twist it',
+     ok:K=>K.kinds.has('twist')},
+    {id:'dome', t:'Call a surface that stays below its tangent plane.', toast:'A dome stays below',
+     ok:K=>K.kinds.has('dome')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Take away the tangent plane at a point, and what is left of f = ax² + cxy + by² is au² + cuv + bv², where u and v are the steps from the point: the same at every point. If a and b have opposite signs, a step along x and a step along y land on opposite sides of the plane, so it crosses: a saddle. If they share a sign, work out 4ab − c². Above 0, it stays on the side a puts it: above the plane if a > 0, a bowl, and below if a < 0, a dome. Below 0, the xy term wins along a diagonal, and it crosses after all.',
+  L:'ABCD',
+  WORD:{1:'staying above the plane', 0:'crossing the plane', [-1]:'staying below the plane'},
+  SAYS:{1:'it stays above the plane', 0:'it crosses the plane', [-1]:'it stays below the plane'},
+  NAMES:{1:'it stays above its tangent plane', 0:'it crosses its tangent plane', [-1]:'it stays below its tangent plane'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [a,c,b,x,y]=this.R()[i]; return {a,c,b,x,y}; },
+  disc(i){ const {a,b,c}=this.Q(i); return 4*a*b-c*c; },
+  // 1 above, −1 below, 0 crosses
+  truth(i){ const {a,b}=this.Q(i), D=this.disc(i); return a*b<0 || D<0 ? 0 : a>0 ? 1 : -1; },
+  // the diagonal step where a twisted saddle shows its other side: u = 1, v = −sign(a·c)
+  dv(i){ const {a,c}=this.Q(i); return -Math.sign(a)*Math.sign(c); },
+  left(i,u,v){ const {a,b,c}=this.Q(i); return a*u*u+c*u*v+b*v*v; },
+  opps(){ return [0,1,2,3].filter(i=>{ const {a,b}=this.Q(i); return a*b<0; }); },
+  twists(){ return [0,1,2,3].filter(i=>{ const {a,b}=this.Q(i); return a*b>0 && this.disc(i)<0; }); },
+  domes(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  tags(){ const t=[]; if(this.opps().length) t.push('opp'); if(this.twists().length) t.push('twist'); if(this.domes().length) t.push('dome'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  pn(n){ return n<0 ? \`(\${neg(n)})\` : String(n); },
+  // a·p² + c·pq + b·q², written the usual way: no 1s, no zero terms
+  form(i,p,q){
+    const {a,b,c}=this.Q(i), T=[[a,p+'²'],[c,p+q],[b,q+'²']].filter(([k])=>k);
+    return T.map(([k,s],j)=>{ const m=Math.abs(k)===1 ? '' : String(Math.abs(k));
+      return j ? \`\${k<0?' − ':' + '}\${m}\${s}\` : \`\${k<0?'−':''}\${m}\${s}\`; }).join('');
+  },
+  mono(k,s){ return (k<0?'−':'')+(Math.abs(k)===1?'':String(Math.abs(k)))+s; },
+  surf(i){ return 'f = '+this.form(i,'x','y'); },
+  pt(i){ const {x,y}=this.Q(i); return \`(\${neg(x)}, \${neg(y)})\`; },
+  dstr(i){ const {a,b,c}=this.Q(i); return \`4·\${this.pn(a)}·\${this.pn(b)} − \${this.pn(c)}² = \${neg(this.disc(i))}\`; },
+  // what is left along the diagonal, term by term: a + c·v + b
+  diag(i){ const {a,b,c}=this.Q(i), v=this.dv(i), t=[a,c*v,b];
+    return t.map((k,j)=>j ? \`\${k<0?' − ':' + '}\${Math.abs(k)}\` : neg(k)).join('')+\` = \${neg(this.left(i,1,v))}\`; },
+  side(n){ return n>0 ? 'above the plane' : 'below the plane'; },
+  why(i){
+    const {a,b}=this.Q(i), t=this.truth(i);
+    if(a*b<0) return \`a = \${neg(a)} and b = \${neg(b)} have opposite signs, so a step along x alone leaves \${this.mono(a,'u²')}, \${this.side(a)}, and a step along y alone leaves \${this.mono(b,'v²')}, \${this.side(b)}: it crosses.\`;
+    if(t===0) return \`a = \${neg(a)} and b = \${neg(b)} share a sign, but \${this.dstr(i)} is below 0: along u = 1, v = \${neg(this.dv(i))} what is left is \${this.diag(i)}, \${this.side(-a)}, so it crosses.\`;
+    return \`a = \${neg(a)} and b = \${neg(b)} share a sign, and \${this.dstr(i)} is above 0, so the xy term cannot turn it round: \${this.SAYS[t]}.\`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const tw=this.twists(), op=this.opps(), dm=this.domes();
+      if(tw.length){ const i=tw[0], {a}=this.Q(i);
+        out.push(\`In \${this.L[i]}, x² and y² both lean \${a>0?'up':'down'}, but the xy term is strong: \${this.dstr(i)} is below 0, and along u = 1, v = \${neg(this.dv(i))} what is left is \${this.diag(i)}, \${this.side(-a)}. It is a saddle.\`); }
+      if(op.length){ const i=op[0], {a,b}=this.Q(i);
+        out.push(\`In \${this.L[i]}, x² leans \${a>0?'up':'down'} and y² leans \${b>0?'up':'down'}, so a step along x lands \${this.side(a)} and a step along y lands \${this.side(b)}: a saddle.\`); }
+      if(dm.length){ const i=dm[0];
+        out.push(\`In \${this.L[i]}, a = \${neg(this.Q(i).a)} and \${this.dstr(i)} is above 0, so every step falls below the plane: a dome.\`); }
+      out.push(\`4ab − c² for each: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${neg(this.disc(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad)
+        out.push(\`In \${this.L[i]}, \${this.surf(i)}. Take away its tangent plane at \${this.pt(i)} and what is left is \${this.form(i,'u','v')}, where u and v are the steps from the point. \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`);
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: what is left once the plane is taken away, along four steps
+     from the point, for t from −1 to 1; the plane is the middle line. Along x
+     in gold and along y in blue from the start; once the round is right, the
+     two diagonals dashed in red. The height is set by all four, so nothing
+     jumps when they appear. */
+  PW:156, PH:72,
+  slices(i){ const {a,b,c}=this.Q(i); return {x:a, y:b, p:a+b+c, m:a+b-c}; },
+  svg(){
+    const f=n=>n.toFixed(2), PW=this.PW, PH=this.PH;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four surfaces, each with a point: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.surf(i)} at \${this.pt(i)}\`).join('; ')}\${this.solved?', each with its diagonal slices drawn':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, S=this.slices(i);
+      const M=Math.max(...Object.values(S).map(Math.abs)) || 1;
+      const X0=X+12, Y0=Y+38, mid=Y0+PH/2, px=t=>X0+(t+1)/2*PW, py=v=>mid-v/M*(PH/2-4);
+      const curve=(k,key,col,dash)=>{ const P=[];
+        for(let j=0;j<=40;j++){ const t=-1+2*j/40; P.push((j?'L':'M')+f(px(t))+' '+f(py(k*t*t))); }
+        return \`<path data-k="\${key}" d="\${P.join('')}" fill="none" stroke="\${col}" stroke-width="2"\${dash?' stroke-dasharray="5 3"':''}/>\`; };
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="frame" x="\${X0}" y="\${Y0}" width="\${PW}" height="\${PH}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line data-k="plane" x1="\${X0}" y1="\${f(mid)}" x2="\${X0+PW}" y2="\${f(mid)}" stroke="\${FIG_COL.dim}" stroke-width="1.2"/>\`;
+      if(this.solved){ out+=curve(S.p,'diag',FIG_COL.d,true); out+=curve(S.m,'diag',FIG_COL.d,true); }
+      out+=curve(S.x,'sx',FIG_COL.b,false)+curve(S.y,'sy',FIG_COL.a,false);
+      out+=\`<circle data-k="pt" cx="\${f(px(0))}" cy="\${f(mid)}" r="3.5" fill="\${FIG_COL.ink}"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+17}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">\${this.surf(i)}</text>\`;
+      out+=\`<text data-k="how" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.dim}" font-size="11" text-anchor="end">at \${this.pt(i)}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'above',0:'cross',[-1]:'below'}[t]}" x="\${X+172}" y="\${Y+123}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'∪ above',0:'✕ crosses',[-1]:'∩ below'}[t]}</text>\`; }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    TanPlane.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    TanPlane.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; TanPlane.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="PlaneTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four surfaces, each with a point. Near the point, does the surface stay above its tangent plane, stay below it, or cross it?</div>\`;
+    out+=\`<div id="ptnFig">\${this.svg()}<div class="figcap">Each pane draws what is left once the tangent plane is taken away: a step along x in gold and along y in blue, with the plane as the middle line. Once all four are called right, the two diagonal steps are dashed in red.</div></div>\`;
+    out+=\`<div id="ptnStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="ptnStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.form(i,'x','y')}</span></b>\`+
+        this.btn(i,1,'∪ Above')+this.btn(i,0,'✕ Crosses')+this.btn(i,-1,'∩ Below')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="ptnRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ptnNext" onclick="PlaneTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ptnCheck" \${this.ready()?'':'disabled '}onclick="PlaneTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="ptnGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ptnGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SADDLE SPOTTER','every surface called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which plane? The tangent plane workshop turned round ----------
    A surface f(x, y) = ax² + cxy + by² with whole a, b and c, a whole point
    (x₀, y₀), and four planes z = h + p(x − x₀) + q(y − y₀), one of them the
@@ -32678,11 +33435,11 @@ const TanPlane = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tqTab').innerHTML=[['hand','🪁 Build it by hand','Set a plane’s height and slopes by hand'],['pick','🎯 Which plane?','See a surface and a point, and pick which of four planes touches it there']]
+    document.getElementById('tqTab').innerHTML=[['hand','🪁 Build it by hand','Set a plane’s height and slopes by hand'],['pick','🎯 Which plane?','See a surface and a point, and pick which of four planes touches it there'],['turn','🥣 Bowl or saddle?','See four surfaces and call whether each stays above its tangent plane, stays below it, or crosses it']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="TanPlane.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tqSets','tqFig','tqP','tqStep','tqRead','tqGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('tnBox').innerHTML=pick ? TanPick.html() : '';
+    document.getElementById('tnBox').innerHTML=!pick ? '' : this.tab==='pick' ? TanPick.html() : PlaneTurn.html();
     if(pick) return;
     document.getElementById('tqSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TanPlane.pick(\${i})" aria-label="\${s.btn}: z = \${this.sq(s.a,'x')} \${s.b<0?'−':'+'} \${this.sq(Math.abs(s.b),'y')} at (\${neg(s.x0)}, \${neg(s.y0)})">\${s.btn}</button>\`).join('');
@@ -36813,7 +37570,7 @@ const ExpInt = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('MASTER OF GROWTH','every exponential undone','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('MASTER OF LOGS','every exponential undone','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

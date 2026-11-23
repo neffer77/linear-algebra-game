@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see a curve and its area, and pick which of four numbers is its average value\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeAvg');
     t.eq('the water level workshop opens', await t.screen(), 's-avg');
-    t.eq('levelling by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('levelling by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which level\?/);
-    t.eq('which level is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which level is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, drawing, level, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('agBox').innerText)).startsWith(

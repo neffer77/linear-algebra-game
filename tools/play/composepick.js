@@ -31,11 +31,11 @@ module.exports = {
       /Then turn it round: see A and B, and pick which of four matrices does A first, then B\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCompose');
     t.eq('Order Matters opens', await t.screen(), 's-compose');
-    t.eq('trying the moves is the pressed mode', await pressed(t), 'true,false');
+    t.eq('trying the moves is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7373));
     await t.tapText(/Which matrix\?/);
-    t.eq('which matrix is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which matrix is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the moves, the figure, the readout and the goals step aside', await hidden(t, 'cmFirst') && await hidden(t, 'cmThen') && await hidden(t, 'cmFig') && await hidden(t, 'cmRead') && await hidden(t, 'cmGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('oqBox').innerText)).startsWith(
       'Doing a move A and then a move B is a single move, the matrix BA'));

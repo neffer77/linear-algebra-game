@@ -1,60 +1,60 @@
 {
-  "change": "Add a Steeper or gentler mode to the inverse slope workshop",
+  "change": "Add an Above or below mode to the water level workshop",
   "mutations": [
     {
-      "name": "the flip is left out",
+      "name": "f″ takes 3 for the cube's 6",
       "file": "index.html",
-      "find": "gp(i){ return 1/this.fp(i); },",
-      "replace": "gp(i){ return this.fp(i); },",
+      "find": "f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },",
+      "replace": "f2(i,x){ const {c3,c2}=this.Q(i); return 3*c3*x+2*c2; },",
       "run": "verify"
     },
     {
-      "name": "f′ is taken at u",
+      "name": "the bend is counted at the ends too",
       "file": "index.html",
-      "find": "fp(i){ return this.S(i).d(this.x(i)); },",
-      "replace": "fp(i){ return this.S(i).d(this.u(i)); },",
+      "find": "return z>a && z<b ? this.fr(-c2,3*c3) : null; },",
+      "replace": "return z>=a && z<=b ? this.fr(-c2,3*c3) : null; },",
       "run": "verify"
     },
     {
-      "name": "a slope of exactly 1 is not looked for",
+      "name": "level cubics are not looked for",
       "file": "index.html",
-      "find": "return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },",
-      "replace": "return a>1 ? 1 : -1; },",
+      "find": "flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },",
+      "replace": "flats(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "a falling slope is read by its sign",
+      "name": "the average takes a third, not a sixth",
       "file": "index.html",
-      "find": "size(v){ const a=Math.abs(v);",
-      "replace": "size(v){ const a=v;",
+      "find": "avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },",
+      "replace": "avg(i){ const {m}=this.Q(i); return this.fr(3*this.f(i,m)+this.gapN(i),3); },",
       "run": "verify"
     },
     {
-      "name": "the f′-at-u slip is never found",
+      "name": "the average is drawn before the round is right",
       "file": "index.html",
-      "find": "atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },",
-      "replace": "atxs(){ return []; },",
+      "find": "if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');",
+      "replace": "out+=lvl(av,'avg',FIG_COL.d,'6 3');",
       "run": "verify"
     },
     {
-      "name": "the mirrors are drawn before the round is right",
+      "name": "the middle level is drawn at the left end",
       "file": "index.html",
-      "find": "if(this.solved) out+=`<path data-k=\"g\"",
-      "replace": "if(true) out+=`<path data-k=\"g\"",
+      "find": "out+=lvl(fm,'mid',FIG_COL.dim,'4 3');",
+      "replace": "out+=lvl(this.f(i,a),'mid',FIG_COL.dim,'4 3');",
       "run": "verify"
     },
     {
-      "name": "the blue dot sits at (u, x)",
+      "name": "curves that bend down are not looked for",
       "file": "index.html",
-      "find": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(x))}\" cy=\"${f(py(u))}\"",
-      "replace": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(u))}\" cy=\"${f(py(x))}\"",
+      "find": "downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },",
+      "replace": "downs(){ return []; },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
       "run": "verify"
     }
   ]

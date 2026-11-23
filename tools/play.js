@@ -150,6 +150,7 @@ const SUITES = [
   require('./play/newtonpick'), // see a curve and a first guess, pick which of four numbers is the next guess
   require('./play/newtonturn'), // see four curves with a first guess each, call where each Newton step goes
   require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
+  require('./play/avgturn'), // see four curves, call each average above f at the middle, equal to it or below it
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum
   require('./play/georeach'), // step x along a power series and find how far it still adds up
   require('./play/rowmoves'), // work a 3×3 matrix down with row moves and keep track of its determinant
@@ -174,6 +175,7 @@ const SUITES = [
   require('./play/powpick'), // see A, its eigenvectors and v, pick which of four vectors is Aⁿv
   require('./play/flowmatch'), // see the arrows of x′ = Ax, pick which of four matrices drew them
   require('./play/tanpick'), // see a surface and a point, pick which of four planes touches it there
+  require('./play/planeturn'), // see four surfaces, call each above its tangent plane, below it or crossing it
   require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
   require('./play/cisternsketch'), // see a spring's flow, set the total at the end of each hour and draw F
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there
@@ -190,11 +192,13 @@ const SUITES = [
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
+  require('./play/secturn'), // see four curves with a secant each, call its slope more than f′(a), equal to it or less
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on
   require('./play/contourmatch'), // see a contour map and pick which of four functions f(x, y) drew it
   require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v
   require('./play/mixpick'), // the Tome's mix: one question from a different workshop's pick mode each time
   require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
+  require('./play/composeturn'), // see four pairs of matrices, call whether the order makes a difference to each
   require('./play/lnpick'), // see a product of powers, pick which of four numbers is the slope of ln y
   require('./play/eulerpick'), // see y′ = px + qy, a start and a step, pick which of four numbers is Euler's estimate
   require('./play/fieldmatch'), // see a slope field and pick which of four equations y′ = f(x, y) drew it
