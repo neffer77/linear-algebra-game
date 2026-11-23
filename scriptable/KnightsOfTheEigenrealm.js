@@ -1318,7 +1318,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LADDER WORKSHOP ============ -->
   <div class="screen" id="s-ladder">
     <div class="panel"><h2>🪜 Ladder Workshop</h2><div class="sub">A ladder leans on a wall and its foot slides out at a steady speed. The ladder's length never changes, so x² + y² = L² ties the foot to the top. Slide the foot out and watch how fast the top falls: slowly at first, then racing near the ground.</div></div>
-    <div id="ldTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Slide the foot by hand or pick the speed"></div>
+    <div id="ldTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Slide the foot by hand, pick the speed, or call each top faster or slower"></div>
     <div class="panel">
       <div id="lzBox"></div>
       <div id="ldSets" class="wsModes" role="group" aria-label="Which ladder"></div>
@@ -15536,7 +15536,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪜 Ladder Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Slide a ladder's foot out from a wall and watch its top fall, slowly at first and then racing. One equation, x² + y² = L², ties the two speeds together. Then turn it round: see a ladder, and pick which of four numbers is the top's speed.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide a ladder's foot out from a wall and watch its top fall, slowly at first and then racing. One equation, x² + y² = L², ties the two speeds together. Then turn it round: see a ladder, and pick which of four numbers is the top's speed. Or call it: see four ladders, and say whether each top falls faster than its foot, just as fast, or slower.</div>
          <button class="btn sm" id="tomeLadder" style="width:auto;margin-top:8px" onclick="Ladder.open()">Open the ladder workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -23291,6 +23291,171 @@ const LadPick = {
     return out;
   }
 };
+/* ---------- Faster or slower? The ladder workshop's third mode ----------
+   Four ladders lean on a wall, each with its foot sliding out, and the
+   player calls whether each top slides down faster than the foot, just as
+   fast, or slower. x² + y² = L² gives y′ = −x·x′/y, so the top moves x/y
+   times as fast as the foot: faster when x > y, just as fast when x = y,
+   slower when x < y. Each pane shows the foot x m out, the ladder's length
+   and the foot's speed, but not the ladder or its top. Rounds hold a foot
+   past halfway out whose top is still the slower, a ladder at exactly 45°,
+   and a foot racing out whose top is still the slower. A slip rings that
+   pane and works y and x/y through; once all four are right, each ladder is
+   drawn with its top. Nothing is saved, and there is no clock. */
+const LadderTurn = {
+  // [L², x, x′]: lengths are whole numbers or square roots, so x = y can come out exact
+  ROUNDS:[
+    [[100,6,1], [25,4,1], [50,5,2], [169,5,3]],
+    [[8,2,1], [25,3,2], [100,8,1], [169,12,1]],
+    [[169,7,4], [18,3,3], [100,9,1], [25,2,1]],
+    [[289,15,2], [289,8,5], [32,4,2], [100,7,1]],
+    [[625,24,1], [72,6,1], [625,7,3], [100,6,4]],
+    [[400,16,2], [400,12,1], [36,3,3], [2,1,1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four ladders right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'past', t:'Call a ladder whose foot is past halfway out, yet whose top is still the slower.', toast:'Past halfway, still slower',
+     ok:K=>K.kinds.has('past')},
+    {id:'same', t:'Call a ladder whose top falls exactly as fast as its foot slides.', toast:'Neck and neck',
+     ok:K=>K.kinds.has('same')},
+    {id:'quick',t:'Call a ladder whose foot races out at 3 m/s or more, yet whose top is still the slower.', toast:'A fast foot, a slow top',
+     ok:K=>K.kinds.has('quick')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The ladder never changes length, so x² + y² = L². Differentiate in time: 2x·x′ + 2y·y′ = 0, so y′ = −x·x′/y, and the top falls x/y times as fast as the foot slides. It is faster when the foot is farther out than the top is high, x > y, just as fast when x = y, and slower when x < y. The foot\\'s own speed scales both and changes nothing.',
+  L:'ABCD',
+  WORD:{1:'faster', 0:'just as fast', [-1]:'slower'},
+  NAMES:{1:'the top is faster', 0:'the top is just as fast', [-1]:'the top is slower'},
+  R(){ return this.ROUNDS[this.ri]; },
+  L2(i){ return this.R()[i][0]; },
+  x(i){ return this.R()[i][1]; },
+  v(i){ return this.R()[i][2]; },
+  y2(i){ return this.L2(i)-this.x(i)**2; },
+  y(i){ return Math.sqrt(this.y2(i)); },
+  len(i){ return Math.sqrt(this.L2(i)); },
+  ratio(i){ return this.x(i)/this.y(i); },
+  truth(i){ return Math.sign(2*this.x(i)**2-this.L2(i)); },
+  sq(n){ return Number.isInteger(Math.sqrt(n)); },
+  rt(n){ return this.sq(n) ? String(Math.sqrt(n)) : \`√\${n}\`; },
+  num(v,d=2){ const p=10**d, r=Math.round(v*p)/p; return neg(Object.is(r,-0)?0:r); },
+  is(v,d=2){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-9 ? '= ' : '≈ ')+this.num(v,d); },
+  ab(v,d=2){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-9 ? '' : 'about ')+this.num(v,d); },
+  ys(i){ return this.sq(this.y2(i)) ? this.rt(this.y2(i)) : \`\${this.rt(this.y2(i))} ≈ \${this.num(this.y(i))}\`; },
+  /* what a round holds: a foot past halfway with a slower top, a ladder at 45°, a fast foot with a slower top */
+  pasts(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && 4*this.x(i)**2>this.L2(i)); },
+  sames(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=3); },
+  tags(){ const t=[]; if(this.pasts().length) t.push('past'); if(this.sames().length) t.push('same'); if(this.quicks().length) t.push('quick'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const pa=this.pasts(), sa=this.sames(), qu=this.quicks();
+      if(pa.length){ const i=pa[0];
+        out.push(\`In \${this.L[i]}, the foot is \${this.x(i)} m out, past half of the \${this.rt(this.L2(i))} m ladder, yet the top is still \${this.ys(i)} m up: higher than the foot is out, so the top is slower.\`); }
+      if(sa.length){ const i=sa[0];
+        out.push(\`In \${this.L[i]}, x = y = \${this.x(i)} m: the ladder leans at 45°, and its top falls exactly as fast as its foot slides, \${this.v(i)} m/s.\`); }
+      if(qu.length){ const i=qu[0];
+        out.push(\`In \${this.L[i]}, the foot races out at \${this.v(i)} m/s, yet the top falls at only \${this.ab(this.v(i)*this.ratio(i))} m/s: x/y \${this.is(this.ratio(i))} is below 1 whatever the foot's speed.\`); }
+      out.push(\`Each x/y: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.is(this.ratio(i)).replace(/^= /,'')}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const t=this.truth(i);
+        out.push(\`In \${this.L[i]}, the ladder is \${this.rt(this.L2(i))} m long with its foot x = \${this.x(i)} m out, so the top is y = √(\${this.L2(i)} − \${this.x(i)**2}) = \${this.ys(i)} m up. The top falls x/y = \${this.x(i)}/\${this.rt(this.y2(i))} \${this.is(this.ratio(i))} times as fast as the foot: \${t>0?'more than 1, so it is faster':t<0?'less than 1, so it is slower':'exactly 1, so it is just as fast'}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the wall and the ground, the blue foot x m out with an arrow
+     for its speed, and the length and speed written; once the round is
+     right, the gold ladder and its red top y m up */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four ladders against a wall: \${P.map((r,i)=>\`\${this.L[i]}, a \${this.rt(this.L2(i))} m ladder with its foot \${this.x(i)} m out, sliding at \${this.v(i)} m/s\`).join('; ')}\${this.solved?', each drawn with its top':''}">\`;
+    P.forEach((r,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, gx=X+24, gy=Y+106, k=92/this.len(i), fx=gx+this.x(i)*k, ty=gy-this.y(i)*k;
+      out+=\`<clipPath id="ltClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#ltClip\${i})"><line data-k="ground" x1="\${gx}" y1="\${gy}" x2="\${X+176}" y2="\${gy}" stroke="\${FIG_COL.axis}" stroke-width="2"/>\`;
+      out+=\`<line data-k="wall" x1="\${gx}" y1="\${gy}" x2="\${gx}" y2="\${Y+4}" stroke="\${FIG_COL.axis}" stroke-width="2"/>\`;
+      if(this.solved){
+        out+=\`<line data-k="ladder" x1="\${f(fx)}" y1="\${gy}" x2="\${gx}" y2="\${f(ty)}" stroke="\${FIG_COL.b}" stroke-width="3" stroke-linecap="round"/>\`;
+        out+=\`<circle data-k="top" cx="\${gx}" cy="\${f(ty)}" r="4" fill="\${FIG_COL.d}"/>\`;
+      }
+      out+=\`<line data-k="slide" x1="\${f(fx+6)}" y1="\${gy-7}" x2="\${f(fx+20)}" y2="\${gy-7}" stroke="\${FIG_COL.a}" stroke-width="1.5"/><path d="M\${f(fx+20)} \${gy-10}L\${f(fx+25)} \${gy-7}L\${f(fx+20)} \${gy-4}Z" fill="\${FIG_COL.a}"/>\`;
+      out+=\`<circle data-k="foot" cx="\${f(fx)}" cy="\${gy}" r="4" fill="\${FIG_COL.a}"/></g>\`;
+      out+=\`<text x="\${f(fx)}" y="\${Y+121}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="middle">x = \${this.x(i)}</text>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+18}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">L = \${this.rt(this.L2(i))} m, x′ = \${this.v(i)} m/s</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'fast',0:'same',[-1]:'slow'}[t]}" x="\${X+172}" y="\${Y+34}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'▲ faster',0:'= as fast',[-1]:'▼ slower'}[t]}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Ladder.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Ladder.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Ladder.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="LadderTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four ladders, each with its foot sliding out from the wall. Does the top slide down faster than the foot, just as fast, or slower?</div>\`;
+    out+=\`<div id="ltFig">\${this.svg()}<div class="figcap">Each pane shows the wall, the ground and the blue foot x m out, with the ladder's length L and the foot's speed x′. Once all four are called right, each ladder is drawn in gold with its red top y m up.</div></div>\`;
+    out+=\`<div id="ltStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map((r,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="ltStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">L = \${this.rt(this.L2(i))}, x = \${this.x(i)}, x′ = \${this.v(i)}</span></b>\`+
+        this.btn(i,1,'▲ Faster')+this.btn(i,0,'= Same')+this.btn(i,-1,'▼ Slower')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="ltRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ltNext" onclick="LadderTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ltCheck" \${this.ready()?'':'disabled '}onclick="LadderTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four ladders to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="ltGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ltGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LADDER READER','every speed called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Ladder = {
   SETS:[
     {id:'five', btn:'5 m ladder', L:5, v:1, X:[1,2,3,4,4.5,4.8], s:4},
@@ -23356,11 +23521,11 @@ const Ladder = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('ldTab').innerHTML=[['hand','🪜 Slide it by hand','Slide the foot out and watch the top fall'],['pick','🎯 Which speed?','See a ladder, and pick which of four numbers is the top\\'s speed']]
+    document.getElementById('ldTab').innerHTML=[['hand','🪜 Slide it by hand','Slide the foot out and watch the top fall'],['pick','🎯 Which speed?','See a ladder, and pick which of four numbers is the top\\'s speed'],['turn','⚖️ Faster or slower?','See four ladders, and call whether each top falls faster than its foot, just as fast, or slower']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Ladder.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ldSets','ldFig','ldStep','ldRead','ldGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('lzBox').innerHTML=pick ? LadPick.html() : '';
+    document.getElementById('lzBox').innerHTML=!pick ? '' : this.tab==='pick' ? LadPick.html() : LadderTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('ldSets').innerHTML=this.SETS.map((s,i)=>

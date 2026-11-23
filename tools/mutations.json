@@ -1,60 +1,60 @@
 {
-  "change": "Add a Rising or falling mode to the product rule workshop",
+  "change": "Add a Faster or slower mode to the ladder workshop",
   "mutations": [
     {
-      "name": "the slope keeps only f′g",
+      "name": "the top is compared with half the ladder",
       "file": "index.html",
-      "find": "slope(i){ return this.fp(i)*this.ga(i)+this.fa(i)*this.gp(i); },",
-      "replace": "slope(i){ return this.fp(i)*this.ga(i); },",
+      "find": "truth(i){ return Math.sign(2*this.x(i)**2-this.L2(i)); },",
+      "replace": "truth(i){ return Math.sign(2*this.x(i)-this.len(i)); },",
       "run": "verify"
     },
     {
-      "name": "the slope is f′g′",
+      "name": "the top's height adds x² instead of taking it away",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.slope(i)); },",
-      "replace": "truth(i){ return Math.sign(this.fp(i)*this.gp(i)); },",
+      "find": "y2(i){ return this.L2(i)-this.x(i)**2; },",
+      "replace": "y2(i){ return this.L2(i)+this.x(i)**2; },",
       "run": "verify"
     },
     {
-      "name": "f′ of x² loses its 2",
+      "name": "x/y is turned upside down",
       "file": "index.html",
-      "find": "sq: {s:'x²',     d:'2x', f:x=>x*x,     fp:x=>2*x},",
-      "replace": "sq: {s:'x²',     d:'2x', f:x=>x*x,     fp:x=>x},",
+      "find": "ratio(i){ return this.x(i)/this.y(i); },",
+      "replace": "ratio(i){ return this.y(i)/this.x(i); },",
       "run": "verify"
     },
     {
-      "name": "a fall from two rises needs only one",
+      "name": "past halfway needs no slower top",
       "file": "index.html",
-      "find": "boths(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.fp(i)>0 && this.gp(i)>0); },",
-      "replace": "boths(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && (this.fp(i)>0 || this.gp(i)>0)); },",
+      "find": "pasts(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && 4*this.x(i)**2>this.L2(i)); },",
+      "replace": "pasts(){ return [0,1,2,3].filter(i=>4*this.x(i)**2>this.L2(i)); },",
       "run": "verify"
     },
     {
-      "name": "y is drawn before the round is right",
+      "name": "a fast foot starts at 2 m/s",
       "file": "index.html",
-      "find": "if(this.solved){\n        out+=line('y'",
-      "replace": "if(true){\n        out+=line('y'",
+      "find": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=3); },",
+      "replace": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=2); },",
       "run": "verify"
     },
     {
-      "name": "y is drawn as f + g",
+      "name": "the ladder is drawn before the round is right",
       "file": "index.html",
-      "find": "y(i,x){ return this.Fn(i).f(x)*this.Gn(i).f(x); },",
-      "replace": "y(i,x){ return this.Fn(i).f(x)+this.Gn(i).f(x); },",
+      "find": "if(this.solved){\n        out+=`<line data-k=\"ladder\"",
+      "replace": "if(true){\n        out+=`<line data-k=\"ladder\"",
       "run": "verify"
     },
     {
-      "name": "the tangent leans the other way",
+      "name": "the top is drawn x up instead of y",
       "file": "index.html",
-      "find": "y2=\"${f(py(y0+0.8*m))}\"",
-      "replace": "y2=\"${f(py(y0-0.8*m))}\"",
+      "find": "fx=gx+this.x(i)*k, ty=gy-this.y(i)*k;",
+      "replace": "fx=gx+this.x(i)*k, ty=gy-this.x(i)*k;",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Product.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Product.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
       "run": "verify"
     }
   ]

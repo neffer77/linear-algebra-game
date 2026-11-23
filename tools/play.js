@@ -153,6 +153,7 @@ const SUITES = [
   require('./play/rowmoves'), // work a 3×3 matrix down with row moves and keep track of its determinant
   require('./play/elimcramer'), // find each unknown of a 2×2 system as a ratio of two parallelogram areas
   require('./play/ladpick'), // see a ladder, pick which of four numbers is the top's speed
+  require('./play/ladderturn'), // see four ladders, call each top faster, just as fast or slower than its foot
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/impturn'), // see four curves with a point each, call each tangent rising, falling, flat or upright
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
