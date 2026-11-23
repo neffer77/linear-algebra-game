@@ -1,60 +1,60 @@
 {
-  "change": "Add a Line or plane mode to the span workshop",
+  "change": "Add a Kept or knocked off mode to the eigenvector hunt",
   "mutations": [
     {
-      "name": "a pair with a negative u₁v₂ − u₂v₁ is called a line",
+      "name": "an arrow turned round is called kept",
       "file": "index.html",
-      "find": "truth(i){ return this.det(i)!==0 ? 2 :",
-      "replace": "truth(i){ return this.det(i)>0 ? 2 :",
+      "find": "truth(i){ const l=this.lam(i); return l===null ? 0 : Math.sign(l); },",
+      "replace": "truth(i){ const l=this.lam(i); return l===null ? 0 : 1; },",
       "run": "verify"
     },
     {
-      "name": "u₁v₂ − u₂v₁ is added instead",
+      "name": "A's rows are read as its columns",
       "file": "index.html",
-      "find": "return u[0]*v[1]-u[1]*v[0]; },\n  isZero(w)",
-      "replace": "return u[0]*v[1]+u[1]*v[0]; },\n  isZero(w)",
+      "find": "return [a*x+b*y, c*x+d*y]; },\n  /* λ when Av",
+      "replace": "return [a*x+c*y, b*x+d*y]; },\n  /* λ when Av",
       "run": "verify"
     },
     {
-      "name": "a pair with one ⟨0, 0⟩ is called a point",
+      "name": "an arrow a little off its line counts as kept",
       "file": "index.html",
-      "find": "this.isZero(this.u(i)) && this.isZero(this.v(i)) ? 0 : 1; },",
-      "replace": "this.isZero(this.u(i)) || this.isZero(this.v(i)) ? 0 : 1; },",
+      "find": "const [x,y]=this.v(i), [p,q]=this.Av(i); if(x*q-y*p) return null;",
+      "replace": "const [x,y]=this.v(i), [p,q]=this.Av(i); if(Math.abs(x*q-y*p)>3) return null;",
       "run": "verify"
     },
     {
-      "name": "any line pair counts as pointing opposite ways",
+      "name": "27° counts as a few degrees off",
       "file": "index.html",
-      "find": "this.truth(i)===1 && this.rel(i).k<0",
-      "replace": "this.truth(i)===1 && this.rel(i).k!==null",
+      "find": "NEAR:15,",
+      "replace": "NEAR:30,",
       "run": "verify"
     },
     {
-      "name": "37° counts as nearly alike",
+      "name": "the angle off is rounded down",
       "file": "index.html",
-      "find": "NEAR:20,",
-      "replace": "NEAR:40,",
+      "find": "deg(i){ const o=this.off(i), r=Math.round(o);",
+      "replace": "deg(i){ const o=this.off(i), r=Math.floor(o);",
       "run": "verify"
     },
     {
-      "name": "a line is drawn at right angles to its arrows",
+      "name": "Av is drawn before the round is right",
       "file": "index.html",
-      "find": "const w=this.isZero(this.u(i)) ? this.v(i) : this.u(i), n=",
-      "replace": "const w0=this.isZero(this.u(i)) ? this.v(i) : this.u(i), w=[-w0[1],w0[0]], n=",
+      "find": "if(this.solved){ const [ax,ay]=tip(Av);",
+      "replace": "if(true){ const [ax,ay]=tip(Av);",
       "run": "verify"
     },
     {
-      "name": "arrows are drawn upside down",
+      "name": "the scale is taken from v alone",
       "file": "index.html",
-      "find": "y2=Y-w[1]*U,",
-      "replace": "y2=Y+w[1]*U,",
+      "find": "m=Math.max(...v.map(Math.abs),...Av.map(Math.abs)), s=50/m;",
+      "replace": "m=Math.max(...v.map(Math.abs)), s=50/m;",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Span.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Span.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Eigen.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Eigen.render();",
       "run": "verify"
     }
   ]

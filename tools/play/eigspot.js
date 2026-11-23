@@ -30,12 +30,12 @@ module.exports = {
       /Then turn it round: see four arrows, and spot the one that stays\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeEig');
     t.eq('the eigenvector hunt opens', await t.screen(), 's-eig');
-    t.eq('hunting by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('hunting by hand is the pressed mode', await pressed(t), 'true,false,false');
     t.ok('and nothing is spotted yet', await t.ev(() => document.getElementById('egSpot').innerHTML === ''));
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Spot one/);
-    t.eq('spot one is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('spot one is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the hand-hunt and its goals step aside', await hidden(t, 'egMats') && await hidden(t, 'egVec') && await hidden(t, 'egFig') && await hidden(t, 'egGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('egSpot').innerText)).startsWith(
       'An eigenvector stays on its own line: A may stretch it, shrink it or turn it right round, but never knock it off. Which arrow stays on its dotted line?'));

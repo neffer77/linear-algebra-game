@@ -1034,7 +1034,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ EIGENVECTOR HUNT ============ -->
   <div class="screen" id="s-eig">
     <div class="panel"><h2>👑 Eigenvector Hunt</h2><div class="sub">A matrix knocks almost every arrow off its line. Pick a matrix, point v anywhere, and hunt for the directions that only get stretched: the eigenvectors.</div></div>
-    <div id="egMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt by hand or spot one"></div>
+    <div id="egMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt by hand, spot one, or call each arrow"></div>
     <div class="panel">
       <div id="egSpot"></div>
       <div id="egMats" class="wsModes" role="group" aria-label="Matrix"></div>
@@ -15466,7 +15466,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">👑 Eigenvector Hunt</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line. Then turn it round: see four arrows, and spot the one that stays.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line. Then turn it round: see four arrows, and spot the one that stays. Or call it: see four arrows, each with its matrix, and say whether each is kept, turned round or knocked off.</div>
          <button class="btn sm" id="tomeEig" style="width:auto;margin-top:8px" onclick="Eigen.open()">Open the eigenvector hunt</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -17561,11 +17561,11 @@ const Eigen = {
   },
   render(){
     const names=['first','second'];
-    document.getElementById('egMode').innerHTML=[['hunt','🏹 Hunt by hand','Point v by hand and hunt for the directions a matrix keeps'],['spot','🔎 Spot one','See four arrows and spot the one that stays on its line']]
+    document.getElementById('egMode').innerHTML=[['hunt','🏹 Hunt by hand','Point v by hand and hunt for the directions a matrix keeps'],['spot','🔎 Spot one','See four arrows and spot the one that stays on its line'],['turn','🧭 Kept or knocked off?','See four matrices, each with an arrow, and call each arrow kept, turned round or knocked off its line']]
       .map(([m,t,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Eigen.setMode('\${m}')" aria-label="\${l}">\${t}</button>\`).join('');
-    const spot=this.mode==='spot';
+    const spot=this.mode!=='hunt';
     for(const id of ['egMats','egVec','egFig','egRead','egGoalPanel']) document.getElementById(id).style.display=spot?'none':'';
-    document.getElementById('egSpot').innerHTML=spot ? EigSpot.html() : '';
+    document.getElementById('egSpot').innerHTML=!spot ? '' : this.mode==='spot' ? EigSpot.html() : EigTurn.html();
     if(spot) return;
     document.getElementById('egMats').innerHTML=this.MATS.map((o,i)=>
       \`<button class="btn sm ghost egMat" aria-pressed="\${i===this.mi}" onclick="Eigen.pick(\${i})"
@@ -17869,6 +17869,171 @@ const SpanPick = {
     else if(this.last) lines.push(\`That was it: \${this.work(this.last.c,'right')}, right on the ring. Here is a new pair.\`);
     lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
     out+=\`<div id="skRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
+/* ---------- Kept or knocked off? The eigenvector hunt's third mode ----------
+   Four panes, each a matrix A and one arrow v. Only v is drawn, with its
+   dashed line; where A sends it is not. For each the player works Av and
+   calls v kept the same way (Av = λv with λ more than 0), turned right round
+   (λ less than 0), or knocked off its line (no λ at all). Rounds hold
+   arrows turned round, arrows left exactly as they were, and arrows only a
+   few degrees off their line. A slip rings that pane and works Av; once all
+   four are right, each gets Av drawn in gold with its λ, or how far it was
+   knocked off. Nothing is saved, and there is no clock. */
+const EigTurn = {
+  ROUNDS:[
+    [[[[2,1],[1,2]],[1,1]], [[[2,1],[1,2]],[1,0]], [[[1,2],[2,1]],[1,-1]], [[[3,1],[0,2]],[1,-1]]],
+    [[[[0,-1],[1,0]],[1,1]], [[[3,1],[0,2]],[1,0]], [[[2,0],[0,-1]],[0,1]], [[[2,1],[1,2]],[2,1]]],
+    [[[[0,1],[1,0]],[1,-1]], [[[1,1],[0,1]],[1,0]], [[[1,1],[0,1]],[0,1]], [[[2,1],[1,2]],[-1,1]]],
+    [[[[0,1],[1,0]],[2,1]], [[[-2,1],[0,1]],[1,0]], [[[1,2],[2,1]],[1,1]], [[[3,1],[1,3]],[1,-1]]],
+    [[[[1,-1],[2,4]],[1,-1]], [[[2,-1],[-1,2]],[1,2]], [[[-1,2],[0,1]],[1,1]], [[[2,0],[0,1]],[3,1]]],
+    [[[[0,-2],[-2,0]],[1,1]], [[[1,4],[1,1]],[2,-1]], [[[2,0],[1,2]],[1,0]], [[[2,0],[0,2]],[1,-2]]]
+  ],
+  NEAR:15,
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four arrows right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flip',  t:'Call an arrow turned right round, with λ less than 0.', toast:'Turned round, still kept',
+     ok:K=>K.kinds.has('flip')},
+    {id:'still', t:'Call an arrow the matrix leaves exactly where it was.', toast:'Left just as it was',
+     ok:K=>K.kinds.has('still')},
+    {id:'near',  t:'Call an arrow knocked only a few degrees off its line.', toast:'Close is not kept',
+     ok:K=>K.kinds.has('near')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Work Av. If it lands on v’s own line, Av = λv and v is an eigenvector: kept the same way when λ is more than 0, turned right round when λ is less than 0. If Av leaves the line, v is knocked off.',
+  L:'ABCD',
+  WORD:{1:'kept the same way', [-1]:'turned round', 0:'knocked off'},
+  R(){ return this.ROUNDS[this.ri]; },
+  A(i){ return this.R()[i][0]; },
+  v(i){ return this.R()[i][1]; },
+  Av(i){ const [[a,b],[c,d]]=this.A(i), [x,y]=this.v(i); return [a*x+b*y, c*x+d*y]; },
+  /* λ when Av lies on v's line, null when it does not */
+  lam(i){ const [x,y]=this.v(i), [p,q]=this.Av(i); if(x*q-y*p) return null; return x ? p/x : q/y; },
+  truth(i){ const l=this.lam(i); return l===null ? 0 : Math.sign(l); },
+  /* how far Av is knocked off v's line, 0° to 90° */
+  off(i){ const [x,y]=this.v(i), [p,q]=this.Av(i), t=Math.abs(Math.atan2(x*q-y*p, x*p+y*q))*180/Math.PI; return Math.min(t,180-t); },
+  deg(i){ const o=this.off(i), r=Math.round(o); return \`\${Math.abs(o-r)<1e-9?'':'about '}\${r}°\`; },
+  vec(p){ return \`⟨\${p.map(c=>neg(c)).join(', ')}⟩\`; },
+  mat(M){ return \`[\${neg(M[0][0])} \${neg(M[0][1])}; \${neg(M[1][0])} \${neg(M[1][1])}]\`; },
+  par(c){ return \`(\${neg(c)})\`; },
+  /* what a round holds: arrows turned round, arrows left as they were, arrows a hair off their line */
+  flips(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  stills(){ return [0,1,2,3].filter(i=>this.lam(i)===1); },
+  nears(){ return [0,1,2,3].filter(i=>this.truth(i)===0 && this.off(i)<this.NEAR); },
+  tags(){ const t=[]; if(this.flips().length) t.push('flip'); if(this.stills().length) t.push('still'); if(this.nears().length) t.push('near'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  work(i){ const [[a,b],[c,d]]=this.A(i), [x,y]=this.v(i);
+    return \`Av = ⟨\${this.par(a)}\${this.par(x)} + \${this.par(b)}\${this.par(y)}, \${this.par(c)}\${this.par(x)} + \${this.par(d)}\${this.par(y)}⟩ = \${this.vec(this.Av(i))}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fl=this.flips(), st=this.stills(), nr=this.nears();
+      if(fl.length){ const i=fl[0];
+        out.push(\`In \${this.L[i]}, Av = \${neg(this.lam(i))} × v: v is turned right round, yet it stays on its line, so it is still an eigenvector.\`); }
+      if(st.length) out.push(\`In \${this.L[st[0]]}, Av = v: the matrix leaves the arrow exactly where it was, so λ = 1.\`);
+      if(nr.length){ const i=nr[0];
+        out.push(\`In \${this.L[i]}, Av is only \${this.deg(i)} off v’s line: close, but not on it, so v is not an eigenvector.\`); }
+      out.push(\`Each arrow: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.lam(i)===null?'knocked off':'λ = '+neg(this.lam(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const l=this.lam(i);
+        const why = l===null ? \`That is not a multiple of v: Av is knocked \${this.deg(i)} off v’s line, so v is not an eigenvector.\`
+          : l===1 ? 'That is v itself, so v is kept the same way, with λ = 1.'
+          : \`That is \${neg(l)} × \${this.vec(this.v(i))}, on v’s line \${l>0?'the same way':'but turned right round'}, so v is an eigenvector with λ = \${neg(l)}.\`;
+        out.push(\`In \${this.L[i]}, A = \${this.mat(this.A(i))} and v = \${this.vec(this.v(i))}: \${this.work(i)}. \${why} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: v in blue from the middle along its dashed line, drawn to one
+     scale with Av so solving moves nothing; a slip is ringed red, and once
+     called right each gets Av in gold and its λ, or how far it was knocked
+     off, in green */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2);
+    const arrow=(x0,y0,x1,y1,col,key)=>{ const d=Math.hypot(x1-x0,y1-y0), ux=(x1-x0)/d, uy=(y1-y0)/d, h=7, bx=x1-ux*h, by=y1-uy*h;
+      return \`<g data-k="\${key}"><line x1="\${f(x0)}" y1="\${f(y0)}" x2="\${f(bx)}" y2="\${f(by)}" stroke="\${col}" stroke-width="2.5"/>\`+
+        \`<polygon points="\${f(x1)},\${f(y1)} \${f(bx-uy*3.5)},\${f(by+ux*3.5)} \${f(bx+uy*3.5)},\${f(by-ux*3.5)}" fill="\${col}"/></g>\`; };
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four matrices, each with an arrow: \${P.map(([M,v],i)=>\`\${this.L[i]}, the matrix \${this.mat(M)} with v = \${this.vec(v)}\`).join('; ')}\${this.solved?', each with where A sends it':''}">\`;
+    P.forEach(([M,v],i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, cy=Y+68, Av=this.Av(i), m=Math.max(...v.map(Math.abs),...Av.map(Math.abs)), s=50/m;
+      const tip=p=>[cx+p[0]*s, cy-p[1]*s];
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+14}" y1="\${cy}" x2="\${X+166}" y2="\${cy}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="\${cx}" y1="\${Y+10}" x2="\${cx}" y2="\${Y+122}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const n=Math.hypot(...v), ex=v[0]/n, ey=-v[1]/n, reach=Math.min(ex?74/Math.abs(ex):1e9, ey?56/Math.abs(ey):1e9);
+      out+=\`<line data-k="vline" x1="\${f(cx-ex*reach)}" y1="\${f(cy-ey*reach)}" x2="\${f(cx+ex*reach)}" y2="\${f(cy+ey*reach)}" stroke="\${FIG_COL.a}" stroke-width="1" stroke-dasharray="4 4" opacity=".6"/>\`;
+      const lab=(x,y,t,col,key)=>{ const d=Math.hypot(x-cx,y-cy)||1; return \`<text data-k="\${key}" x="\${f(x+(x-cx)/d*11)}" y="\${f(y+(y-cy)/d*11+4)}" fill="\${col}" font-size="12" font-weight="700" text-anchor="middle">\${t}</text>\`; };
+      const [vx,vy]=tip(v);
+      if(this.solved){ const [ax,ay]=tip(Av); out+=arrow(cx,cy,ax,ay,FIG_COL.b,'Av')+lab(ax,ay,'Av',FIG_COL.b,'Avlab'); }
+      out+=arrow(cx,cy,vx,vy,FIG_COL.a,'v')+lab(vx,vy,'v',FIG_COL.a,'vlab');
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const l=this.lam(i);
+        out+=\`<text data-k="\${l===null?'off':l>0?'kept':'turned'}" x="\${X+170}" y="\${Y+120}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${l===null?Math.round(this.off(i))+'° off':'λ = '+neg(l)}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Eigen.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Eigen.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Eigen.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="EigTurn.call(\${i},\${c})" aria-label="Arrow \${this.L[i]}: \${{1:'kept on its line, the same way', [-1]:'kept on its line, turned right round', 0:'knocked off its line'}[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four matrices, each with an arrow v. Does A keep v on its line, the same way or turned round, or knock it off?</div>\`;
+    out+=\`<div id="egtFig">\${this.svg()}<div class="figcap">v is blue, on its dashed line. Once all four are called right, each gets Av in gold, with its λ or how far it was knocked off.</div></div>\`;
+    out+=\`<div id="egtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map(([M,v],i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="egtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="egM small" style="font-size:11px">\${neg(M[0][0])}&nbsp;\${neg(M[0][1])}<br>\${neg(M[1][0])}&nbsp;\${neg(M[1][1])}</span> <span class="small">\${this.vec(v)}</span></b>\`+
+        this.btn(i,1,'→ Kept')+this.btn(i,-1,'← Turned')+this.btn(i,0,'↗ Off')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="egtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="egtNext" onclick="EigTurn.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="egtCheck" \${this.ready()?'':'disabled '}onclick="EigTurn.check()" aria-label="\${this.ready()?'Check the four arrows':'Call all four arrows to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="egtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="egtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TRUE LINE','every arrow called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
     return out;
   }
 };

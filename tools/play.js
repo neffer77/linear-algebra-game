@@ -117,6 +117,7 @@ const SUITES = [
   require('./play/slopesketch'), // see f, set its slope at five stops and draw f′ by hand
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
+  require('./play/eigturn'), // see four matrices with an arrow each, call each arrow kept, turned or knocked off
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
   require('./play/chainpick'), // see y = f(g(x)), pick which of four formulas is its slope
   require('./play/chaincurve'), // step t along a curve and read dy/dx as dy/dt over dx/dt

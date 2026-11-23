@@ -13847,6 +13847,149 @@ const spanTurnNotes = (() => {
   if (env.banners.join() !== 'WIDE VIEW / every span called') fail('spanturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, spans };
 })();
+const eigTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Eigen = {render(){ env.renders++; }};" +
+    cut('const EigTurn = {', '/* ============ SPAN WORKSHOP') + 'return EigTurn;')(env, COL);
+  const sx = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = w => `⟨${sx(w[0])}, ${sx(w[1])}⟩`;
+  const mat = M => `[${sx(M[0][0])} ${sx(M[0][1])}; ${sx(M[1][0])} ${sx(M[1][1])}]`;
+  // A times v, one row at a time
+  const mul = (M, w) => M.map(row => row.reduce((t, a, j) => t + a * w[j], 0));
+  // λ by trying every whole number from −9 to 9 (A's entries and v's are small and whole, so λ is too)
+  const lamOf = (M, w) => { const p = mul(M, w); for (let k = -9; k <= 9; k++) if (p[0] === k * w[0] && p[1] === k * w[1]) return k; return null; };
+  // the angle between the lines of v and Av, from |cos|, 0° to 90°
+  const offOf = (M, w) => { const p = mul(M, w); const c = Math.abs(w[0] * p[0] + w[1] * p[1]) / Math.hypot(...w) / Math.hypot(...p); return Math.acos(Math.min(1, c)) * 180 / Math.PI; };
+  const deg = o => { const r = Math.round(o); return `${Math.abs(o - r) < 1e-9 ? '' : 'about '}${r}°`; };
+  const WD = { 1: 'kept the same way', [-1]: 'turned round', 0: 'knocked off' };
+  const NAME = { 1: 'kept on its line, the same way', [-1]: 'kept on its line, turned right round', 0: 'knocked off its line' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('eigturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, drawn = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('eigturn', key, `it holds ${P.length} arrows, not four`); return; }
+    P.forEach(([M, w], i) => { const k = JSON.stringify([M, w]); if (seen.has(k)) fail('eigturn', key, `${'ABCD'[i]} comes round twice`); seen.add(k);
+      if ([...M.flat(), ...w].some(n => !Number.isInteger(n) || Math.abs(n) > 4) || (!w[0] && !w[1])) fail('eigturn', key, `${'ABCD'[i]} is not small whole numbers with v not ⟨0, 0⟩`);
+      const p = mul(M, w); if (!p[0] && !p[1]) fail('eigturn', key, `A crushes ${'ABCD'[i]}'s v to ⟨0, 0⟩`);
+      if (Math.max(...w.map(Math.abs)) * 50 / Math.max(...w.map(Math.abs), ...p.map(Math.abs)) < 15) fail('eigturn', key, `${'ABCD'[i]}'s v is drawn too short beside Av`); });
+    const lams = P.map(([M, w]) => lamOf(M, w)), truth = lams.map(l => (l === null ? 0 : Math.sign(l)));
+    if (truth.some((t, i) => S.truth(i) !== t || S.lam(i) !== lams[i] || S.Av(i).join() !== mul(...P[i]).join())) fail('eigturn', key, `its arrows are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('eigturn', key, 'every arrow is called the same');
+    // what the round holds, found afresh
+    const fl = [], st = [], ne = [];
+    P.forEach(([M, w], i) => { if (lams[i] !== null && lams[i] < 0) fl.push(i); if (lams[i] === 1) st.push(i); if (lams[i] === null && offOf(M, w) < 15) ne.push(i); });
+    const tags = [fl.length ? 'flip' : null, st.length ? 'still' : null, ne.length ? 'near' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('eigturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every arrow called wrong, one at a time, in both wrong ways
+    P.forEach(([M, w], i) => {
+      const [[a, b], [c, d]] = M, p = mul(M, w), l = lams[i];
+      const work = `Av = ⟨(${sx(a)})(${sx(w[0])}) + (${sx(b)})(${sx(w[1])}), (${sx(c)})(${sx(w[0])}) + (${sx(d)})(${sx(w[1])})⟩ = ${vec(p)}`;
+      const why = l === null ? `That is not a multiple of v: Av is knocked ${deg(offOf(M, w))} off v’s line, so v is not an eigenvector.`
+        : l === 1 ? 'That is v itself, so v is kept the same way, with λ = 1.'
+          : `That is ${sx(l)} × ${vec(w)}, on v’s line ${l > 0 ? 'the same way' : 'but turned right round'}, so v is an eigenvector with λ = ${sx(l)}.`;
+      for (const k of [1, -1, 0]) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, A = ${mat(M)} and v = ${vec(w)}: ${work}. ${why} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('eigturn', key, `with ${'ABCD'[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(Av|kept|turned|off)"/.test(svg)) fail('eigturn', key, `with ${'ABCD'[i]} wrong, the wrong arrow is not ringed alone or Av is given away`);
+        if (S.solved || S.streak) fail('eigturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('eigturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('eigturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('eigturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="egtCheck" disabled /.test(S.html())) fail('eigturn', key, 'the check is open before the arrows are called');
+    const svg0 = S.svg();
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="egtCheck" disabled /.test(S.html())) fail('eigturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('eigturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="EigTurn\\.call\\(${i},(-?[01])\\)" aria-label="Arrow ${'ABCD'[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('eigturn', key, `the button for ${'ABCD'[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`EigTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('eigturn', key, `${'ABCD'[i]} does not offer kept, turned and off`);
+    });
+    if (S.calls.join() !== truth.join()) fail('eigturn', key, 'the buttons cannot make the right calls');
+    if (/id="egtCheck" disabled /.test(S.html())) fail('eigturn', key, 'the check stays shut with every arrow called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (fl.length) want.push(`In ${'ABCD'[fl[0]]}, Av = ${sx(lams[fl[0]])} × v: v is turned right round, yet it stays on its line, so it is still an eigenvector.`);
+    if (st.length) want.push(`In ${'ABCD'[st[0]]}, Av = v: the matrix leaves the arrow exactly where it was, so λ = 1.`);
+    if (ne.length) want.push(`In ${'ABCD'[ne[0]]}, Av is only ${deg(offOf(...P[ne[0]]))} off v’s line: close, but not on it, so v is not an eigenvector.`);
+    want.push(`Each arrow: ${lams.map((l, i) => `${'ABCD'[i]} ${l === null ? 'knocked off' : 'λ = ' + sx(l)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('eigturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: v alone before, then Av beside it to the same scale, each from its pane's middle
+    const tips = (svg, k) => [...svg.matchAll(new RegExp(`data-k="${k}"><line x1="([^"]+)" y1="([^"]+)" x2="[^"]+" y2="[^"]+" [^>]*/><polygon points="([^,]+),([^ ]+) `, 'g'))].map(m => m.slice(1).map(Number));
+    const svg = S.svg(), vs = tips(svg, 'v'), as = tips(svg, 'Av');
+    if (tips(svg0, 'v').map(String).join() !== vs.map(String).join() || tips(svg0, 'Av').length) fail('eigturn', key, 'v moves when the round is solved, or Av is drawn before it');
+    if (vs.length !== 4 || as.length !== 4) fail('eigturn', key, `${vs.length} v and ${as.length} Av arrows are drawn, not four of each`);
+    const vlines = [...svg.matchAll(/data-k="vline" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    P.forEach(([M, w], i) => {
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, cx = X + 90, cy = Y + 68, p = mul(M, w), V = vs[i], A = as[i], ln = vlines[i];
+      if (!V || !A || !ln) return;
+      for (const [o, z, nm] of [[V, w, 'v'], [A, p, 'Av']]) {
+        if (o[0] !== cx || o[1] !== cy) fail('eigturn', key, `${'ABCD'[i]}'s ${nm} does not start at the pane's middle`);
+        const dx = o[2] - cx, dy = cy - o[3];
+        if (Math.abs(dx * z[1] - dy * z[0]) > 0.05 * Math.hypot(dx, dy) || dx * z[0] + dy * z[1] <= 0) fail('eigturn', key, `${'ABCD'[i]}'s ${nm} does not point along ${vec(z)}`);
+        if (o[2] < X + 4 || o[2] > X + 176 || o[3] < Y + 4 || o[3] > Y + 126) fail('eigturn', key, `${'ABCD'[i]}'s ${nm} runs out of its pane`);
+      }
+      const sv = Math.hypot(V[2] - cx, V[3] - cy) / Math.hypot(...w), sa = Math.hypot(A[2] - cx, A[3] - cy) / Math.hypot(...p);
+      if (Math.abs(sv - sa) > 0.02 * sv) fail('eigturn', key, `${'ABCD'[i]}'s v and Av are not drawn to one scale`);
+      const lx = ln[2] - ln[0], ly = ln[1] - ln[3];
+      if (Math.abs(lx * w[1] - ly * w[0]) > 0.05 * Math.hypot(lx, ly) || Math.abs((ln[0] + ln[2]) / 2 - cx) > 0.02 || Math.abs((ln[1] + ln[3]) / 2 - cy) > 0.02) fail('eigturn', key, `${'ABCD'[i]}'s dashed line is not v's line`);
+      if ([ln[0], ln[2]].some(x => x < X + 4 || x > X + 176) || [ln[1], ln[3]].some(y => y < Y + 4 || y > Y + 126)) fail('eigturn', key, `${'ABCD'[i]}'s dashed line runs out of its pane`);
+      drawn++;
+    });
+    const marks = [...svg.matchAll(/data-k="(kept|turned|off)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    const wantMarks = P.map(([M, w], i) => (lams[i] === null ? `off ${Math.round(offOf(M, w))}° off` : `${lams[i] > 0 ? 'kept' : 'turned'} λ = ${sx(lams[i])}`));
+    if (marks.join() !== wantMarks.join()) fail('eigturn', key, `the panes are marked ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="egtNext"') || /onclick="EigTurn\.call/.test(h.replace(/disabled onclick="EigTurn\.call/g, ''))) fail('eigturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('eigturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('eigturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('eigturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const P = S.R(), right = P.map(([M, w]) => { const l = lamOf(M, w); return l === null ? 0 : Math.sign(l); });
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 0 ? 1 : 0;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,flip'], [false, 'fix,flip,near,one'], [false, 'fix,flip,near,one,still'], [false, 'fix,flip,near,one,still,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('eigturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Turned round, still kept · A slip caught and fixed | ✓ Right on the first check · Close is not kept | ✓ Left just as it was') fail('eigturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TRUE LINE / every arrow called') fail('eigturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, drawn };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21328,6 +21471,7 @@ console.log(`  angles called     ${pad(dotTurnNotes.checks.toLocaleString(), 12)
 console.log(`  bends called      ${pad(trapTurnNotes.checks.toLocaleString(), 12)}  (checks of four trapezoid estimates called over, exact or under in the trapezoid workshop, ${trapTurnNotes.wrongs} of them with one curve called wrong and caught, and ${trapTurnNotes.slivers} sets of slivers drawn on the side the curve bends)`);
 console.log(`  tangents called   ${pad(tanTurnNotes.checks.toLocaleString(), 12)}  (checks of four tangent line estimates called too high, exact or too low in the tangent line workshop, ${tanTurnNotes.wrongs} of them with one curve called wrong and caught, and ${tanTurnNotes.gaps} gaps drawn from the curve to its tangent)`);
 console.log(`  spans called      ${pad(spanTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as spanning the plane, a line or a point in the span workshop, ${spanTurnNotes.wrongs} of them with one pair called wrong and caught, and ${spanTurnNotes.spans} spans drawn as called)`);
+console.log(`  arrows called     ${pad(eigTurnNotes.checks.toLocaleString(), 12)}  (checks of four arrows called kept, turned round or knocked off in the eigenvector hunt, ${eigTurnNotes.wrongs} of them with one arrow called wrong and caught, and ${eigTurnNotes.drawn} arrows drawn beside where their matrix sends them)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
