@@ -9098,6 +9098,27 @@ const Recover = {
   back(n){ return n>0 ? `, and won back <b id="recovered">❤️ ${n}</b> of the blow` : ''; }
 };
 
+/* Riposte. A foe that winds up says so a turn ahead, and a right answer on
+   that turn already braces the slam. It also turns the foe's opening against
+   it: that strike lands half again as hard. It rewards getting the question
+   that matters most right, it never makes a miss cost more, and it is never
+   saved. */
+const Riposte = {
+  MUL: 1.5,
+  // is the foe winding up on the question being asked right now?
+  on(B){ return !!(B && B.slamNext); },
+  bonus(B){ return this.on(B) ? this.MUL : 1; },
+  tele(nm){ return `⚡ <b>${nm}</b> is winding up. Answer correctly to brace the blow and 🤺 <b>riposte</b> for ×1.5!`; },
+  // a right answer as it winds up: said on the scene every time, and told once a fight
+  hit(B){
+    if(!this.on(B)) return false;
+    Anim.float(610, H-370, 'RIPOSTE', '#9fd3ff', true);
+    if(!B.riposted){ B.riposted=true; UI.toast(`🤺 Riposte! A right answer as ${B.foe.nm} winds up lands half again as hard.`); }
+    return true;
+  },
+  line(on){ return on ? `<div class="miss again" id="riposteLine">🤺 <b>Riposte!</b> You answered right as it wound up, so your strike landed half again as hard.</div>` : ''; }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9157,6 +9178,7 @@ const Battle = {
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
     this.weakHit=false;              // the weak point is told once a fight
+    this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9402,7 +9424,7 @@ const Battle = {
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
-      tg.innerHTML=`⚡ <b>${this.foe.nm}</b> is winding up — answer correctly to brace the blow!`;
+      tg.innerHTML=Riposte.tele(this.foe.nm);
     } else tg.style.display='none';
     this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
@@ -9708,6 +9730,7 @@ const Battle = {
        usual draw, so a struggling knight is never held on one topic. A first
        meeting is the lesson ladder's to pace, so it is left to it. */
     const owed=this.recover||0; this.recover=0; this.recovered=0;
+    this.lastRiposte=false;
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
@@ -9724,8 +9747,8 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this);
-      const weak=Weak.hit(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this);
+      const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
@@ -9742,7 +9765,7 @@ const Battle = {
       else if(rallied) Talk.say('rally', true);
       else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);
       else if(this.combo===5) Talk.say('worry', true);
-      else if(crit || weak) Talk.say('reel');
+      else if(crit || weak || riposte) Talk.say('reel');
       // A bigger blow is a longer blow: a crit throws half again as many
       // sparks, and a killing one drops into slow motion, which stretches the
       // whole thing. revealScroll waits this out before moving the page.
@@ -9929,6 +9952,7 @@ const Battle = {
       (!inRite && this.redo && Game.s.hp>0 ? `<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>`+Recover.line(this.recover) : '')+
       (!inRite && ok && this.cur.redo ? `<div class="miss again">↺ <b>Got it this time.</b> The second go landed${Recover.back(this.recovered)}.</div>` : '')+
       (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>`:'')+
+      Riposte.line(!inRite && this.lastRiposte)+
       `<div>${st.ex}</div>`+ rule +
       `<div id="afig"></div>`+
       `<button class="btn gold" style="margin-top:10px" id="contBtn">${inRite?'Next step ▶':'Continue ▶'}</button>`;
