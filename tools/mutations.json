@@ -1,60 +1,60 @@
 {
-  "change": "Add a Faster or slower mode to the ladder workshop",
+  "change": "Add a Growing or shrinking mode to the logistic workshop",
   "mutations": [
     {
-      "name": "the top is compared with half the ladder",
+      "name": "the sign is read off P alone",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(2*this.x(i)**2-this.L2(i)); },",
-      "replace": "truth(i){ return Math.sign(2*this.x(i)-this.len(i)); },",
+      "find": "truth(i){ return Math.sign(this.P(i)*(this.K(i)-this.P(i))); },",
+      "replace": "truth(i){ return Math.sign(this.P(i)); },",
       "run": "verify"
     },
     {
-      "name": "the top's height adds x² instead of taking it away",
+      "name": "the room left is P/K",
       "file": "index.html",
-      "find": "y2(i){ return this.L2(i)-this.x(i)**2; },",
-      "replace": "y2(i){ return this.L2(i)+this.x(i)**2; },",
+      "find": "room(i){ return 1-this.P(i)/this.K(i); },",
+      "replace": "room(i){ return this.P(i)/this.K(i); },",
       "run": "verify"
     },
     {
-      "name": "x/y is turned upside down",
+      "name": "the rate drops the r",
       "file": "index.html",
-      "find": "ratio(i){ return this.x(i)/this.y(i); },",
-      "replace": "ratio(i){ return this.y(i)/this.x(i); },",
+      "find": "rate(i,P=this.P(i)){ return this.r(i)*P*(1-P/this.K(i)); },",
+      "replace": "rate(i,P=this.P(i)){ return P*(1-P/this.K(i)); },",
       "run": "verify"
     },
     {
-      "name": "past halfway needs no slower top",
+      "name": "above the ceiling means above 1000",
       "file": "index.html",
-      "find": "pasts(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && 4*this.x(i)**2>this.L2(i)); },",
-      "replace": "pasts(){ return [0,1,2,3].filter(i=>4*this.x(i)**2>this.L2(i)); },",
+      "find": "overs(){ return [0,1,2,3].filter(i=>this.P(i)>this.K(i)); },",
+      "replace": "overs(){ return [0,1,2,3].filter(i=>this.P(i)>1000); },",
       "run": "verify"
     },
     {
-      "name": "a fast foot starts at 2 m/s",
+      "name": "a population of 0 is not looked for",
       "file": "index.html",
-      "find": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=3); },",
-      "replace": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=2); },",
+      "find": "zeros(){ return [0,1,2,3].filter(i=>this.P(i)===0); },",
+      "replace": "zeros(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the ladder is drawn before the round is right",
+      "name": "the curve is drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){\n        out+=`<line data-k=\"ladder\"",
-      "replace": "if(true){\n        out+=`<line data-k=\"ladder\"",
+      "find": "if(this.solved){\n        out+=`<line data-k=\"axis\"",
+      "replace": "if(true){\n        out+=`<line data-k=\"axis\"",
       "run": "verify"
     },
     {
-      "name": "the top is drawn x up instead of y",
+      "name": "P is dotted at K",
       "file": "index.html",
-      "find": "fx=gx+this.x(i)*k, ty=gy-this.y(i)*k;",
-      "replace": "fx=gx+this.x(i)*k, ty=gy-this.x(i)*k;",
+      "find": "cx=\"${f(px(this.P(i)))}\" cy=\"${f(py(this.rate(i)))}\"",
+      "replace": "cx=\"${f(px(K))}\" cy=\"${f(py(this.rate(i)))}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    LogiGrow.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    LogiGrow.render();",
       "run": "verify"
     }
   ]

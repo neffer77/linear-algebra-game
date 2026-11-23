@@ -14891,6 +14891,147 @@ const ladderTurnNotes = (() => {
   if (env.banners.join() !== 'LADDER READER / every speed called') fail('ladderturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+const logiTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const LogiGrow = {render(){ env.renders++; }};" +
+    cut('const LogiTurn = {', 'const LogiGrow = {') + 'return LogiTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // each population worked afresh: the room left as a fraction in lowest terms, and the rate as rP − rP²/K
+  const gcd = (a, b) => (b ? gcd(b, a % b) : Math.abs(a));
+  const frac = (n, d) => { const g = gcd(Math.abs(n), d) || 1; n /= g; d /= g; return d === 1 ? neg(n) : `${neg(n)}/${d}`; };
+  const two = v => { const r = Math.round(v * 100) / 100; return neg(Object.is(r, -0) ? 0 : r); };
+  const WD = { 1: 'growing', 0: 'holding', [-1]: 'shrinking' };
+  const NAME = { 1: 'P grows', 0: 'P holds', [-1]: 'P shrinks' };
+  const MARK = { 1: 'grow ▲ grows', 0: 'hold = holds', [-1]: 'shrink ▼ shrinks' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([r, K, P]) => {
+    const rate = r * P - r * P * P / K;
+    const t = P === 0 || P === K ? 0 : P < K ? 1 : -1;
+    const room = frac(K - P, K);
+    return { r, K, P, rate, t, room, proom: K - P < 0 ? `(${room})` : room };
+  });
+  if (S.ROUNDS.length !== 6) fail('logiturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('logiturn', key, `it holds ${Q.length} populations, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = Q[i].join(); if (seen.has(s)) fail('logiturn', key, `${L[i]} comes round twice`); seen.add(s);
+      if (!(w.r > 0 && w.r <= 2) || !Number.isInteger(w.K) || w.K < 50 || w.K > 3000 || !Number.isInteger(w.P) || w.P < 0 || w.P > 1.5 * w.K)
+        fail('logiturn', key, `${L[i]} is not a rate up to 2 with a whole ceiling and a whole P no more than half again above it`);
+      if (Math.abs(S.rate(i) - w.rate) > 1e-9) fail('logiturn', key, `${L[i]}'s dP/dt is worked as ${S.rate(i)}, not ${w.rate}`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('logiturn', key, `its populations are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 3) fail('logiturn', key, 'it does not hold a grower, a holder and a shrinker');
+    // what the round holds, found afresh: above its ceiling, on it, at 0
+    const ov = [], ca = [], ze = [];
+    W.forEach((w, i) => { if (w.P > w.K) ov.push(i); if (w.P === w.K) ca.push(i); if (w.P === 0) ze.push(i); });
+    const tags = [ov.length ? 'over' : null, ca.length ? 'cap' : null, ze.length ? 'zero' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('logiturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every population called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      const says = w.t > 0 ? 'above 0, so P grows' : w.t < 0 ? 'below 0, so P shrinks' : 'exactly 0, so P holds';
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, r = ${w.r}, K = ${w.K} and P = ${w.P}: dP/dt = rP(1 − P/K) = ${w.r} × ${w.P} × (1 − ${w.P}/${w.K}) = ${w.r} × ${w.P} × ${w.proom} = ${two(w.rate)}, ${says}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('logiturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(rate|dot|K|grow|hold|shrink)"/.test(svg)) fail('logiturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a rate is given away`);
+        if (S.solved || S.streak) fail('logiturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('logiturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('logiturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('logiturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="lgtCheck" disabled /.test(S.html())) fail('logiturn', key, 'the check is open before the populations are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="lgtCheck" disabled /.test(S.html())) fail('logiturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('logiturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="LogiTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('logiturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`LogiTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('logiturn', key, `${L[i]} does not offer grows, holds and shrinks`);
+      if (!h0.includes(`${L[i]} <span class="small">r = ${W[i].r}, K = ${W[i].K}, P = ${W[i].P}</span>`)) fail('logiturn', key, `${L[i]}'s buttons are not labelled with its population`);
+    });
+    if (S.calls.join() !== truth.join()) fail('logiturn', key, 'the buttons cannot make the right calls');
+    if (/id="lgtCheck" disabled /.test(S.html())) fail('logiturn', key, 'the check stays shut with every population called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (ov.length) { const w = W[ov[0]]; want.push(`In ${L[ov[0]]}, P = ${w.P} is above its own ceiling K = ${w.K}, so 1 − P/K = ${w.room} is below 0 and P shrinks back toward K.`); }
+    if (ca.length) { const w = W[ca[0]]; want.push(`In ${L[ca[0]]}, P = K = ${w.K}: there is no room left, 1 − P/K = 0, so P holds at its ceiling.`); }
+    if (ze.length) want.push(`In ${L[ze[0]]}, P = 0: with no one to breed, rP = 0, so P holds at 0 however much room there is.`);
+    want.push(`Each dP/dt: ${W.map((w, i) => `${L[i]} ${two(w.rate)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('logiturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each rate curve read back off its pane, crossing 0 at 0 and at K, with P dotted on it
+    const svg = S.svg();
+    const groups = [...svg.matchAll(/<g clip-path="url\(#lgtClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], m[2]]);
+    if (groups.length !== 4) fail('logiturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const g = groups[i][1], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      const ax = g.match(/data-k="axis" x1="([^"]+)" y1="([^"]+)"/), kt = g.match(/data-k="K" x1="([^"]+)" y1="([^"]+)"/),
+        dt = g.match(/data-k="dot" cx="([^"]+)" cy="([^"]+)"/), pa = g.match(/data-k="rate" d="([^"]+)"/);
+      if (groups[i][0] !== i || !ax || !kt || !dt || !pa) { fail('logiturn', key, `${L[i]} is missing its axis, K, dot or curve`); return; }
+      const x0 = +ax[1], y0 = +ax[2], kx = (+kt[1] - x0) / w.K;
+      const pts = [...pa[1].matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(m => [+m[1], +m[2]]);
+      const peak = pts.reduce((a, b) => (b[1] < a[1] ? b : a));
+      const pp = (peak[0] - x0) / kx, ky = (y0 - peak[1]) / (w.r * pp * (1 - pp / w.K));
+      if (!(kx > 0) || !(ky > 0) || Math.abs(pts[0][0] - x0) > 0.01 || Math.abs(pts[0][1] - y0) > 0.01) { fail('logiturn', key, `${L[i]}'s curve does not start at P = 0 on the axis`); return; }
+      const off = pts.filter(([x, y]) => { const p = (x - x0) / kx; return Math.abs(y0 - w.r * p * (1 - p / w.K) * ky - y) > 0.02; });
+      if (off.length) fail('logiturn', key, `${L[i]}'s curve, read back off the drawing, leaves rP(1 − P/K) at ${off.length} points`);
+      if (!pts.some(([x, y]) => x > x0 + w.K * kx + 1)) fail('logiturn', key, `${L[i]}'s curve does not run on past K`);
+      if (Math.abs(+dt[1] - (x0 + w.P * kx)) > 0.02 || Math.abs(+dt[2] - (y0 - w.rate * ky)) > 0.02) fail('logiturn', key, `${L[i]}'s dot is not at P = ${w.P} on the curve`);
+      if (+dt[2] > Y + 126 || +dt[2] < Y + 4 || +dt[1] > X + 176) fail('logiturn', key, `${L[i]}'s dot falls outside its pane`);
+      if (!svg.includes(`>r = ${w.r}, K = ${w.K}</text>`) || !svg.includes(`>P = ${w.P}</text>`)) fail('logiturn', key, `${L[i]}'s r, K and P are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(grow|hold|shrink)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('logiturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="lgtNext"') || /onclick="LogiTurn\.call/.test(hh.replace(/disabled onclick="LogiTurn\.call/g, ''))) fail('logiturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('logiturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('logiturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('logiturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'cap,fix,over,zero'], [false, 'cap,fix,one,over,zero'], [false, 'cap,fix,one,over,zero'], [false, 'cap,fix,one,over,three,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('logiturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Over the ceiling, down it comes · No room left · Nothing to breed from · A slip caught and fixed | ✓ Right on the first check') fail('logiturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'CEILING READER / every population called') fail('logiturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -22379,6 +22520,7 @@ console.log(`  shadows called    ${pad(gramTurnNotes.checks.toLocaleString(), 12
 console.log(`  steps called      ${pad(newtonTurnNotes.checks.toLocaleString(), 12)}  (checks of four Newton steps called left, right, staying or stuck in the Newton workshop, ${newtonTurnNotes.wrongs} of them with one step called wrong and caught, and ${newtonTurnNotes.steps} curves and tangents read back off the drawing)`);
 console.log(`  products called   ${pad(productTurnNotes.checks.toLocaleString(), 12)}  (checks of four products called rising, flat or falling in the product rule workshop, ${productTurnNotes.wrongs} of them with one product called wrong and caught, and ${productTurnNotes.panes} panes whose f, g, y and tangent are read back off the drawing)`);
 console.log(`  ladders called    ${pad(ladderTurnNotes.checks.toLocaleString(), 12)}  (checks of four ladders called faster, just as fast or slower than the foot in the ladder workshop, ${ladderTurnNotes.wrongs} of them with one ladder called wrong and caught, and ${ladderTurnNotes.panes} ladders read back off the drawing)`);
+console.log(`  populations called ${pad(logiTurnNotes.checks.toLocaleString(), 12)}  (checks of four populations called growing, holding or shrinking in the logistic workshop, ${logiTurnNotes.wrongs} of them with one population called wrong and caught, and ${logiTurnNotes.panes} rate curves read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

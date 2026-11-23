@@ -108,6 +108,7 @@ const SUITES = [
   require('./play/arcpick'),  // see a curve, pick which of four integrals is its length
   require('./play/logistic'),  // step a population toward its ceiling and watch the rate rise and fall
   require('./play/logipick'),  // see r, K and P, pick which of four numbers is dP/dt
+  require('./play/logiturn'),  // see four populations, call each growing, holding or shrinking
   require('./play/trapezoid'), // cut an area into strips and watch the trapezoids' gap quarter
   require('./play/trappick'),  // see a curve and its heights, pick which number is the trapezoid estimate
   require('./play/trapturn'),  // see four curves cut into strips, call each estimate over, exact or under

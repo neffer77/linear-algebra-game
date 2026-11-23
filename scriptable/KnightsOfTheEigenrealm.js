@@ -1975,7 +1975,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LOGISTIC WORKSHOP ============ -->
   <div class="screen" id="s-logistic">
     <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
-    <div id="lgwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a population by hand or pick the rate"></div>
+    <div id="lgwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a population by hand, pick the rate, or call each population growing or shrinking"></div>
     <div class="panel">
       <div id="lgqBox"></div>
       <div id="lgwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Where the population starts"></div>
@@ -15681,7 +15681,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt. Or call it: see four populations, each with its own ceiling, and say whether each is growing, holding or shrinking.</div>
          <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -34420,6 +34420,172 @@ const Trap = {
    and draws the tangent at the point, as steep as the rate. Small, P grows
    almost like e^(0.5t); past 500 the room left shrinks faster than P grows, so
    the rate falls; and from either side P settles on 1000. Nothing is saved. */
+/* ---------- Growing or shrinking? The logistic workshop's third mode ----------
+   Four populations, each with its own growth rate r, ceiling K and size P,
+   and the player calls whether each one grows, holds or shrinks right now.
+   The rate is dP/dt = rP(1 − P/K), so its sign is the call: P grows below
+   its ceiling, holds at the ceiling or at 0, and shrinks above it. Each pane
+   gives r, K and P as numbers only, since a drawing to K's scale would give
+   the answer away. Rounds hold a population above its own ceiling, though
+   it may be smaller than a growing one beside it; one sitting exactly on
+   its ceiling; and one at 0, with nothing to breed from. A slip rings that
+   pane and works rP(1 − P/K) through; once all four are right, each pane
+   draws dP/dt against P, crossing 0 at 0 and K, with P marked on it.
+   Nothing is saved, and there is no clock. */
+const LogiTurn = {
+  // [r, K, P]
+  ROUNDS:[
+    [[0.5,1000,600], [0.2,800,900], [1,500,500], [0.3,1200,0]],
+    [[0.4,600,900], [0.5,2000,1500], [0.1,300,300], [2,100,40]],
+    [[0.5,400,0], [0.25,1600,1200], [1,900,1000], [0.5,700,700]],
+    [[0.3,1000,1500], [0.2,500,100], [0.8,250,250], [0.5,1200,1300]],
+    [[1,800,200], [0.5,300,0], [0.4,1000,1250], [0.6,1500,1500]],
+    [[0.2,900,1200], [0.5,2400,1800], [0.25,400,0], [1,600,600]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four populations right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'over', t:'Call a population above its own ceiling.', toast:'Over the ceiling, down it comes',
+     ok:K=>K.kinds.has('over')},
+    {id:'cap',  t:'Call a population sitting exactly on its ceiling.', toast:'No room left',
+     ok:K=>K.kinds.has('cap')},
+    {id:'zero', t:'Call a population of 0.', toast:'Nothing to breed from',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A population with a ceiling changes at dP/dt = rP(1 − P/K). The sign is the call: below its ceiling, 1 − P/K is above 0 and P grows; at its ceiling there is no room left, so P holds; above it, 1 − P/K is below 0 and P shrinks. At P = 0 there is no one to breed, so P holds there too. Each population answers to its own K, not to its neighbours\\'.',
+  L:'ABCD',
+  WORD:{1:'growing', 0:'holding', [-1]:'shrinking'},
+  NAMES:{1:'P grows', 0:'P holds', [-1]:'P shrinks'},
+  R(){ return this.ROUNDS[this.ri]; },
+  r(i){ return this.R()[i][0]; },
+  K(i){ return this.R()[i][1]; },
+  P(i){ return this.R()[i][2]; },
+  room(i){ return 1-this.P(i)/this.K(i); },
+  rate(i,P=this.P(i)){ return this.r(i)*P*(1-P/this.K(i)); },
+  truth(i){ return Math.sign(this.P(i)*(this.K(i)-this.P(i))); },
+  /* an exact number as a whole number or a fraction */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? \`(\${this.q(v)})\` : this.q(v); },
+  num(v){ const r=Math.round(v*100)/100; return neg(Object.is(r,-0)?0:r); },
+  /* what a round holds: one above its ceiling, one on it, one at 0 */
+  overs(){ return [0,1,2,3].filter(i=>this.P(i)>this.K(i)); },
+  caps(){ return [0,1,2,3].filter(i=>this.P(i)===this.K(i)); },
+  zeros(){ return [0,1,2,3].filter(i=>this.P(i)===0); },
+  tags(){ const t=[]; if(this.overs().length) t.push('over'); if(this.caps().length) t.push('cap'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  sum(i){ const r=this.r(i), P=this.P(i), K=this.K(i);
+    return \`dP/dt = rP(1 − P/K) = \${r} × \${P} × (1 − \${P}/\${K}) = \${r} × \${P} × \${this.pq(this.room(i))} = \${this.num(this.rate(i))}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ov=this.overs(), ca=this.caps(), ze=this.zeros();
+      if(ov.length){ const i=ov[0];
+        out.push(\`In \${this.L[i]}, P = \${this.P(i)} is above its own ceiling K = \${this.K(i)}, so 1 − P/K = \${this.q(this.room(i))} is below 0 and P shrinks back toward K.\`); }
+      if(ca.length){ const i=ca[0];
+        out.push(\`In \${this.L[i]}, P = K = \${this.K(i)}: there is no room left, 1 − P/K = 0, so P holds at its ceiling.\`); }
+      if(ze.length){ const i=ze[0];
+        out.push(\`In \${this.L[i]}, P = 0: with no one to breed, rP = 0, so P holds at 0 however much room there is.\`); }
+      out.push(\`Each dP/dt: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.num(this.rate(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const t=this.truth(i);
+        out.push(\`In \${this.L[i]}, r = \${this.r(i)}, K = \${this.K(i)} and P = \${this.P(i)}: \${this.sum(i)}, \${t>0?'above 0, so P grows':t<0?'below 0, so P shrinks':'exactly 0, so P holds'}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: r, K and P written out; once the round is right, dP/dt
+     against P from 0 to 1.6K in gold, crossing 0 at 0 and at K, with K
+     ticked and P dotted on the curve */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four populations: \${P.map((x,i)=>\`\${this.L[i]}, r = \${this.r(i)}, K = \${this.K(i)}, P = \${this.P(i)}\`).join('; ')}\${this.solved?', each with dP/dt drawn against P':''}">\`;
+    P.forEach((x,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, ax=X+15, ay=Y+78, K=this.K(i), kx=150/(1.6*K), ky=60/(this.r(i)*K);
+      const px=p=>ax+p*kx, py=v=>ay-v*ky;
+      out+=\`<clipPath id="lgtClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#lgtClip\${i})">\`;
+      if(this.solved){
+        out+=\`<line data-k="axis" x1="\${ax}" y1="\${ay}" x2="\${X+168}" y2="\${ay}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+        const pts=[]; for(let j=0;j<=60;j++){ const p=1.6*K*j/60; pts.push((j?'L':'M')+f(px(p))+' '+f(py(this.rate(i,p)))); }
+        out+=\`<path data-k="rate" d="\${pts.join('')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+        out+=\`<line data-k="K" x1="\${f(px(K))}" y1="\${ay-5}" x2="\${f(px(K))}" y2="\${ay+5}" stroke="\${FIG_COL.ink}" stroke-width="1.5"/><text x="\${f(px(K))}" y="\${ay+16}" fill="\${FIG_COL.ink}" font-size="10" text-anchor="middle">K</text>\`;
+        out+=\`<circle data-k="dot" cx="\${f(px(this.P(i)))}" cy="\${f(py(this.rate(i)))}" r="4" fill="\${FIG_COL.a}"/>\`;
+      }
+      out+=\`</g>\`;
+      out+=\`<text data-k="P" x="\${X+90}" y="\${Y+46}" fill="\${FIG_COL.ink}" font-size="16" font-weight="700" text-anchor="middle">P = \${this.P(i)}</text>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+18}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">r = \${this.r(i)}, K = \${K}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'grow',0:'hold',[-1]:'shrink'}[t]}" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'▲ grows',0:'= holds',[-1]:'▼ shrinks'}[t]}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    LogiGrow.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    LogiGrow.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; LogiGrow.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="LogiTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four populations, each with its own r, ceiling K and size P. Is each one growing, holding or shrinking right now?</div>\`;
+    out+=\`<div id="lgtFig">\${this.svg()}<div class="figcap">Each pane gives r, K and P. Once all four are called right, each draws dP/dt against P in gold, crossing 0 at 0 and at K, with P dotted in blue.</div></div>\`;
+    out+=\`<div id="lgtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="lgtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">r = \${this.r(i)}, K = \${this.K(i)}, P = \${this.P(i)}</span></b>\`+
+        this.btn(i,1,'▲ Grows')+this.btn(i,0,'= Holds')+this.btn(i,-1,'▼ Shrinks')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="lgtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgtNext" onclick="LogiTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgtCheck" \${this.ready()?'':'disabled '}onclick="LogiTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four populations to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="lgtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="lgtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CEILING READER','every population called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const LogiGrow = {
   r:0.5, K:1000, TMAX:20,
   SETS:[
@@ -34508,11 +34674,11 @@ const LogiGrow = {
   tab:'hand', // step by hand, or which rate
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('lgwTab').innerHTML=[['hand','🐇 Step by hand','Step a population through time by hand'],['pick','🎯 Which rate?','See r, K and P, and pick which of four numbers is dP/dt']]
+    document.getElementById('lgwTab').innerHTML=[['hand','🐇 Step by hand','Step a population through time by hand'],['pick','🎯 Which rate?','See r, K and P, and pick which of four numbers is dP/dt'],['turn','📈 Growing or shrinking?','See four populations, and call whether each is growing, holding or shrinking']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="LogiGrow.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['lgwSets','lgwFig','lgwMoveRow','lgwRead','lgwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('lgqBox').innerHTML=pick ? LogiPick.html() : '';
+    document.getElementById('lgqBox').innerHTML=!pick ? '' : this.tab==='pick' ? LogiPick.html() : LogiTurn.html();
     if(pick) return;
     document.getElementById('lgwSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogiGrow.pick(\${i})" aria-label="Grow a population \${s.name}">\${s.btn}</button>\`).join('');
