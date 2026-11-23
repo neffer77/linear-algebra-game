@@ -2017,7 +2017,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TANGENT LINE WORKSHOP ============ -->
   <div class="screen" id="s-tanline">
     <div class="panel"><h2>🪡 Tangent Line Workshop</h2><div class="sub">Near a, a curve and its tangent line are almost the same, so f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve, step x away from a, and watch how far the tangent's estimate misses, and which way.</div></div>
-    <div id="tlwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand or pick the estimate"></div>
+    <div id="tlwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand, pick the estimate, or call it too high or too low"></div>
     <div class="panel">
       <div id="tlqBox"></div>
       <div id="tlwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
@@ -15671,7 +15671,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪡 Tangent Line Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Estimate √x, 1/x and sin x from a tangent line, L(x) = f(a) + f′(a)(x − a), and watch how far it misses. See why √x is always overshot and 1/x always undershot, and halve the step to cut the miss to a quarter, or on sin x to an eighth. Then turn it round: see a curve and an x near a, and pick which of four numbers is the tangent's estimate.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Estimate √x, 1/x and sin x from a tangent line, L(x) = f(a) + f′(a)(x − a), and watch how far it misses. See why √x is always overshot and 1/x always undershot, and halve the step to cut the miss to a quarter, or on sin x to an eighth. Then turn it round: see a curve and an x near a, and pick which of four numbers is the tangent's estimate. Or call it high or low: see four curves, each estimated by its tangent at a, and say whether each L(x) is too high, too low or exact.</div>
          <button class="btn sm" id="tomeTanLine" style="width:auto;margin-top:8px" onclick="TanLine.open()">Open the tangent line workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -33599,6 +33599,185 @@ const EstPick = {
   }
 };
 
+/* ---------- Too high or too low? The tangent line workshop's third mode ----------
+   Four tangent line estimates, and the player calls each L(x) too high, too
+   low or exact. The tangent at a is straight, so on a stretch where the
+   curve bends up (f″ > 0) the curve sits above it and L is too low; where
+   it bends down L is too high; a line is its own tangent. Rounds hold
+   estimates left of a on curves that bend one way, where the side does not
+   flip the answer, curves like sin x estimated on both sides of a point
+   where they change bend, where it does, and lines. A slip rings that pane
+   and works L(x), f(x) and f″; once all four are right, each gets its
+   tangent and the gap at x. Nothing is saved, and there is no clock. */
+const TanTurn = {
+  CURVES:{
+    sqrt: {fs:'√x',       a:4, aS:'4', f:x=>Math.sqrt(x), d:x=>1/(2*Math.sqrt(x)),  d2:'−1/(4x√x)',     bR:-1, bL:-1, at:s=>\`√\${s}\`,         Ls:'2 + (1/4)(x − 4)'},
+    recip:{fs:'1/x',      a:1, aS:'1', f:x=>1/x,          d:x=>-1/(x*x),            d2:'2/x³',          bR:1,  bL:1,  at:s=>\`1/\${s}\`,        Ls:'1 − (x − 1)'},
+    exp:  {fs:'eˣ',       a:0, aS:'0', f:x=>Math.exp(x),  d:x=>Math.exp(x),         d2:'eˣ',            bR:1,  bL:1,  at:s=>\`e^(\${s})\`,      Ls:'1 + x'},
+    ln:   {fs:'ln x',     a:1, aS:'1', f:x=>Math.log(x),  d:x=>1/x,                 d2:'−1/x²',         bR:-1, bL:-1, at:s=>\`ln \${s}\`,       Ls:'x − 1'},
+    sq:   {fs:'x²',       a:1, aS:'1', f:x=>x*x,          d:x=>2*x,                 d2:'2',             bR:1,  bL:1,  at:s=>\`\${s}²\`,         Ls:'1 + 2(x − 1)'},
+    cube: {fs:'x³',       a:1, aS:'1', f:x=>x*x*x,        d:x=>3*x*x,               d2:'6x',            bR:1,  bL:1,  at:s=>\`\${s}³\`,         Ls:'1 + 3(x − 1)'},
+    flat3:{fs:'x³',       a:0, aS:'0', f:x=>x*x*x,        d:x=>3*x*x,               d2:'6x',            bR:1,  bL:-1, at:s=>\`(\${s})³\`,       Ls:'0 + 0(x − 0) = 0'},
+    sin:  {fs:'sin x',    a:0, aS:'0', f:Math.sin,        d:Math.cos,               d2:'−sin x',        bR:-1, bL:1,  at:s=>\`sin(\${s})\`,     Ls:'x'},
+    cos:  {fs:'cos x',    a:0, aS:'0', f:Math.cos,        d:x=>-Math.sin(x),        d2:'−cos x',        bR:-1, bL:-1, at:s=>\`cos(\${s})\`,     Ls:'1'},
+    cbrt: {fs:'∛x',       a:8, aS:'8', f:Math.cbrt,       d:x=>1/(3*Math.cbrt(x*x)), d2:'−2/(9x∛x²)',   bR:-1, bL:-1, at:s=>\`∛\${s}\`,         Ls:'2 + (1/12)(x − 8)'},
+    atan: {fs:'arctan x', a:0, aS:'0', f:Math.atan,       d:x=>1/(1+x*x),           d2:'−2x/(1 + x²)²', bR:-1, bL:1,  at:s=>\`arctan(\${s})\`,  Ls:'x'},
+    lin1: {fs:'3x − 2',   a:1, aS:'1', f:x=>3*x-2,        d:x=>3,                   d2:'0',             bR:0,  bL:0,  at:s=>\`3(\${s}) − 2\`,   Ls:'1 + 3(x − 1)'},
+    lin2: {fs:'5 − x/2',  a:2, aS:'2', f:x=>5-x/2,        d:x=>-1/2,                d2:'0',             bR:0,  bL:0,  at:s=>\`5 − \${s}/2\`,    Ls:'4 − (1/2)(x − 2)'}
+  },
+  ROUNDS:[
+    [['sqrt',4.5],['recip',1.2],['lin1',1.5],['sin',0.5]],
+    [['sqrt',3],['exp',0.5],['sin',-0.3],['sin',0.3]],
+    [['ln',0.5],['cube',1.2],['cos',0.5],['lin2',3]],
+    [['recip',0.8],['cbrt',9],['flat3',0.5],['flat3',-0.5]],
+    [['exp',-0.5],['ln',1.5],['sq',1.5],['atan',0.5]],
+    [['atan',1],['atan',-1],['cos',-0.5],['lin1',0.5]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four estimates right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'left',  t:'Call an estimate left of a, on a curve that bends one way all along.', toast:'The side does not flip it',
+     ok:K=>K.kinds.has('left')},
+    {id:'sides', t:'Call one curve on both sides of a point where it changes bend.', toast:'A change of bend, a change of side',
+     ok:K=>K.kinds.has('sides')},
+    {id:'line',  t:'Call a line, which is its own tangent.', toast:'Straight on straight',
+     ok:K=>K.kinds.has('line')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The tangent at a is straight. Where the curve bends up, f″ > 0, it sits above its tangent, so L(x) is too low; where it bends down, f″ < 0, it sits below, so L(x) is too high; a line is its own tangent, so L is exact. What counts is the bend between a and x, not which side of a x is on, unless the curve changes bend at a.',
+  L:'ABCD',
+  WORD:{1:'as too high', 0:'as exact', [-1]:'as too low'},
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  x(i){ return this.R()[i][1]; },
+  xs(i){ return neg(this.x(i)); },
+  /* L(x) = f(a) + f′(a)(x − a), against the curve's own value */
+  Lv(i){ const c=this.C(i), x=this.x(i); return c.f(c.a)+c.d(c.a)*(x-c.a); },
+  fv(i){ return this.C(i).f(this.x(i)); },
+  bend(i){ const c=this.C(i); return this.x(i)>c.a ? c.bR : c.bL; },
+  truth(i){ return -this.bend(i); },
+  fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },
+  gapWord(i){ const t=this.truth(i); return t===0 ? 'exact' : \`too \${t>0?'high':'low'} by \${this.fx(Math.abs(this.Lv(i)-this.fv(i)))}\`; },
+  /* what a round holds: an estimate left of a on a curve that bends one way, one curve on both sides of a change of bend, a line */
+  lefts(){ return [0,1,2,3].filter(i=>{ const c=this.C(i); return this.x(i)<c.a && c.bL!==0 && c.bL===c.bR; }); },
+  sides(){ const P=this.R(), out=[]; for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(P[i][0]===P[j][0] && this.C(i).bL!==this.C(i).bR && (P[i][1]-this.C(i).a)*(P[j][1]-this.C(j).a)<0) out.push([i,j]); return out; },
+  lines(){ return [0,1,2,3].filter(i=>this.C(i).bR===0); },
+  tags(){ const t=[]; if(this.lefts().length) t.push('left'); if(this.sides().length) t.push('sides'); if(this.lines().length) t.push('line'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  between(i){ const c=this.C(i), x=this.x(i); return x>c.a ? \`\${c.aS} and \${this.xs(i)}\` : \`\${this.xs(i)} and \${c.aS}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const lf=this.lefts(), sd=this.sides(), li=this.lines();
+      if(sd.length){ const [i,j]=sd[0], c=this.C(i);
+        out.push(\`\${this.L[i]} and \${this.L[j]} are both f(x) = \${c.fs} near \${c.aS}, on either side: it bends \${c.bR>0?'up':'down'} to the right of \${c.aS} and \${c.bL>0?'up':'down'} to the left, so the tangent is too \${c.bR>0?'low':'high'} on one side and too \${c.bL>0?'low':'high'} on the other.\`); }
+      if(lf.length){ const i=lf[0], c=this.C(i);
+        out.push(\`In \${this.L[i]}, x = \${this.xs(i)} is left of a = \${c.aS}, but \${c.fs} bends \${c.bL>0?'up':'down'} on both sides, so the tangent is still too \${c.bL>0?'low':'high'}: the side does not flip it.\`); }
+      if(li.length){ const i=li[0];
+        out.push(\`\${this.L[i]} is the line f(x) = \${this.C(i).fs}, its own tangent, so L is exact.\`); }
+      out.push(\`L against f: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.gapWord(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const c=this.C(i), b=this.bend(i), xs=this.xs(i);
+        const why = b>0 ? \`between \${this.between(i)}, f″(x) = \${c.d2} is more than 0, so the curve bends up, above its tangent\`
+          : b<0 ? \`between \${this.between(i)}, f″(x) = \${c.d2} is less than 0, so the curve bends down, below its tangent\`
+          : 'f″(x) = 0, so the line is its own tangent';
+        out.push(\`In \${this.L[i]}, f(x) = \${c.fs} near a = \${c.aS}: L(x) = \${c.Ls}, so L(\${xs}) = \${this.fx(this.Lv(i))}, while \${c.at(xs)} = \${this.fx(this.fv(i))}. L is \${this.gapWord(i)}: \${why}. You had it \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each curve in its own pane, gold, with a marked and x marked; a slip is
+     ringed red, and once called right each gets its tangent at a in blue
+     and the gap between L(x) and f(x) in red */
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four tangent line estimates: \${[0,1,2,3].map(i=>\`\${this.L[i]}, f(x) = \${this.C(i).fs} near \${this.C(i).aS}, estimated at \${this.xs(i)}\`).join('; ')}\${this.solved?', each with its tangent':''}">\`;
+    [0,1,2,3].forEach(i=>{
+      const c=this.C(i), x=this.x(i), X=(i%2)*180, Y=Math.floor(i/2)*130;
+      const p=Math.max(Math.abs(x-c.a)*0.5,0.3), lo=Math.min(c.a,x)-p, hi=Math.max(c.a,x)+p;
+      const tan=t=>c.f(c.a)+c.d(c.a)*(t-c.a), ys=[];
+      for(let k=0;k<=60;k++){ const t=lo+(hi-lo)*k/60; ys.push(c.f(t),tan(t)); }
+      let y0=Math.min(...ys), y1=Math.max(...ys); if(y1-y0<1e-9){ y0-=1; y1+=1; }
+      const px=t=>X+16+(t-lo)/(hi-lo)*148, py=v=>Y+112-(v-y0)/(y1-y0)*76;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+12}" y1="\${Y+118}" x2="\${X+168}" y2="\${Y+118}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const curve=[]; for(let k=0;k<=60;k++){ const t=lo+(hi-lo)*k/60; curve.push([px(t),py(c.f(t))]); }
+      if(this.solved) out+=\`<line data-k="tangent" x1="\${f(px(lo))}" y1="\${f(py(tan(lo)))}" x2="\${f(px(hi))}" y2="\${f(py(tan(hi)))}" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+      out+=\`<polyline data-k="curve" points="\${curve.map(q=>\`\${f(q[0])},\${f(q[1])}\`).join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+      out+=\`<line data-k="xmark" x1="\${f(px(x))}" y1="\${Y+118}" x2="\${f(px(x))}" y2="\${f(py(c.f(x)))}" stroke="\${FIG_COL.grid}" stroke-width="1" stroke-dasharray="3 3"/>\`;
+      if(this.solved && this.truth(i)!==0) out+=\`<line data-k="gap" x1="\${f(px(x))}" y1="\${f(py(c.f(x)))}" x2="\${f(px(x))}" y2="\${f(py(tan(x)))}" stroke="\${FIG_COL.d}" stroke-width="3"/>\`;
+      out+=\`<circle data-k="a" cx="\${f(px(c.a))}" cy="\${f(py(c.f(c.a)))}" r="3.5" fill="\${FIG_COL.b}"/>\`;
+      out+=\`<text x="\${f(px(c.a))}" y="\${Y+127}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="middle">a = \${c.aS}</text>\`;
+      out+=\`<text x="\${f(px(x))}" y="\${Y+127}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="middle">x = \${this.xs(i)}</text>\`;
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text x="\${X+170}" y="\${Y+20}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">\${c.fs}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i); out+=\`<text data-k="\${t>0?'high':t<0?'low':'exact'}" x="\${X+170}" y="\${Y+34}" fill="\${FIG_COL.c}" font-size="11" font-weight="700" text-anchor="end">\${t>0?'▲ too high':t<0?'▼ too low':'= exact'}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    TanLine.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    TanLine.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; TanLine.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="TanTurn.call(\${i},\${c})" aria-label="Estimate \${this.L[i]}: L is \${c===0?'exact':c>0?'too high':'too low'}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each estimated at x by its tangent line at a. Is each L(x) too high, too low, or exact?</div>\`;
+    out+=\`<div id="tltFig">\${this.svg()}<div class="figcap">Each gold curve has its point a dotted and x marked. Once all four are called right, each gets its tangent at a in blue and the gap at x in red.</div></div>\`;
+    out+=\`<div id="tltStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null, c=this.C(i);
+      return \`<div class="tltStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${c.fs}, a = \${c.aS}, x = \${this.xs(i)}</span></b>\`+
+        this.btn(i,1,'▲ High')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Low')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="tltRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tltNext" onclick="TanTurn.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tltCheck" \${this.ready()?'':'disabled '}onclick="TanTurn.check()" aria-label="\${this.ready()?'Check the four estimates':'Call all four estimates to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="tltGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tltGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TRUE TOUCH','every tangent called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- The tangent line workshop: linear approximation by hand ----------
    Near a, f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve (√x near 4, 1/x
    near 1, sin x near 0) and step x away from a a tenth or a whole one at a
@@ -33696,11 +33875,11 @@ const TanLine = {
   tab:'hand', // step x by hand, or which estimate
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tlwTab').innerHTML=[['hand','🪡 Step x by hand','Step x away from a by hand and watch the tangent miss'],['pick','🎯 Which estimate?','See a curve and an x near a, and pick which of four numbers is the tangent\\'s estimate']]
+    document.getElementById('tlwTab').innerHTML=[['hand','🪡 Step x by hand','Step x away from a by hand and watch the tangent miss'],['pick','🎯 Which estimate?','See a curve and an x near a, and pick which of four numbers is the tangent\\'s estimate'],['turn','⚖️ Too high or too low?','See four curves, each estimated at x by its tangent at a, and call each estimate too high, too low or exact']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="TanLine.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tlwSets','tlwFig','tlwMoveRow','tlwRead','tlwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('tlqBox').innerHTML=pick ? EstPick.html() : '';
+    document.getElementById('tlqBox').innerHTML=!pick ? '' : this.tab==='pick' ? EstPick.html() : TanTurn.html();
     if(pick) return;
     document.getElementById('tlwSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TanLine.pick(\${i})" aria-label="f(x) = \${s.name}">\${s.btn}</button>\`).join('');
