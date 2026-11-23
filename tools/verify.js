@@ -2519,6 +2519,60 @@ const phaseNotes = (() => {
   want(shown.some(t => t === 'PHASE TWO: it rallies: three in a row will stagger it') && shown.includes('STAGGERED'), 'said', 'the rally or the stagger is not said');
   return { checks, bosses: bosses.length };
 })();
+/* Weak points: every campaign foe has one, a topic its own realm tests and
+   the Tome names, no two foes in a realm share one, and it is only in force
+   in the campaign, on a question of that topic. The blow it adds is folded
+   into the strike's damage, the chip and the scene's word go with it, and the
+   line naming it is said once a fight. */
+const weakNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const labels = html.slice(html.indexOf('const TOPIC_LABEL = {'), html.indexOf('\n};', html.indexOf('const TOPIC_LABEL = {')) + 3);
+  const env = { toasts: [], floats: [] };
+  const P = new Function('env',
+    'const H=400; const UI={toast:m=>env.toasts.push(m)}; const Anim={float:(x,y,t)=>env.floats.push(t)};' +
+    labels + realms + html.slice(html.indexOf('const Weak = {'), html.indexOf('const Bestiary = {')) +
+    ';return {Weak, REALMS, TOPIC_LABEL};')(env);
+  const { Weak, REALMS, TOPIC_LABEL } = P;
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('weak', key, msg); };
+  const names = new Set();
+  REALMS.forEach((r, ri) => {
+    const seen = new Set();
+    r.foes.forEach(f => {
+      names.add(f.nm);
+      const k = Weak.OF[f.nm];
+      want(typeof k === 'string', f.nm, 'has no weak point');
+      want(!k || r.pool.includes(k), f.nm, `its weak point ${k} is not a topic ${r.nm} tests`);
+      want(!k || typeof TOPIC_LABEL[k] === 'string', f.nm, `its weak point ${k} has no name in the Tome`);
+      want(!k || !seen.has(k), f.nm, `shares its weak point ${k} with another foe of ${r.nm}`);
+      seen.add(k);
+      want(Weak.line(f) === '🎯 Weak point: ' + TOPIC_LABEL[k], f.nm, 'the Bestiary does not name its weak point');
+    });
+  });
+  for (const nm of Object.keys(Weak.OF)) want(names.has(nm), nm, 'a weak point for a foe the game does not have');
+  const foe = REALMS[0].foes[0], k = Weak.OF[foe.nm], other = REALMS[0].pool.find(t => t !== k);
+  const B = (mode, key) => ({ mode, foe, cur: { key }, weakHit: false });
+  for (const mode of ['arena', 'dungeon', 'daily']) {
+    const b = B(mode, k);
+    want(Weak.of(b) === null && Weak.bonus(b) === 1 && Weak.chip(b) === '' && Weak.hit(b) === false, mode, 'a foe outside the campaign has a weak point');
+  }
+  want(Weak.of({ mode: 'campaign', foe: { nm: 'Straw Knight' }, cur: { key: k } }) === null, 'stranger', 'a foe the campaign does not have has a weak point');
+  const off = B('campaign', other);
+  want(Weak.of(off) === k && !Weak.on(off) && Weak.bonus(off) === 1 && Weak.chip(off) === '', 'off', 'a question on another topic is told as the weak point');
+  want(Weak.hit(off) === false && env.toasts.length === 0 && env.floats.length === 0, 'off', 'a right answer on another topic is told as a weak point hit');
+  const on = B('campaign', k);
+  want(Weak.on(on) && Weak.bonus(on) === 1.5, 'on', 'a question on the weak point does not land half again as hard');
+  want(Weak.chip(on) === ' <span class="rev weak">🎯 weak point ×1.5</span>', 'chip', 'the question does not say it is on the weak point');
+  want(Weak.hit(on) === true && Weak.hit(on) === true, 'hit', 'a weak point hit is not reported');
+  want(env.floats.join() === 'WEAK POINT,WEAK POINT', 'float', `the scene says ${JSON.stringify(env.floats)}`);
+  want(env.toasts.length === 1 && env.toasts[0] === `🎯 Weak point! ${foe.nm} cannot stand ${TOPIC_LABEL[k]}.`, 'told', `the fight says ${JSON.stringify(env.toasts)}`);
+  const battle = html.slice(html.indexOf('const Battle = {'), html.indexOf('const Battle = {') + 60000);
+  want(/\* Phase\.bonus\(this\) \* Weak\.bonus\(this\);/.test(battle), 'damage', 'the weak point is not folded into the strike');
+  want(/this\.weakHit=false;/.test(battle.slice(battle.indexOf('_start(f){'), battle.indexOf('wStats(){'))), 'reset', 'the weak point is not told afresh each fight');
+  want(/Weak\.chip\(this\)/.test(battle), 'shown', 'the question never shows the weak point chip');
+  return { checks, foes: names.size };
+})();
 /* The Bestiary: every campaign foe has a tale, every tale is a foe's, and
    none is too long for a card on a phone. */
 const bestiaryNotes = (() => {
@@ -24039,6 +24093,7 @@ console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
+console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
 {

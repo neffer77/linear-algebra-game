@@ -116,6 +116,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .mtag{float:right;font-size:11px;font-weight:800;opacity:.85}
 .rev{display:inline-block;padding:1px 7px;border-radius:999px;background:#3a2f5e;
   border:1px solid var(--purple);color:#d9b8ff;font-size:10px;letter-spacing:.5px;margin-left:4px}
+.rev.weak{background:#173a2a;border:1px solid #7ff0a8;color:#7ff0a8}
 .miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
   padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
 .miss b{color:#ffb3b6}
@@ -8816,6 +8817,42 @@ const Phase = {
    beaten is a shadow with no name. It reads only which foes are cleared,
    so nothing new is saved. Portraits are drawn by the battle's own sprite
    code on the scene canvas, copied off, and the canvas put back. */
+/* Weak points. Every campaign foe has one topic from its own realm that it
+   cannot stand, picked to match its tale: the slime that is the same length
+   whichever way it is pushed cannot stand Vector Length. A right answer on
+   that topic lands half again as hard, and the question says so as it is
+   asked, so the knight learns a foe by fighting it. Once a foe is beaten the
+   Bestiary names its weak point. Only the campaign's own foes have one, and
+   nothing of it is saved: what is beaten is already kept.                 */
+const Weak = {
+  OF: {
+   "Meadow Slime":'mag', "Bramble Goblin":'vecAdd', "Thicket Brute":'vecScale', "The Vector Wyrm":'vecCombo',
+   "Rank-One Skeleton":'transpose', "Row Reducer":'solve2', "Shear Sentinel":'matVec', "The Determinant Golem":'det2',
+   "Asymptote Wisp":'limInf', "Secant Harpy":'limRational', "Slope Stalker":'evalDeriv', "The Tangent Wraith":'tangent',
+   "Riemann Shade":'area', "Abyssal Chimera":'chainRule', "Constant of Dread":'indefPower', "The Lich of Limits":'defPoly',
+   "Basis Knight":'rank', "Nullspace Drake":'det3', "Resonant Champion":'proj', "The Eigen Dragon":'eigen2',
+   "Echo of a Basis":'rankNullity', "Defective Warden":'diagonalisable', "Null Vector Shade":'nullSpace', "The Spectral Sovereign":'charPoly',
+   "Asymptotic Horror":'lhopital', "Divergent Colossus":'improper', "Convergence Wyrm":'arcLength', "The Unbounded":'growth',
+   "Saddle Point Sentinel":'partial', "Steepest Descent":'dirDeriv', "Warden of Both Paths":'chainMulti', "The Gradient Itself":'gradient'
+  },
+  MUL: 1.5,
+  // the topic this fight's foe cannot stand, in the campaign only
+  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },
+  // is the question being asked right now on it?
+  on(B){ const k=this.of(B); return !!(k && B.cur && B.cur.key===k); },
+  bonus(B){ return this.on(B) ? this.MUL : 1; },
+  chip(B){ return this.on(B) ? ' <span class="rev weak">🎯 weak point ×1.5</span>' : ''; },
+  // a right answer on it: said on the scene every time, and told once a fight
+  hit(B){
+    if(!this.on(B)) return false;
+    Anim.float(610, H-330, 'WEAK POINT', '#7ff0a8', true);
+    if(!B.weakHit){ B.weakHit=true; UI.toast(`🎯 Weak point! ${B.foe.nm} cannot stand ${TOPIC_LABEL[this.of(B)]}.`); }
+    return true;
+  },
+  // the Bestiary's line for a beaten foe
+  line(f){ const k=this.OF[f.nm]; return k ? `🎯 Weak point: ${TOPIC_LABEL[k]||k}` : ''; }
+};
+
 const Bestiary = {
   LORE: {
    "Meadow Slime": "It wobbles the same distance whichever way you push it, which is all a vector ever asked.",
@@ -8891,6 +8928,7 @@ const Bestiary = {
              <div style="font-size:13px;opacity:.85">❤️ ${f.hp} · ⚔️ ${f.atk} · 💰 ${f.gold}</div>
              <div style="font-size:13px;font-style:italic;margin-top:3px">${this.LORE[f.nm]||''}</div>
              ${f.boss&&Talk.BOSS[f.nm]?`<div style="font-size:13px;margin-top:3px;color:var(--gold)">“${Talk.BOSS[f.nm].meet}”</div>`:''}
+             <div class="bestWeak" style="font-size:13px;margin-top:3px;color:#7ff0a8">${Weak.line(f)}</div>
              <div style="font-size:12px;opacity:.75;margin-top:3px">Tests: ${this.tests(r).join(', ')}</div>
              <button class="btn sm ghost" style="width:auto;margin-top:6px" onclick="Battle.begin(${ri},${fi})" aria-label="Fight ${f.nm} again">⚔️ Fight again</button>`
           : `<div style="font-weight:800;opacity:.6">${f.boss?'👑 ':''}???</div>
@@ -8964,6 +9002,7 @@ const Battle = {
     this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
+    this.weakHit=false;              // the weak point is told once a fight
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9270,7 +9309,8 @@ const Battle = {
       Lesson.chip(this.lesson) +
       (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
       (this.cur.redo ? ' <span class="rev again">↺ one like it</span>' : '') +
-      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
+      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '') +
+      Weak.chip(this);
 
     // Codex chip
     const head=document.getElementById('qhead');
@@ -9524,7 +9564,8 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this);
+      const weak=Weak.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
@@ -9541,7 +9582,7 @@ const Battle = {
       else if(rallied) Talk.say('rally', true);
       else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);
       else if(this.combo===5) Talk.say('worry', true);
-      else if(crit) Talk.say('reel');
+      else if(crit || weak) Talk.say('reel');
       // A bigger blow is a longer blow: a crit throws half again as many
       // sparks, and a killing one drops into slow motion, which stretches the
       // whole thing. revealScroll waits this out before moving the page.

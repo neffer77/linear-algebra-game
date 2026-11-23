@@ -1,61 +1,61 @@
 {
-  "change": "Add a Rank the stretch mode to the matrix workshop",
+  "change": "Give every campaign foe a weak point",
   "mutations": [
     {
-      "name": "the stretch is ad + bc",
+      "name": "a weak point adds nothing",
       "file": "index.html",
-      "find": "  det(i){ const [a,b,c,d]=this.R()[i]; return a*d-b*c; },",
-      "replace": "  det(i){ const [a,b,c,d]=this.R()[i]; return a*d+b*c; },",
+      "find": "  MUL: 1.5,",
+      "replace": "  MUL: 1,",
       "run": "verify"
     },
     {
-      "name": "a flip shrinks the stretch",
+      "name": "an arena foe has a weak point",
       "file": "index.html",
-      "find": "  area(i){ return Math.abs(this.det(i)); },",
-      "replace": "  area(i){ return this.det(i); },",
+      "find": "  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },",
+      "replace": "  of(B){ return (B && B.foe && this.OF[B.foe.nm]) || null; },",
       "run": "verify"
     },
     {
-      "name": "the shape lands î's corner on the second column",
+      "name": "the weak point is named on every hit",
       "file": "index.html",
-      "find": "[[0,0],[a,c],[a+b,c+d],[b,d]].map(",
-      "replace": "[[0,0],[b,d],[a+b,c+d],[a,c]].map(",
+      "find": "    if(!B.weakHit){ B.weakHit=true;",
+      "replace": "    if(true){ B.weakHit=true;",
       "run": "verify"
     },
     {
-      "name": "the shape is drawn twice as wide",
+      "name": "the slime's weak point is a topic of another realm",
       "file": "index.html",
-      "find": "      const PX=x=>X+90+x*U, PY=y=>Y+60-y*U;\n      const pts",
-      "replace": "      const PX=x=>X+90+2*x*U, PY=y=>Y+60-y*U;\n      const pts",
+      "find": "\"Meadow Slime\":'mag',",
+      "replace": "\"Meadow Slime\":'det2',",
       "run": "verify"
     },
     {
-      "name": "a fix counts as a first check",
+      "name": "the strike leaves the weak point out",
       "file": "index.html",
-      "find": "      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Workshop.render();",
-      "replace": "      for(const t of this.tags()) this.kinds.add(t); this.wins+=this.tries>1;\n    } else this.streak=0;\n    Workshop.render();",
+      "find": "* Phase.bonus(this) * Weak.bonus(this);",
+      "replace": "* Phase.bonus(this);",
       "run": "verify"
     },
     {
-      "name": "rank the stretch leaves the steppers out",
+      "name": "the question line never shows the chip",
       "file": "index.html",
-      "find": "    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick||rank?'none':'';",
-      "replace": "    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';",
-      "run": "play:detrank"
+      "find": "      Weak.chip(this);",
+      "replace": "      '';",
+      "run": "play:weakpoint"
     },
     {
-      "name": "the shared figure stays under the panes",
+      "name": "a right answer on the weak point is not said",
       "file": "index.html",
-      "find": "      for(const id of ['wsFig','wsRead']) document.getElementById(id).innerHTML='';\n",
-      "replace": "",
-      "run": "play:detrank"
+      "find": "      const weak=Weak.hit(this);",
+      "replace": "      const weak=false;",
+      "run": "play:weakpoint"
     },
     {
-      "name": "a rank tap does not redraw",
+      "name": "the Bestiary leaves the weak point out",
       "file": "index.html",
-      "find": "    if(this.marks) this.marks[i]=null;\n    Workshop.render();",
-      "replace": "    if(this.marks) this.marks[i]=null;",
-      "run": "play:detrank"
+      "find": "color:#7ff0a8\">${Weak.line(f)}</div>",
+      "replace": "color:#7ff0a8\"></div>",
+      "run": "play:weakpoint"
     }
   ]
 }
