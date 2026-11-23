@@ -1,60 +1,60 @@
 {
-  "change": "Add a Too low or too high mode to the Gram–Schmidt workshop",
+  "change": "Add a Which way next mode to the Newton workshop",
   "mutations": [
     {
-      "name": "a square pair is called too low",
+      "name": "a root already is called stuck",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.wu(i)); },",
-      "replace": "truth(i){ return Math.sign(this.wu(i)+0.5); },",
+      "find": "if(F===0) return 0; if(D===0) return 2;",
+      "replace": "if(F===0) return 2; if(D===0) return 2;",
       "run": "verify"
     },
     {
-      "name": "each copy is taken to cost 1",
+      "name": "the step is taken as +f/f′",
       "file": "index.html",
-      "find": "wu(i){ return this.dp(i)-this.c(i)*this.nn(i); },",
-      "replace": "wu(i){ return this.dp(i)-this.c(i); },",
+      "find": "return Math.sign(-F/D); },",
+      "replace": "return Math.sign(F/D); },",
       "run": "verify"
     },
     {
-      "name": "u₂ · u₁ drops its second term",
+      "name": "x₁ adds the step the wrong way",
       "file": "index.html",
-      "find": "dp(i){ const [u,v]=this.R()[i]; return this.dot(v,u); },",
-      "replace": "dp(i){ const [u,v]=this.R()[i]; return v[0]*u[0]; },",
+      "find": "x1(i){ return this.x0(i)-this.F(i)/this.D(i); },",
+      "replace": "x1(i){ return this.x0(i)+this.F(i)/this.D(i); },",
       "run": "verify"
     },
     {
-      "name": "a costly copy is taken as one too low",
+      "name": "f′ of x³ − 3x loses its −3",
       "file": "index.html",
-      "find": "costs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.c(i)<this.dp(i)); },",
-      "replace": "costs(){ return [0,1,2,3].filter(i=>this.truth(i)===1 && this.c(i)<this.dp(i)); },",
+      "find": "fp:x=>3*x*x-3,",
+      "replace": "fp:x=>3*x*x,",
       "run": "verify"
     },
     {
-      "name": "w is drawn before the round is right",
+      "name": "a jump past a root goes unseen",
       "file": "index.html",
-      "find": "if(this.solved){ const cu=[c*u[0],c*u[1]], w=this.w(i);",
-      "replace": "if(true){ const cu=[c*u[0],c*u[1]], w=this.w(i);",
+      "find": "roots.some(([r])=>(r-a)*(r-b)<0); }); },",
+      "replace": "roots.some(([r])=>(r-a)*(r-b)<-1e9); }); },",
       "run": "verify"
     },
     {
-      "name": "w is drawn as u₂ + c·u₁",
+      "name": "the curve is drawn before the round is right",
       "file": "index.html",
-      "find": "w(i){ const [u,v,c]=this.R()[i]; return [v[0]-c*u[0], v[1]-c*u[1]]; },",
-      "replace": "w(i){ const [u,v,c]=this.R()[i]; return [v[0]+c*u[0], v[1]+c*u[1]]; },",
+      "find": "if(this.solved){\n        const pts=[];",
+      "replace": "if(true){\n        const pts=[];",
       "run": "verify"
     },
     {
-      "name": "a backward shadow's c keeps the wrong sign",
+      "name": "the tangent runs straight down to x₀",
       "file": "index.html",
-      "find": "best(i){ let p=this.dp(i), q=this.nn(i);",
-      "replace": "best(i){ let p=Math.abs(this.dp(i)), q=this.nn(i);",
+      "find": "x2=\"${f(px(this.x1(i)))}\" y2=\"${cy}\" stroke=\"${FIG_COL.c}\"",
+      "replace": "x2=\"${f(px(a))}\" y2=\"${cy}\" stroke=\"${FIG_COL.c}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Gram.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Gram.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Newton.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Newton.render();",
       "run": "verify"
     }
   ]

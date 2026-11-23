@@ -145,6 +145,7 @@ const SUITES = [
   require('./play/hoppick'), // see a 0/0 ratio, pick which of four numbers is its limit
   require('./play/hopsort'), // see four ratios, and sort which are 0/0 and need the rule and which plug straight in
   require('./play/newtonpick'), // see a curve and a first guess, pick which of four numbers is the next guess
+  require('./play/newtonturn'), // see four curves with a first guess each, call where each Newton step goes
   require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum
   require('./play/georeach'), // step x along a power series and find how far it still adds up

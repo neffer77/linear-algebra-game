@@ -31,11 +31,11 @@ module.exports = {
       /Then turn it round: see a curve and a first guess, and pick which of four numbers is the next guess\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeNewton');
     t.eq('the Newton\'s method workshop opens', await t.screen(), 's-newton');
-    t.eq('stepping by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('stepping by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which x₁\?/);
-    t.eq('which x₁ is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which x₁ is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, drawing, steppers, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('nkBox').innerText)).startsWith(

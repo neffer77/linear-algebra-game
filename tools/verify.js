@@ -14420,6 +14420,166 @@ const gramTurnNotes = (() => {
   if (env.banners.join() !== 'SHADOW TAKER / every c called') fail('gramturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, arrows };
 })();
+const newtonTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Newton = {render(){ env.renders++; }};" +
+    cut('const NewtonTurn = {', 'const Newton = {') + 'return NewtonTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // each curve written out afresh from its formula, as the player reads it, and its slope taken by small steps
+  const FN = { 'x² − 2': x => x ** 2 - 2, 'x² − 4x + 3': x => x ** 2 - 4 * x + 3, 'x³ − 2x + 2': x => x ** 3 - 2 * x + 2,
+    'x² − 2x − 3': x => x ** 2 - 2 * x - 3, '4 − x²': x => 4 - x ** 2, 'x³ − 3x': x => x ** 3 - 3 * x };
+  const DN = { 'x² − 2': '2x', 'x² − 4x + 3': '2x − 4', 'x³ − 2x + 2': '3x² − 2', 'x² − 2x − 3': '2x − 2', '4 − x²': '−2x', 'x³ − 3x': '3x² − 3' };
+  const h = 1e-5, slope = (F, x) => (F(x + h) - F(x - h)) / (2 * h);
+  const snap = v => (Math.abs(v - Math.round(v * 72) / 72) < 1e-6 ? Math.round(v * 72) / 72 : v);
+  // a ratio of small whole numbers, in lowest terms
+  const q = v => { for (let d = 1; d <= 200; d++) { const n = Math.round(v * d); if (Math.abs(n - v * d) < 1e-7) return d === 1 ? neg(n) : `${neg(n)}/${d}`; } return null; };
+  const pq = v => (v < 0 ? `(${q(v)})` : q(v));
+  const WD = { 1: 'moving right', [-1]: 'moving left', 0: 'staying put', 2: 'stuck' };
+  const NAME = { 1: 'x₁ is to the right', [-1]: 'x₁ is to the left', 0: 'x₀ stays put', 2: 'stuck on a flat tangent' };
+  const MARK = { 1: 'right', [-1]: 'left', 0: 'stay', 2: 'stuck' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // the curves: each named formula and derivative, and every root it has between −6 and 6, found by sign changes
+  for (const [k, C] of Object.entries(S.CURVES)) {
+    const F = FN[C.name];
+    if (!F || DN[C.name] !== C.d) { fail('newtonturn', 'setup', `curve ${k}, ${C.name} with f′ = ${C.d}, is not one of the six`); continue; }
+    for (const x of [-2.3, -0.7, 0.4, 1.9]) if (Math.abs(C.f(x) - F(x)) > 1e-9 || Math.abs(C.fp(x) - slope(F, x)) > 1e-4) fail('newtonturn', 'setup', `${C.name} or its slope is worked wrong at ${x}`);
+    let n = 0; for (let x = -6; x < 6; x += 0.001) if (F(x) === 0 || F(x) * F(x + 0.001) < 0) n++;
+    if (n !== C.roots.length || C.roots.some(([r]) => Math.abs(F(r)) > 1e-9)) fail('newtonturn', 'setup', `${C.name} does not have the roots it lists`);
+  }
+  const work = ri => S.ROUNDS[ri].map(([k, a]) => {
+    const C = S.CURVES[k], F = FN[C.name], f0 = F(a), d0 = snap(slope(F, a));
+    const t = f0 === 0 ? 0 : d0 === 0 ? 2 : Math.sign(-f0 / d0), x1 = t === 1 || t === -1 ? a - f0 / d0 : null;
+    return { C, a, f0, d0, t, x1 };
+  });
+  if (S.ROUNDS.length !== 6) fail('newtonturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, steps = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('newtonturn', key, `it holds ${P.length} guesses, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = P[i].join(); if (seen.has(s)) fail('newtonturn', key, `${L[i]} comes round twice`); seen.add(s);
+      if (!Number.isInteger(w.a * 2) || Math.abs(w.a) > 4) fail('newtonturn', key, `${L[i]}'s first guess is not a half between −4 and 4`);
+      if (w.x1 !== null && Math.abs(w.x1) > 4.6) fail('newtonturn', key, `${L[i]}'s next guess runs off its pane`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('newtonturn', key, `its guesses are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('newtonturn', key, 'every guess is called the same');
+    // what the round holds, found afresh: a step past a root, a step away from every root, a flat tangent
+    const pa = [], aw = [], st = [];
+    W.forEach((w, i) => {
+      if (w.x1 !== null && w.C.roots.some(([r]) => Math.min(w.a, w.x1) < r && r < Math.max(w.a, w.x1))) pa.push(i);
+      if (w.x1 !== null && w.C.roots.every(([r]) => Math.abs(w.x1 - r) > Math.abs(w.a - r))) aw.push(i);
+      if (w.t === 2) st.push(i); });
+    const tags = [pa.length ? 'past' : null, aw.length ? 'away' : null, st.length ? 'stuck' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('newtonturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const each = w => (w.t === 2 ? 'no next guess' : w.t === 0 ? `stays at ${q(w.a)}` : `x₁ = ${q(w.x1)}`);
+    // every guess called wrong, one at a time, in each of the three wrong ways
+    W.forEach((w, i) => {
+      const how = w.t === 0 ? `f(${q(w.a)}) = 0 already, so x₀ is a root and the step is 0`
+        : w.t === 2 ? 'the tangent is flat, so it never meets the axis and there is no next guess'
+        : `the step is −f(x₀)/f′(x₀) = −${pq(w.f0)}/${pq(w.d0)} = ${q(w.x1 - w.a)}, so x₁ = ${q(w.x1)} and the guess moves ${w.t > 0 ? 'right' : 'left'}`;
+      for (const k of [1, -1, 0, 2]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f(x) = ${w.C.name} at x₀ = ${q(w.a)}: f(${q(w.a)}) = ${q(w.f0)} and f′(x) = ${w.C.d} gives f′(${q(w.a)}) = ${q(w.d0)}. Here ${how}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('newtonturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(curve|tan|x1|root|right|left|stay|stuck)"/.test(svg)) fail('newtonturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a curve is given away`);
+        if (S.solved || S.streak) fail('newtonturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('newtonturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('newtonturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('newtonturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="ntCheck" disabled /.test(S.html())) fail('newtonturn', key, 'the check is open before the guesses are called');
+    if (/data-k="(curve|tan)"/.test(S.svg())) fail('newtonturn', key, 'a curve is drawn before the round is right');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="ntCheck" disabled /.test(S.html())) fail('newtonturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('newtonturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="NewtonTurn\\.call\\(${i},(-?[0-2])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('newtonturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`NewtonTurn\\.call\\(${i},`, 'g')) || []).length !== 4) fail('newtonturn', key, `${L[i]} does not offer left, right, stays and stuck`);
+    });
+    if (S.calls.join() !== truth.join()) fail('newtonturn', key, 'the buttons cannot make the right calls');
+    if (/id="ntCheck" disabled /.test(S.html())) fail('newtonturn', key, 'the check stays shut with every guess called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (pa.length) { const w = W[pa[0]], [, lab] = w.C.roots.find(([r]) => Math.min(w.a, w.x1) < r && r < Math.max(w.a, w.x1));
+      want.push(`In ${L[pa[0]]}, x₁ = ${q(w.x1)} lands past the root ${lab}: the tangent overshoots it, and the next step comes back.`); }
+    if (aw.length) { const w = W[aw[0]]; want.push(`In ${L[aw[0]]}, x₁ = ${q(w.x1)} is farther from every root than x₀ = ${q(w.a)} was: the tangent there points away, and Newton’s method can wander before it closes in.`); }
+    if (st.length) want.push(`In ${L[st[0]]}, f′(${q(W[st[0]].a)}) = 0: the tangent is flat and never meets the axis, so there is no next guess.`);
+    want.push(`Each next guess: ${W.map((w, i) => `${L[i]} ${each(w)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('newtonturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: x₀ on its axis, the curve through the point above it, and the tangent along f′(x₀) down to x₁
+    const svg = S.svg();
+    const x0s = [...svg.matchAll(/data-k="x0" cx="([^"]+)" cy="([^"]+)"/g)].map(m => [+m[1], +m[2]]);
+    const tans = [...svg.matchAll(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    const curves = [...svg.matchAll(/<g clip-path="url\(#ntClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], m[2]]);
+    const moving = W.filter(w => w.t !== 0).length;
+    if (x0s.length !== 4 || curves.length !== 4 || tans.length !== moving) fail('newtonturn', key, 'not every pane has its first guess, curve and tangent');
+    else { let ti = 0; W.forEach((w, i) => {
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, cx = X + 90, cy = Y + 72, kx = 18, ky = 8, F = FN[w.C.name];
+      const [px, py] = x0s[i];
+      if (Math.abs(px - (cx + w.a * kx)) > 0.01 || py !== cy) fail('newtonturn', key, `${L[i]}'s first guess is not marked at x₀ on the axis`);
+      const g = curves[i][1], d = (g.match(/data-k="curve" d="([^"]+)"/) || [])[1] || '';
+      const back = [...d.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(m => [(+m[1] - cx) / kx, (cy - +m[2]) / ky]);
+      if (curves[i][0] !== i || back.length < 100 || back.some(([x, y]) => Math.abs(F(x)) < 29 && Math.abs(y - F(x)) > 0.01)) fail('newtonturn', key, `${L[i]}'s curve, read back off the drawing, is not ${w.C.name}`);
+      const roots = [...g.matchAll(/data-k="root" cx="([^"]+)" cy="([^"]+)"/g)].map(m => (+m[1] - cx) / kx);
+      if (roots.length !== w.C.roots.length || roots.some(r => Math.abs(F(r)) > 0.02)) fail('newtonturn', key, `${L[i]}'s roots are not marked where the curve meets the axis`);
+      if (w.t !== 0) { const [x1, y1, x2, y2] = tans[ti++], ax = (x1 - cx) / kx, ay = (cy - y1) / ky, bx = (x2 - cx) / kx, by = (cy - y2) / ky;
+        if (w.t === 2) { if (Math.abs(ay - w.f0) > 0.01 || Math.abs(by - w.f0) > 0.01 || !(ax < w.a && w.a < bx)) fail('newtonturn', key, `${L[i]}'s flat tangent is not drawn flat through the curve above x₀`); }
+        else if (Math.abs(ax - w.a) > 0.01 || Math.abs(ay - w.f0) > 0.01 || Math.abs(by) > 0.01 || Math.abs(bx - w.x1) > 0.01 || Math.abs((by - ay) / (bx - ax) - w.d0) > 0.01)
+          fail('newtonturn', key, `${L[i]}'s tangent does not run from the curve above x₀ down to x₁ along f′(x₀)`);
+      }
+      steps++;
+    }); }
+    const marks = [...svg.matchAll(/data-k="(right|left|stay|stuck)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => `${MARK[w.t]} ${each(w)}`).join()) fail('newtonturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="ntNext"') || /onclick="NewtonTurn\.call/.test(hh.replace(/disabled onclick="NewtonTurn\.call/g, ''))) fail('newtonturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('newtonturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('newtonturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('newtonturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === -1 ? 1 : -1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'away,fix,past,stuck'], [false, 'away,fix,one,past,stuck'], [false, 'away,fix,one,past,stuck'], [false, 'away,fix,one,past,stuck,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('newtonturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Jumped past a root · A step the wrong way · Stuck on a flat tangent · A slip caught and fixed | ✓ Right on the first check') fail('newtonturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'ROOT RUNNER / every step called') fail('newtonturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, steps };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21905,6 +22065,7 @@ console.log(`  arrows called     ${pad(eigTurnNotes.checks.toLocaleString(), 12)
 console.log(`  nights called     ${pad(castleTurnNotes.checks.toLocaleString(), 12)}  (checks of four castle pairs called gaining, holding or losing in the two castles workshop, ${castleTurnNotes.wrongs} of them with one castle called wrong and caught, and ${castleTurnNotes.nights} next nights drawn to the same scale as tonight)`);
 console.log(`  ways called       ${pad(impTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves' tangents called rising, falling, flat or upright in the implicit slope workshop, ${impTurnNotes.wrongs} of them with one tangent called wrong and caught, and ${impTurnNotes.tangents} tangents read back off the drawing along y′)`);
 console.log(`  shadows called    ${pad(gramTurnNotes.checks.toLocaleString(), 12)}  (checks of four c's called too low, just right or too high in the Gram–Schmidt workshop, ${gramTurnNotes.wrongs} of them with one c called wrong and caught, and ${gramTurnNotes.arrows} pairs whose u₁, u₂, c·u₁ and w are read back off the drawing)`);
+console.log(`  steps called      ${pad(newtonTurnNotes.checks.toLocaleString(), 12)}  (checks of four Newton steps called left, right, staying or stuck in the Newton workshop, ${newtonTurnNotes.wrongs} of them with one step called wrong and caught, and ${newtonTurnNotes.steps} curves and tangents read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
