@@ -2519,6 +2519,31 @@ const phaseNotes = (() => {
   want(shown.some(t => t === 'PHASE TWO: it rallies: three in a row will stagger it') && shown.includes('STAGGERED'), 'said', 'the rally or the stagger is not said');
   return { checks, bosses: bosses.length };
 })();
+/* The Bestiary: every campaign foe has a tale, every tale is a foe's, and
+   none is too long for a card on a phone. */
+const bestiaryNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Bestiary = {'), html.indexOf('const Battle = {'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const P = new Function('Game', 'TOPIC_LABEL', src + realms + ';return {Bestiary, REALMS};')(
+    { s: { cleared: { '0:0': true, '2:3': true } } }, { vecAdd: 'Adding vectors' });
+  const { Bestiary, REALMS } = P, foes = REALMS.flatMap(r => r.foes);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('bestiary', key, msg); };
+  for (const f of foes) {
+    const t = Bestiary.LORE[f.nm];
+    want(typeof t === 'string' && t.length >= 30, f.nm, 'has no tale');
+    want(!t || t.length <= 110, f.nm, `a tale of ${t && t.length} characters is too long for a card`);
+    want(!t || !t.includes(f.nm), f.nm, 'the tale gives its own name away again');
+  }
+  for (const k of Object.keys(Bestiary.LORE)) want(foes.some(f => f.nm === k), k, 'a tale for a foe the game does not have');
+  want(new Set(Object.values(Bestiary.LORE)).size === Object.keys(Bestiary.LORE).length, 'tales', 'two foes share a tale');
+  const all = Bestiary.all(), c = Bestiary.count();
+  want(all.length === foes.length && c.total === foes.length, 'count', `${all.length} foes listed of ${foes.length}`);
+  want(c.beaten === 2 && all.filter(e => e.beaten).map(e => e.f.nm).join() === [REALMS[0].foes[0].nm, REALMS[2].foes[3].nm].join(), 'cleared', 'the beaten foes are not the cleared ones');
+  want(Bestiary.tests(REALMS[0])[0] === 'Adding vectors' && Bestiary.tests(REALMS[0]).length === new Set(REALMS[0].pool).size, 'tests', 'a realm\'s topics are not named as the Tome names them');
+  return { checks, foes: foes.length };
+})();
 const slipNotes = (() => {
   const plain = h => String(h).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
@@ -23870,6 +23895,7 @@ console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(),
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
+console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
 {

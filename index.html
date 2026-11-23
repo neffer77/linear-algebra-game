@@ -822,8 +822,22 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
         <button class="btn sm ghost" onclick="Game.rest()">🔥 Rest</button>
         <button class="btn sm ghost" onclick="UI.go('s-prefs')" aria-label="Settings" style="flex:0 0 46px">⚙️</button>
       </div>
+      <div class="row">
+        <button class="btn sm ghost" onclick="UI.go('s-bestiary')" id="btnBest">👹 Bestiary</button>
+      </div>
     </div>
     <div id="mapList"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ BESTIARY ============ -->
+  <div class="screen" id="s-bestiary">
+    <div class="panel"><h2>👹 Bestiary</h2><div class="sub">Every foe in the Eigenrealm. A foe you have beaten steps out of the shadow with its tale, its numbers and the topics its realm tests, and you can fight it again: one time in four it comes back as an elite.</div>
+      <div id="bestCount" style="margin-top:8px;font-weight:800"></div>
+      <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="bestBar" style="background:var(--gold);height:100%"></div></div>
+    </div>
+    <div id="bestList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
 
@@ -8795,6 +8809,104 @@ const Phase = {
   flawless(B){ return B.phase===2 && B.missed===B.phaseFrom; }
 };
 
+/* ---------- The Bestiary ----------
+   Every campaign foe on one page, realm by realm. A foe you have beaten is
+   drawn in its own colours with its tale, its health and blow, and the
+   topics its realm tests, with a button to fight it again; one not yet
+   beaten is a shadow with no name. It reads only which foes are cleared,
+   so nothing new is saved. Portraits are drawn by the battle's own sprite
+   code on the scene canvas, copied off, and the canvas put back. */
+const Bestiary = {
+  LORE: {
+   "Meadow Slime": "It wobbles the same distance whichever way you push it, which is all a vector ever asked.",
+   "Bramble Goblin": "It adds its thorns tip to tail and swears the sum is sharper than either.",
+   "Thicket Brute": "Scale it by two and it is twice the trouble, pointing the same way.",
+   "The Vector Wyrm": "Magnitude and direction both, and it will tell you so before you ask.",
+   "Rank-One Skeleton": "Every row it has is a copy of one row, so it can only ever point one way.",
+   "Row Reducer": "It grinds each row down against the one above until the stairs show.",
+   "Shear Sentinel": "It slides the top of the square sideways and leaves the area exactly as it was.",
+   "The Determinant Golem": "Its whole strength is one number. Make that number zero and it cannot get up.",
+   "Asymptote Wisp": "It drifts closer and closer to the wall and never once touches it.",
+   "Secant Harpy": "It swoops between two points and calls the straight line between them a slope.",
+   "Slope Stalker": "It follows a curve so closely that, up near, the curve looks straight.",
+   "The Tangent Wraith": "It touches your curve at one point and leans exactly as it leans.",
+   "Riemann Shade": "It builds itself out of thin strips and grows truer the thinner they get.",
+   "Abyssal Chimera": "One head inside another inside another. Take the derivative from the outside in.",
+   "Constant of Dread": "Every antiderivative leaves it behind. Forget the + C and it is still there.",
+   "The Lich of Limits": "You can come as near as you like. Whether you arrive is another question.",
+   "Basis Knight": "Two arrows, no spare ones, and every point in the plane within reach.",
+   "Nullspace Drake": "Whatever it breathes on is crushed to nothing, and it knows exactly which arrows those are.",
+   "Resonant Champion": "Push it along its own axis and it only grows stronger in the same direction.",
+   "The Eigen Dragon": "Transform it however you like. Along its eigenvectors it only stretches.",
+   "Echo of a Basis": "A basis that lost one arrow and still remembers the plane it used to reach.",
+   "Defective Warden": "Too few eigenvectors to go round, so it can never be made diagonal.",
+   "Null Vector Shade": "It has length zero and no direction, and it is in every subspace at once.",
+   "The Spectral Sovereign": "It rules by its eigenvalues and keeps them in a row along its diagonal.",
+   "Asymptotic Horror": "It grows faster than any power of x, and the gap only widens.",
+   "Divergent Colossus": "Its terms shrink toward zero and its sum still runs off for ever.",
+   "Convergence Wyrm": "Halve it, and halve it again, and its endless coils add up to a finite length.",
+   "The Unbounded": "No ceiling holds it. Ask it for a bound and it laughs.",
+   "Saddle Point Sentinel": "Flat in every direction where it stands, and still neither a peak nor a pit.",
+   "Steepest Descent": "It always walks straight down the gradient, and it is always in a hurry.",
+   "Warden of Both Paths": "It guards two routes to the same point and checks that the slope agrees on both.",
+   "The Gradient Itself": "It points up the steepest climb from wherever you stand."
+  },
+  // every campaign foe, with where it stands and whether it is beaten
+  all(){
+    const g=Game.s||{cleared:{}};
+    return REALMS.flatMap((r,ri)=>r.foes.map((f,fi)=>({f, r, ri, fi, beaten:!!(g.cleared&&g.cleared[ri+':'+fi])})));
+  },
+  count(){ const a=this.all(); return {beaten:a.filter(e=>e.beaten).length, total:a.length}; },
+  // what a realm tests, by the names the Tome uses
+  tests(r){ return [...new Set(r.pool.map(k=>TOPIC_LABEL[k]||k))]; },
+  // a foe's portrait into a small canvas: its own colours, or a shadow
+  shot(el, f, known){
+    const S=2, w0=cv.width, h0=cv.height, t=Anim.t;
+    cv.width=Math.max(w0,240*S); cv.height=Math.max(h0,240*S);
+    cx.setTransform(S,0,0,S,0,0);
+    Anim.t=0;
+    try{ drawFoe(120, 205, f.boss?0.95:1.05, f.art, f.col, 0, 0, false); }
+    finally{ Anim.t=t; }
+    const o=el.getContext('2d');
+    o.clearRect(0,0,el.width,el.height);
+    o.drawImage(cv, 0, 0, 240*S, 240*S, 0, 0, el.width, el.height);
+    if(!known){ o.globalCompositeOperation='source-in'; o.fillStyle='#2b2540'; o.fillRect(0,0,el.width,el.height); o.globalCompositeOperation='source-over'; }
+    cv.width=w0; cv.height=h0; fitCanvas();
+  },
+  render(){
+    const list=document.getElementById('bestList'); if(!list) return;
+    const {beaten, total}=this.count();
+    document.getElementById('bestCount').textContent=`${beaten} of ${total} foes beaten`+(beaten===total?' · every foe in the realm 🏆':'');
+    document.getElementById('bestBar').style.width=(beaten/total*100)+'%';
+    let html='';
+    REALMS.forEach((r,ri)=>{
+      const es=this.all().filter(e=>e.ri===ri);
+      html+=`<div class="panel" style="padding:10px"><h2 style="font-size:15px;color:${r.col}">${r.nm} · ${es.filter(e=>e.beaten).length}/${es.length}</h2>`;
+      es.forEach(e=>{
+        const {f, fi}=e, id=`best-${ri}-${fi}`;
+        html+=`<div class="bestRow" id="${id}" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+          <canvas width="96" height="96" style="width:72px;height:72px;flex:0 0 72px" aria-hidden="true" data-ri="${ri}" data-fi="${fi}"></canvas>
+          <div style="flex:1;min-width:0">`+(e.beaten
+          ? `<div style="font-weight:800">${f.boss?'👑 ':''}${f.nm}</div>
+             <div style="font-size:13px;opacity:.85">❤️ ${f.hp} · ⚔️ ${f.atk} · 💰 ${f.gold}</div>
+             <div style="font-size:13px;font-style:italic;margin-top:3px">${this.LORE[f.nm]||''}</div>
+             ${f.boss&&Talk.BOSS[f.nm]?`<div style="font-size:13px;margin-top:3px;color:var(--gold)">“${Talk.BOSS[f.nm].meet}”</div>`:''}
+             <div style="font-size:12px;opacity:.75;margin-top:3px">Tests: ${this.tests(r).join(', ')}</div>
+             <button class="btn sm ghost" style="width:auto;margin-top:6px" onclick="Battle.begin(${ri},${fi})" aria-label="Fight ${f.nm} again">⚔️ Fight again</button>`
+          : `<div style="font-weight:800;opacity:.6">${f.boss?'👑 ':''}???</div>
+             <div style="font-size:13px;opacity:.6">Not yet beaten. ${f.boss?'The boss of':'It waits in'} ${r.nm}.</div>`)+
+          `</div></div>`;
+      });
+      html+='</div>';
+    });
+    list.innerHTML=html;
+    list.querySelectorAll('canvas[data-ri]').forEach(c=>{
+      const e=this.all().find(x=>x.ri==c.dataset.ri && x.fi==c.dataset.fi);
+      this.shot(c, e.f, e.beaten);
+    });
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -14923,6 +15035,7 @@ const UI = {
     if(id==='s-pathchain') PathChain.render();
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
+    if(id==='s-bestiary') Bestiary.render();
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
