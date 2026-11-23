@@ -60,6 +60,10 @@ module.exports = {
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));
 
+    // drawing the portraits borrows the scene canvas, and gives it back at its own size
+    const lent = await t.ev(() => ({ w: cv.width, h: cv.height }));
+    t.ok('the scene canvas is given back at its own size', lent.w > 0 && Math.abs(lent.h / lent.w - 0.5) < 0.02, JSON.stringify(lent));
+
     // fighting again from it starts that very foe
     await t.ev(() => { Elite.force = null; Elite._odds = Elite.CHANCE; Elite.CHANCE = 0; });
     await t.ev(() => document.querySelector('#best-0-1 button').click());
