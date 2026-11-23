@@ -1499,7 +1499,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ IMPLICIT SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-implicit">
     <div class="panel"><h2>⭕ Implicit Slope Workshop</h2><div class="sub">A circle is not the graph of y = f(x), yet every point on it has a tangent. Differentiate both sides of its equation, letting every y term pick up a y′ by the chain rule, and solve for y′. Step a point around a curve and check each slope with a nudge.</div></div>
-    <div id="imTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step the point by hand or pick the slope"></div>
+    <div id="imTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step the point by hand, pick the slope, or call each tangent"></div>
     <div class="panel">
       <div id="iyBox"></div>
       <div id="imSets" class="wsModes" role="group" aria-label="Which curve"></div>
@@ -15696,7 +15696,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step a point around a circle and find its slope without ever solving for y. Meet the flat tops, the tangents that stand straight up, and a curve that needs the product rule. Then turn it round: see a curve and a point, and pick which of four numbers is the slope there.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a point around a circle and find its slope without ever solving for y. Meet the flat tops, the tangents that stand straight up, and a curve that needs the product rule. Then turn it round: see a curve and a point, and pick which of four numbers is the slope there. Or call it: see four curves, each with a point, and say whether each tangent rises, falls, lies flat or stands straight up.</div>
          <button class="btn sm" id="tomeImplicit" style="width:auto;margin-top:8px" onclick="Implicit.open()">Open the implicit slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -25656,6 +25656,183 @@ const ImpPick = {
     return out;
   }
 };
+/* ---------- Which way? The implicit slope workshop's third mode ----------
+   Four curves given only by their equations, each with a point on it, and
+   the player calls the tangent there: rising, falling, flat or standing
+   straight up. The curve is not drawn until the round is right, so the call
+   rests on differentiating both sides and reading y′ = top/bottom: a top of
+   0 lies flat, a bottom of 0 stands upright, and otherwise the sign of y′
+   says which way. Rounds hold a hyperbola that rises where a circle would
+   fall, flat tangents off the circle, and upright ones. A slip rings that
+   pane and works y′ through; once all four are right, each gets its curve
+   and its tangent drawn. Nothing is saved, and there is no clock. */
+const ImpTurn = {
+  // each curve: its equation, both sides differentiated, and y′ = sg·N/D as the player would write it
+  CURVES:{
+    c: {eq:'x² + y² = 25', diff:'2x + 2y·y′ = 0', sg:-1, nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y, F:(x,y)=>x*x+y*y, k:25, R:6,
+        br:()=>[ImpTurn.trace(t=>[5*Math.cos(t),5*Math.sin(t)],0,2*Math.PI)]},
+    e: {eq:'x² + 4y² = 25', diff:'2x + 8y·y′ = 0', sg:-1, nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>4*y, F:(x,y)=>x*x+4*y*y, k:25, R:6,
+        br:()=>[ImpTurn.trace(t=>[5*Math.cos(t),2.5*Math.sin(t)],0,2*Math.PI)]},
+    t: {eq:'x² + xy + y² = 7', diff:'2x + (y + x·y′) + 2y·y′ = 0', sg:-1, nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x+y, D:(x,y)=>x+2*y, F:(x,y)=>x*x+x*y+y*y, k:7, R:4,
+        br:()=>[ImpTurn.trace(t=>{ const u=Math.sqrt(14/3)*Math.cos(t), v=Math.sqrt(14)*Math.sin(t); return [(u+v)/Math.SQRT2,(u-v)/Math.SQRT2]; },0,2*Math.PI)]},
+    h: {eq:'x² − y² = 16', diff:'2x − 2y·y′ = 0', sg:1, nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y, F:(x,y)=>x*x-y*y, k:16, R:7,
+        br:()=>[1,-1].map(s=>ImpTurn.trace(t=>[s*4*Math.cosh(t),4*Math.sinh(t)],-1.5,1.5))},
+    v: {eq:'y² − x² = 9', diff:'2y·y′ − 2x = 0', sg:1, nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y, F:(x,y)=>y*y-x*x, k:9, R:7,
+        br:()=>[1,-1].map(s=>ImpTurn.trace(t=>[3*Math.sinh(t),s*3*Math.cosh(t)],-1.6,1.6))},
+    r: {eq:'xy = 6', diff:'y + x·y′ = 0', sg:-1, nS:'y', dS:'x', N:(x,y)=>y, D:(x,y)=>x, F:(x,y)=>x*y, k:6, R:7,
+        br:()=>[1,-1].map(s=>ImpTurn.trace(t=>[s*Math.exp(t),s*6*Math.exp(-t)],-0.25,2.05))}
+  },
+  // [curve, x, y]
+  ROUNDS:[
+    [['c',3,4], ['c',0,5], ['h',5,3], ['e',5,0]],
+    [['e',-3,2], ['r',2,3], ['v',0,3], ['c',-5,0]],
+    [['t',2,1], ['h',4,0], ['c',4,-3], ['e',0,2.5]],
+    [['v',4,5], ['t',3,-1], ['r',-2,-3], ['e',4,-1.5]],
+    [['c',-4,-3], ['h',-5,3], ['t',-3,2], ['v',0,-3]],
+    [['r',1,6], ['t',1,-3], ['h',-5,-3], ['h',-4,0]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four tangents right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flat',  t:'Call a tangent that lies flat, where the top of y′ is 0.', toast:'Flat where the top is 0',
+     ok:K=>K.kinds.has('flat')},
+    {id:'stand', t:'Call a tangent that stands straight up, where the bottom of y′ is 0.', toast:'Upright where the bottom is 0',
+     ok:K=>K.kinds.has('stand')},
+    {id:'twist', t:'Call a point where the tangent goes the other way from a circle’s.', toast:'Not every curve is a circle',
+     ok:K=>K.kinds.has('twist')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Differentiate both sides with respect to x, treating y as a function of x, so each y term picks up a y′. Solve for y′ as a fraction. Where its top is 0 the tangent lies flat; where its bottom is 0 it stands straight up; otherwise y′ above 0 rises and below 0 falls.',
+  L:'ABCD',
+  WORD:{1:'rising', [-1]:'falling', 0:'flat', 2:'standing upright'},
+  NAMES:{1:'rises', [-1]:'falls', 0:'lies flat', 2:'stands straight up'},
+  trace(f,a,b){ const p=[]; for(let i=0;i<=120;i++) p.push(f(a+(b-a)*i/120)); return p; },
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  xy(i){ return this.R()[i].slice(1); },
+  nd(i){ const C=this.C(i), [x,y]=this.xy(i); return [C.N(x,y), C.D(x,y)]; },
+  truth(i){ const [n,d]=this.nd(i); if(d===0) return 2; if(n===0) return 0; return Math.sign(this.C(i).sg*n/d); },
+  frac(n,d){ if(d<0){ n=-n; d=-d; } const g=(a,b)=>b?g(b,a%b):a, k=g(Math.abs(n),d)||1; n/=k; d/=k; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  slope(i){ const [n,d]=this.nd(i); return this.frac(this.C(i).sg*n,d); },
+  pt(i){ const [x,y]=this.xy(i); return \`(\${neg(x)}, \${neg(y)})\`; },
+  p(s){ return s.includes(' ') ? \`(\${s})\` : s; },
+  yp(C){ return \`y′ = \${C.sg<0?'−':''}\${this.p(C.nS)}/\${this.p(C.dS)}\`; },
+  /* what a round holds: flat tangents, upright ones, and points where a circle's tangent would go the other way */
+  flats(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  stands(){ return [0,1,2,3].filter(i=>this.truth(i)===2); },
+  twists(){ return [0,1,2,3].filter(i=>{ const [x,y]=this.xy(i), t=this.truth(i); return (x*y>0 && t===1) || (x*y<0 && t===-1); }); },
+  tags(){ const t=[]; if(this.flats().length) t.push('flat'); if(this.stands().length) t.push('stand'); if(this.twists().length) t.push('twist'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  each(i){ const t=this.truth(i); return t===2 ? 'upright' : t===0 ? 'flat' : \`y′ = \${this.slope(i)}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const tw=this.twists(), st=this.stands(), fl=this.flats();
+      if(tw.length){ const i=tw[0], [x,y]=this.xy(i);
+        out.push(\`In \${this.L[i]}, a circle’s tangent at \${this.pt(i)} would \${x*y>0?'fall':'rise'}, yet on \${this.C(i).eq} it \${this.truth(i)>0?'rises':'falls'}: the picture in your head is not the curve, and only y′ can tell.\`); }
+      if(st.length){ const i=st[0];
+        out.push(\`In \${this.L[i]}, the bottom of y′, \${this.C(i).dS}, is 0: there is no number for the slope, and the tangent stands straight up.\`); }
+      if(fl.length){ const i=fl[0];
+        out.push(\`In \${this.L[i]}, the top of y′, \${this.C(i).nS}, is 0, so y′ = 0 and the tangent lies flat.\`); }
+      out.push(\`Each tangent: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.each(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const C=this.C(i), [n,d]=this.nd(i), t=this.truth(i);
+        const how = t===2 ? \`the bottom, \${C.dS}, is 0, so there is no slope and the tangent stands straight up\`
+          : t===0 ? \`the top, \${C.nS}, is 0, so y′ = 0 and the tangent lies flat\`
+          : \`y′ = \${C.sg<0?'−':''}(\${neg(n)})/(\${neg(d)}) = \${this.slope(i)}, so the tangent \${t>0?'rises':'falls'}\`;
+        out.push(\`In \${this.L[i]}, \${C.eq} at \${this.pt(i)}: \${C.diff}, so \${this.yp(C)}. Here \${how}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: its axes and the point in gold, with its equation; once the
+     round is right, the curve in blue (cut to the pane) and the tangent in
+     green with its y′ */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2), T=28;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with a point: \${P.map((r,i)=>\`\${this.L[i]}, \${this.C(i).eq} at \${this.pt(i)}\`).join('; ')}\${this.solved?', each with its curve and tangent drawn':''}">\`;
+    P.forEach((r,i)=>{
+      const C=this.C(i), [x,y]=this.xy(i), X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, cy=Y+72, s=52/C.R, px=v=>cx+v*s, py=v=>cy-v*s;
+      out+=\`<clipPath id="ixClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#ixClip\${i})"><line x1="\${X+4}" y1="\${cy}" x2="\${X+176}" y2="\${cy}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="\${cx}" y1="\${Y+4}" x2="\${cx}" y2="\${Y+126}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      if(this.solved){
+        for(const b of C.br()) out+=\`<path data-k="curve" d="\${b.map(([u,v],j)=>(j?'L':'M')+f(px(u))+' '+f(py(v))).join('')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+        const [n,d]=this.nd(i), m=d===0 ? null : C.sg*n/d, dx=m===null ? 0 : T/Math.sqrt(1+m*m), dy=m===null ? T : m*dx;
+        out+=\`<line data-k="tan" x1="\${f(px(x)-dx)}" y1="\${f(py(y)+dy)}" x2="\${f(px(x)+dx)}" y2="\${f(py(y)-dy)}" stroke="\${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/>\`;
+      }
+      out+=\`</g><circle data-k="pt" cx="\${f(px(x))}" cy="\${f(py(y))}" r="4" fill="\${FIG_COL.b}"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+18}" fill="\${FIG_COL.b}" font-size="11" text-anchor="end">\${C.eq}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'rise',[-1]:'fall',0:'flat',2:'stand'}[t]}" x="\${X+172}" y="\${Y+121}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${this.each(i)}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Implicit.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Implicit.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Implicit.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="ImpTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: the tangent \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each with a point on it. Does the tangent there rise, fall, lie flat, or stand straight up?</div>\`;
+    out+=\`<div id="ixFig">\${this.svg()}<div class="figcap">Only each point is drawn, with its curve's equation. Once all four are called right, each curve is drawn in blue with its tangent in green.</div></div>\`;
+    out+=\`<div id="ixStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map((r,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="ixStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.C(i).eq} at \${this.pt(i)}</span></b>\`+
+        this.btn(i,1,'↗ Rises')+this.btn(i,-1,'↘ Falls')+this.btn(i,0,'→ Flat')+this.btn(i,2,'↑ Upright')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="ixRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ixNext" onclick="ImpTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ixCheck" \${this.ready()?'':'disabled '}onclick="ImpTurn.check()" aria-label="\${this.ready()?'Check the four tangents':'Call all four tangents to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="ixGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ixGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TRUE TANGENT','every tangent called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Implicit = {
   SETS:[
     {id:'circle', btn:'Circle', eq:'x² + y² = 25', c:25,
@@ -25738,11 +25915,11 @@ const Implicit = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('imTab').innerHTML=[['hand','⭕ Step it by hand','Step a point around a curve and read its slope'],['pick','🎯 Which slope?','See a curve and a point, and pick which of four numbers is the slope there']]
+    document.getElementById('imTab').innerHTML=[['hand','⭕ Step it by hand','Step a point around a curve and read its slope'],['pick','🎯 Which slope?','See a curve and a point, and pick which of four numbers is the slope there'],['turn','🧭 Which way?','See four curves, each with a point, and call each tangent rising, falling, flat or upright']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Implicit.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['imSets','imFig','imStep','imRead','imGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('iyBox').innerHTML=pick ? ImpPick.html() : '';
+    document.getElementById('iyBox').innerHTML=!pick ? '' : this.tab==='pick' ? ImpPick.html() : ImpTurn.html();
     if(pick) return;
     document.getElementById('imSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Implicit.pick(\${i})" aria-label="\${s.btn}: \${s.eq}">\${s.btn}</button>\`).join('');

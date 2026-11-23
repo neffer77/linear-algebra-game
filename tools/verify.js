@@ -14116,6 +14116,164 @@ const castleTurnNotes = (() => {
   if (env.banners.join() !== 'FAIR RIDER / every night called') fail('castleturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, nights };
 })();
+const impTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Implicit = {render(){ env.renders++; }};" +
+    cut('const ImpTurn = {', 'const Implicit = {') + 'return ImpTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // each curve's left side, written out afresh, keyed by the equation the player sees
+  const LHS = { 'x² + y² = 25': [(x, y) => x * x + y * y, 25], 'x² + 4y² = 25': [(x, y) => x * x + 4 * y * y, 25],
+    'x² + xy + y² = 7': [(x, y) => x * x + x * y + y * y, 7], 'x² − y² = 16': [(x, y) => x * x - y * y, 16],
+    'y² − x² = 9': [(x, y) => y * y - x * x, 9], 'xy = 6': [(x, y) => x * y, 6] };
+  // y′ = −Fx/Fy, the partials taken by small steps, so nothing leans on the workshop's own working
+  const h = 1e-5, part = (F, x, y) => [(F(x + h, y) - F(x - h, y)) / (2 * h), (F(x, y + h) - F(x, y - h)) / (2 * h)];
+  const ev = (s, x, y) => Function('x', 'y', 'return ' + s.replace(/\s/g, '').replace(/(\d)([xy])/g, '$1*$2'))(x, y);
+  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+  const red = (n, d) => { if (d < 0) { n = -n; d = -d; } const k = gcd(Math.abs(n), d) || 1; n /= k; d /= k; return d === 1 ? neg(n) : `${neg(n)}/${d}`; };
+  const WD = { 1: 'rising', [-1]: 'falling', 0: 'flat', 2: 'standing upright' };
+  const NAME = { 1: 'rises', [-1]: 'falls', 0: 'lies flat', 2: 'stands straight up' };
+  const MARK = { 1: 'rise', [-1]: 'fall', 0: 'flat', 2: 'stand' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // the right calls for a round, worked from the partials alone
+  const work = ri => S.ROUNDS[ri].map(([k, x, y]) => {
+    const C = S.CURVES[k], [F] = LHS[C.eq] || [() => NaN], [fx, fy] = part(F, x, y);
+    const t = Math.abs(fy) < 1e-6 ? 2 : Math.abs(fx) < 1e-6 ? 0 : Math.sign(-fx / fy);
+    return { C, x, y, fx, fy, t, n: ev(C.nS, x, y), d: ev(C.dS, x, y) };
+  });
+  if (S.ROUNDS.length !== 6) fail('impturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  for (const [k, C] of Object.entries(S.CURVES)) {
+    if (!LHS[C.eq]) { fail('impturn', 'setup', `curve ${k}, ${C.eq}, is not one of the six`); continue; }
+    // every drawn piece of the curve lies on it, and the y′ it states is −Fx/Fy wherever the bottom is not 0
+    const [F, c] = LHS[C.eq];
+    if (C.br().some(b => b.some(([x, y]) => Math.abs(F(x, y) - c) > 1e-6))) fail('impturn', 'setup', `the curve drawn for ${C.eq} leaves it`);
+    for (const [x, y] of [[1.3, 0.7], [-2.1, 1.6], [0.4, -2.9]]) {
+      const [fx, fy] = part(F, x, y), d = ev(C.dS, x, y);
+      if (Math.abs(d) > 1e-6 && Math.abs(C.sg * ev(C.nS, x, y) / d + fx / fy) > 1e-4) fail('impturn', 'setup', `for ${C.eq}, ${S.yp(C)} is not the slope`);
+    }
+  }
+  const seen = new Set();
+  let checks = 0, wrongs = 0, tangents = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('impturn', key, `it holds ${P.length} points, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = P[i].join(); if (seen.has(s)) fail('impturn', key, `${L[i]} comes round twice`); seen.add(s);
+      const [F, c] = LHS[w.C.eq]; if (Math.abs(F(w.x, w.y) - c) > 1e-9) fail('impturn', key, `${L[i]}'s point is not on ${w.C.eq}`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('impturn', key, `its tangents are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('impturn', key, 'every tangent is called the same');
+    // what the round holds, found afresh: flat, upright, and where a circle's tangent would go the other way
+    const fl = [], st = [], tw = [];
+    W.forEach((w, i) => { if (w.t === 0) fl.push(i); if (w.t === 2) st.push(i); if ((w.x * w.y > 0 && w.t === 1) || (w.x * w.y < 0 && w.t === -1)) tw.push(i); });
+    const tags = [fl.length ? 'flat' : null, st.length ? 'stand' : null, tw.length ? 'twist' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('impturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const each = w => w.t === 2 ? 'upright' : w.t === 0 ? 'flat' : `y′ = ${red(w.C.sg * w.n, w.d)}`;
+    // every tangent called wrong, one at a time, in each of the three wrong ways
+    W.forEach((w, i) => {
+      const yp = `y′ = ${w.C.sg < 0 ? '−' : ''}${w.C.nS.includes(' ') ? `(${w.C.nS})` : w.C.nS}/${w.C.dS.includes(' ') ? `(${w.C.dS})` : w.C.dS}`;
+      const how = w.t === 2 ? `the bottom, ${w.C.dS}, is 0, so there is no slope and the tangent stands straight up`
+        : w.t === 0 ? `the top, ${w.C.nS}, is 0, so y′ = 0 and the tangent lies flat`
+        : `y′ = ${w.C.sg < 0 ? '−' : ''}(${neg(w.n)})/(${neg(w.d)}) = ${red(w.C.sg * w.n, w.d)}, so the tangent ${w.t > 0 ? 'rises' : 'falls'}`;
+      for (const k of [1, -1, 0, 2]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, ${w.C.eq} at (${neg(w.x)}, ${neg(w.y)}): ${w.C.diff}, so ${yp}. Here ${how}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('impturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(curve|tan|rise|fall|flat|stand)"/.test(svg)) fail('impturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a curve is given away`);
+        if (S.solved || S.streak) fail('impturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('impturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('impturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('impturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="ixCheck" disabled /.test(S.html())) fail('impturn', key, 'the check is open before the tangents are called');
+    if (/data-k="(curve|tan)"/.test(S.svg())) fail('impturn', key, 'a curve is drawn before the round is right');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="ixCheck" disabled /.test(S.html())) fail('impturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('impturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="ImpTurn\\.call\\(${i},(-?[0-2])\\)" aria-label="${L[i]}: the tangent ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('impturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`ImpTurn\\.call\\(${i},`, 'g')) || []).length !== 4) fail('impturn', key, `${L[i]} does not offer rises, falls, flat and upright`);
+    });
+    if (S.calls.join() !== truth.join()) fail('impturn', key, 'the buttons cannot make the right calls');
+    if (/id="ixCheck" disabled /.test(S.html())) fail('impturn', key, 'the check stays shut with every tangent called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (tw.length) { const w = W[tw[0]];
+      want.push(`In ${L[tw[0]]}, a circle’s tangent at (${neg(w.x)}, ${neg(w.y)}) would ${w.x * w.y > 0 ? 'fall' : 'rise'}, yet on ${w.C.eq} it ${w.t > 0 ? 'rises' : 'falls'}: the picture in your head is not the curve, and only y′ can tell.`); }
+    if (st.length) want.push(`In ${L[st[0]]}, the bottom of y′, ${W[st[0]].C.dS}, is 0: there is no number for the slope, and the tangent stands straight up.`);
+    if (fl.length) want.push(`In ${L[fl[0]]}, the top of y′, ${W[fl[0]].C.nS}, is 0, so y′ = 0 and the tangent lies flat.`);
+    want.push(`Each tangent: ${W.map((w, i) => `${L[i]} ${each(w)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('impturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each point where its curve puts it, the curve through it, and the tangent along y′
+    const svg = S.svg();
+    const pts = [...svg.matchAll(/data-k="pt" cx="([^"]+)" cy="([^"]+)"/g)].map(m => [+m[1], +m[2]]);
+    const tans = [...svg.matchAll(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    const curves = [...svg.matchAll(/<g clip-path="url\(#ixClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], [...m[2].matchAll(/data-k="curve" d="([^"]+)"/g)].map(c => c[1])]);
+    if (pts.length !== 4 || tans.length !== 4 || curves.length !== 4 || curves.some(([, c]) => !c.length)) fail('impturn', key, 'not every pane has its point, curve and tangent');
+    else W.forEach((w, i) => {
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, s = 52 / w.C.R, cx = X + 90, cy = Y + 72;
+      const [F, c] = LHS[w.C.eq], [px, py] = pts[i];
+      if (Math.abs(px - (cx + w.x * s)) > 0.01 || Math.abs(py - (cy - w.y * s)) > 0.01 || px < X + 8 || px > X + 172 || py < Y + 8 || py > Y + 122) fail('impturn', key, `${L[i]}'s point is not where (${w.x}, ${w.y}) is, inside its pane`);
+      const back = curves[i][1].flatMap(d => [...d.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(m => [(+m[1] - cx) / s, (cy - +m[2]) / s]));
+      if (curves[i][0] !== i || back.some(([x, y]) => Math.abs(F(x, y) - c) > 0.2 * c / 5 + 0.15)) fail('impturn', key, `${L[i]}'s curve, read back off the drawing, leaves ${w.C.eq}`);
+      if (!back.some(([x, y]) => Math.hypot(x - w.x, y - w.y) < 0.25)) fail('impturn', key, `${L[i]}'s curve does not pass its point`);
+      const [x1, y1, x2, y2] = tans[i], dx = x2 - x1, dy = y1 - y2;
+      if (Math.abs((x1 + x2) / 2 - px) > 0.02 || Math.abs((y1 + y2) / 2 - py) > 0.02 || Math.abs(Math.hypot(dx, dy) - 56) > 0.05) fail('impturn', key, `${L[i]}'s tangent is not centred on its point`);
+      const ok = w.t === 2 ? Math.abs(dx) < 0.01 : w.t === 0 ? Math.abs(dy) < 0.01 : Math.abs(dy / dx - (-w.fx / w.fy)) < 0.01;
+      if (!ok) fail('impturn', key, `${L[i]}'s tangent does not run along y′`);
+      tangents++;
+    });
+    const marks = [...svg.matchAll(/data-k="(rise|fall|flat|stand)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => `${MARK[w.t]} ${each(w)}`).join()) fail('impturn', key, `the panes are marked ${marks.join()}`);
+    const eqs = [...svg.matchAll(/data-k="eq"[^>]*>([^<]*)</g)].map(m => m[1]);
+    if (eqs.join() !== W.map(w => w.C.eq).join()) fail('impturn', key, `the panes are labelled ${eqs.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="ixNext"') || /onclick="ImpTurn\.call/.test(hh.replace(/disabled onclick="ImpTurn\.call/g, ''))) fail('impturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('impturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('impturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('impturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,flat,stand,twist'], [false, 'fix,flat,one,stand,twist'], [false, 'fix,flat,one,stand,twist'], [false, 'fix,flat,one,stand,three,twist']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('impturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Flat where the top is 0 · Upright where the bottom is 0 · Not every curve is a circle · A slip caught and fixed | ✓ Right on the first check') fail('impturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TRUE TANGENT / every tangent called') fail('impturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, tangents };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21599,6 +21757,7 @@ console.log(`  tangents called   ${pad(tanTurnNotes.checks.toLocaleString(), 12)
 console.log(`  spans called      ${pad(spanTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as spanning the plane, a line or a point in the span workshop, ${spanTurnNotes.wrongs} of them with one pair called wrong and caught, and ${spanTurnNotes.spans} spans drawn as called)`);
 console.log(`  arrows called     ${pad(eigTurnNotes.checks.toLocaleString(), 12)}  (checks of four arrows called kept, turned round or knocked off in the eigenvector hunt, ${eigTurnNotes.wrongs} of them with one arrow called wrong and caught, and ${eigTurnNotes.drawn} arrows drawn beside where their matrix sends them)`);
 console.log(`  nights called     ${pad(castleTurnNotes.checks.toLocaleString(), 12)}  (checks of four castle pairs called gaining, holding or losing in the two castles workshop, ${castleTurnNotes.wrongs} of them with one castle called wrong and caught, and ${castleTurnNotes.nights} next nights drawn to the same scale as tonight)`);
+console.log(`  ways called       ${pad(impTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves' tangents called rising, falling, flat or upright in the implicit slope workshop, ${impTurnNotes.wrongs} of them with one tangent called wrong and caught, and ${impTurnNotes.tangents} tangents read back off the drawing along y′)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

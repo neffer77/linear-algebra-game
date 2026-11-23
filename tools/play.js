@@ -151,6 +151,7 @@ const SUITES = [
   require('./play/elimcramer'), // find each unknown of a 2×2 system as a ratio of two parallelogram areas
   require('./play/ladpick'), // see a ladder, pick which of four numbers is the top's speed
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
+  require('./play/impturn'), // see four curves with a point each, call each tangent rising, falling, flat or upright
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
   require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips

@@ -1,60 +1,60 @@
 {
-  "change": "Add a Gain or lose mode to the two castles workshop",
+  "change": "Add a Which way mode to the implicit slope workshop",
   "mutations": [
     {
-      "name": "a split that holds is called gaining",
+      "name": "an upright tangent is called falling",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.in(i)-this.out(i)); },",
-      "replace": "truth(i){ return Math.sign(this.in(i)-this.out(i)+1); },",
+      "find": "if(d===0) return 2; if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
+      "replace": "if(d===0) return -1; if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
       "run": "verify"
     },
     {
-      "name": "riders out are counted from B's knights",
+      "name": "the minus in y′ is dropped",
       "file": "index.html",
-      "find": "out(i){ const [p,,A]=this.R()[i]; return p*A/10; },",
-      "replace": "out(i){ const [p,,A]=this.R()[i]; return p*(100-A)/10; },",
+      "find": "if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
+      "replace": "if(n===0) return 0; return Math.sign(n/d);",
       "run": "verify"
     },
     {
-      "name": "riders in are worked with A's share",
+      "name": "a circle's tangent is taken the wrong way round",
       "file": "index.html",
-      "find": "in(i){ const [,q,A]=this.R()[i]; return q*(100-A)/10; },",
-      "replace": "in(i){ const [q,,A]=this.R()[i]; return q*(100-A)/10; },",
+      "find": "return (x*y>0 && t===1) || (x*y<0 && t===-1);",
+      "replace": "return (x*y>0 && t===-1) || (x*y<0 && t===1);",
       "run": "verify"
     },
     {
-      "name": "a castle as big as its rival counts against its size",
+      "name": "the curve is drawn before the round is right",
       "file": "index.html",
-      "find": "(this.a(i)>50 && this.truth(i)===1)",
-      "replace": "(this.a(i)>=50 && this.truth(i)===1)",
+      "find": "if(this.solved){\n        for(const b of C.br())",
+      "replace": "if(true){\n        for(const b of C.br())",
       "run": "verify"
     },
     {
-      "name": "the next night is drawn before the round is right",
+      "name": "the tangent is drawn upside down",
       "file": "index.html",
-      "find": "if(this.solved){ const nA=this.next(i), d=nA-A;",
-      "replace": "if(true){ const nA=this.next(i), d=nA-A;",
+      "find": "y1=\"${f(py(y)+dy)}\" x2=\"${f(px(x)+dx)}\" y2=\"${f(py(y)-dy)}\"",
+      "replace": "y1=\"${f(py(y)-dy)}\" x2=\"${f(px(x)+dx)}\" y2=\"${f(py(y)+dy)}\"",
       "run": "verify"
     },
     {
-      "name": "B's next night is drawn as tonight's",
+      "name": "the ellipse is drawn as a circle",
       "file": "index.html",
-      "find": "y=\"${f(base-(100-nA)*H)}\" width=\"30\" height=\"${f((100-nA)*H)}\"",
-      "replace": "y=\"${f(base-(100-A)*H)}\" width=\"30\" height=\"${f((100-A)*H)}\"",
+      "find": "[5*Math.cos(t),2.5*Math.sin(t)]",
+      "replace": "[5*Math.cos(t),5*Math.sin(t)]",
       "run": "verify"
     },
     {
-      "name": "an empty castle is named the wrong way round",
+      "name": "a flat tangent's readout names the bottom",
       "file": "index.html",
-      "find": "this.a(i)===100 ? `In ${this.L[i]}, B is empty",
-      "replace": "this.a(i)===0 ? `In ${this.L[i]}, B is empty",
+      "find": ": t===0 ? `the top, ${C.nS}, is 0, so y′ = 0",
+      "replace": ": t===0 ? `the top, ${C.dS}, is 0, so y′ = 0",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Castles.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Castles.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Implicit.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Implicit.render();",
       "run": "verify"
     }
   ]
