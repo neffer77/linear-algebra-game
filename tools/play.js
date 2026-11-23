@@ -46,6 +46,7 @@ const SUITES = [
   require('./play/elite'),       // a beaten foe comes back as an elite, one fight in four
   require('./play/phase'),       // a realm boss rallies at half health into a second phase
   require('./play/bestiary'),    // every foe on one page, a shadow until it is beaten
+  require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung
@@ -121,6 +122,7 @@ const SUITES = [
   require('./play/slopematch'), // see f, pick which of three graphs is f′
   require('./play/slopesketch'), // see f, set its slope at five stops and draw f′ by hand
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
+  require('./play/detrank'), // see four matrices, and rank them from the biggest stretch of area to the smallest
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/eigturn'), // see four matrices with an arrow each, call each arrow kept, turned or knocked off
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
