@@ -1,61 +1,61 @@
 {
-  "change": "Add a Match them up mode to the Taylor workshop",
+  "change": "Add a Saga: a chapter of the story told as each realm's boss falls",
   "mutations": [
     {
-      "name": "cos x is said to bend up at 0",
+      "name": "a chapter is given away before its boss falls",
       "file": "index.html",
-      "find": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[-1,2]]},",
-      "replace": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[1,2]]},",
+      "find": "REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri))",
+      "replace": "REALMS.map((r,ri)=>this.card(ri,'saga-'+ri))",
       "run": "verify"
     },
     {
-      "name": "f″(0) is taken as the x² term itself",
+      "name": "a rematch tells the chapter again",
       "file": "index.html",
-      "find": "return b===2 ? [a,1] : b%2===0 ? [a,b/2] : [2*a,b]; },",
-      "replace": "return [a,b]; },",
+      "find": "${this.foe.boss&&first?Saga.card(this.ri):''}",
+      "replace": "${this.foe.boss?Saga.card(this.ri):''}",
       "run": "verify"
     },
     {
-      "name": "each function is matched by its own place, not its polynomial's",
+      "name": "a realm's first foe reads its chapter",
       "file": "index.html",
-      "find": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order.indexOf(i); },",
-      "replace": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order[i]; },",
+      "find": "g.cleared[ri+':'+(REALMS[ri].foes.length-1)]); },\n  count()",
+      "replace": "g.cleared[ri+':0']); },\n  count()",
       "run": "verify"
     },
     {
-      "name": "the functions are drawn before the round is right",
+      "name": "the count runs one ahead",
       "file": "index.html",
-      "find": "      if(this.solved){\n        // the function itself",
-      "replace": "      if(this.marks){\n        // the function itself",
+      "find": "return REALMS.filter((r,ri)=>this.read(ri)).length; }",
+      "replace": "return REALMS.filter((r,ri)=>this.read(ri)).length+1; }",
       "run": "verify"
     },
     {
-      "name": "a match still moves once the round is right",
+      "name": "the boss is drawn as a shadow",
       "file": "index.html",
-      "find": "    if(this.solved || this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
-      "replace": "    if(this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "find": "Bestiary.shot(c, this.boss(+c.dataset.saga), true)",
+      "replace": "Bestiary.shot(c, this.boss(+c.dataset.saga), false)",
       "run": "verify"
     },
     {
-      "name": "the check opens before all four are matched",
+      "name": "the victory never draws the boss",
       "file": "index.html",
-      "find": "id=\"tymCheck\" ${this.ready()?'':'disabled '}onclick",
-      "replace": "id=\"tymCheck\" onclick",
-      "run": "verify"
-    },
-    {
-      "name": "a wrong slope is blamed on the x² term",
-      "file": "index.html",
-      "find": "                  : !this.same(o[1],c[1]) ? `it starts at the right height, but its x term",
-      "replace": "                  : false ? `it starts at the right height, but its x term",
-      "run": "verify"
-    },
-    {
-      "name": "the Tome never mentions matching them up",
-      "file": "index.html",
-      "find": " Or match them up: four functions and four polynomials, and which hugs which near 0.",
+      "find": "      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));\n",
       "replace": "",
-      "run": "play:taylormatch"
+      "run": "verify"
+    },
+    {
+      "name": "the opening is left off the page",
+      "file": "index.html",
+      "find": "${OPENING.map(o=>o.b).join(' ')}",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the map has no way to the Saga",
+      "file": "index.html",
+      "find": "        <button class=\"btn sm ghost\" onclick=\"UI.go('s-saga')\" id=\"btnSaga\">📜 Saga</button>",
+      "replace": "",
+      "run": "play:saga"
     }
   ]
 }

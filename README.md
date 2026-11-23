@@ -117,6 +117,15 @@ prefilled — tap through it and you need never touch a keyboard again.
   POINT on the scene and the foe reeling. The first one in a fight names the topic. Once a
   foe is beaten, the Bestiary lists its weak point. Arena, dungeon and daily foes have
   none, and nothing is saved.
+- **📜 The Saga.** The opening says why mathematics hurts a dragon; the Saga says what
+  happens next, a chapter for each realm. Beat a realm's boss for the first time and its
+  chapter is told on the victory screen, beside the boss in its own colours: three
+  sentences on what the boss was in its own mathematics, how the blow that beat it worked
+  (the Determinant Golem falls because a matrix sent to zero cannot be undone), and what
+  waits in the next realm. It comes at the one moment the fighting has stopped anyway, and
+  never in front of a question. A page off the map, and a button in the Tome, keep the
+  opening and every chapter read so far; the rest show only where to read them. It reads
+  only which bosses are beaten, so nothing new is saved.
 
 **⛓️ Rites.** A topic that is genuinely complex does not arrive as one hard question. It
 arrives as a ladder of five-second steps — *pick u · find du · rewrite · integrate* — each
@@ -3201,6 +3210,7 @@ Inside `index.html` the code is organised as:
 | `Phase` | a realm boss's second phase: when it rallies, its harder blows and quicker wind-up, the stagger a streak earns, and the gold a flawless phase pays |
 | `Weak` | each campaign foe's weak point, a topic from its own realm: the chip on its questions, the half-again blow, the line said once a fight, and the Bestiary's line |
 | `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
+| `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
@@ -3303,6 +3313,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `elite` | a beaten foe is an elite one fight in four and a first meeting never is; an armoured elite has a quarter more health, its twist on its bar and said as the fight opens, halves the first two blows and is cracked by the third answer in a row, landing in full from then on; a vampiric elite drinks back the blow it lands on a miss; a swift one winds up a turn sooner; a frenzied one has a quarter less health and hits half again as hard; felling an elite pays a first clear's gold with a sure chest and says so, where a plain rematch pays under half and says nothing; nothing runs off a phone and nothing is saved |
 | `phase` | a realm boss rallies once, on the blow that leaves it at half or below, with a banner, its own line and Phase II on its bar; its wind-up comes a turn sooner and its blows a fifth harder; three right in a row stagger it, breaking off a wind-up, and the next right blow lands half again as hard; a miss breaks the streak; a flawless second phase pays a quarter more gold and says so, one with a miss does not; a plain foe and a boss in the arena never rally; nothing is saved |
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
+| `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |

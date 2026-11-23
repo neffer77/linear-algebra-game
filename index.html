@@ -828,6 +828,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div class="row">
         <button class="btn sm ghost" onclick="UI.go('s-bestiary')" id="btnBest">👹 Bestiary</button>
+        <button class="btn sm ghost" onclick="UI.go('s-saga')" id="btnSaga">📜 Saga</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -841,6 +842,17 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="bestBar" style="background:var(--gold);height:100%"></div></div>
     </div>
     <div id="bestList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ SAGA ============ -->
+  <div class="screen" id="s-saga">
+    <div class="panel"><h2>📜 Saga</h2><div class="sub">The story of the Eigenrealm, a chapter for each realm. Beat a realm’s boss and its chapter is told on the spot, and kept here to read again.</div>
+      <div id="sagaCount" style="margin-top:8px;font-weight:800"></div>
+      <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="sagaBar" style="background:var(--gold);height:100%"></div></div>
+    </div>
+    <div id="sagaList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -8948,6 +8960,78 @@ const Bestiary = {
   }
 };
 
+/* The Saga: the story of the Eigenrealm, a chapter for each realm, read when
+   its boss falls. The opening says why mathematics hurts a dragon; this is
+   what happens next, told at the one moment a player has stopped anyway (the
+   victory after a boss) and never in front of a question. Each chapter is
+   three sentences: what the boss was, in its own mathematics, how the blow
+   that beat it worked, and what waits in the next realm. A chapter is read
+   by beating its boss, so nothing new is saved, and the page off the map
+   keeps every chapter read so far to be read again. */
+const Saga = {
+  CH:[
+   {t:'Head to tail',
+    b:'The Wyrm’s coils pointed every way at once and added up to nowhere. You laid them head to tail, and the arrows of the Vale run straight again. But every road out of the Vale crosses the Marches, and the grids there have begun to shear.'},
+   {t:'Down to zero',
+    b:'The Golem could undo any blow while its determinant held. Yours sent that one number to zero, and a matrix that flattens everything can never be undone. Past the Marches the ground begins to slope, and up on the Cliffs the slopes are coming apart.'},
+   {t:'One point of contact',
+    b:'The Wraith lived on a line that touches a curve at a single point and leans exactly as the curve leans there. You read its slope at that point, and it had nowhere left to stand. Below the Cliffs the areas have stopped adding up, and the Abyss is filling with what they lost.'},
+   {t:'The sum that would not close',
+    b:'The Lich kept the thin strips that make up an area and never let their sum close. You took the limit it refused, and the Abyss has its area back. Its last words named the Eigen Dragon, whose fire runs along its own lines and no others.'},
+   {t:'Along its own lines',
+    b:'The Dragon’s fire could only stretch what lay along its eigenvectors, and a knight who knows where those lines run knows where to stand. With the Dragon fallen the Citadel’s gates swing open. Beyond them the Reach shimmers with every spectrum the Dragon hoarded.'},
+   {t:'A basis shared',
+    b:'The Sovereign ruled by breaking everything it touched into parts only it could name. You named them too, and a secret basis that is shared is only a basis. Past its throne the Expanse runs on without end, and something out there will not stop growing.'},
+   {t:'A limit after all',
+    b:'The Unbounded swore it grew without end. You took its limit anyway, and the answer was a number. Only the Summit is left, where every slope in the realm points the same way: up.'},
+   {t:'Level ground',
+    b:'At the top there was no monster, only the direction in which everything climbs fastest. You followed it to the peak and found the ground level, because at a summit the gradient is zero. The Eigenrealm balances again, and its old foes are already sharpening their twists for a rematch.'}
+  ],
+  // a realm's boss, and whether it has fallen
+  boss(ri){ const fs=REALMS[ri].foes; return fs[fs.length-1]; },
+  read(ri){ const g=Game.s; return !!(g && g.cleared && g.cleared[ri+':'+(REALMS[ri].foes.length-1)]); },
+  count(){ return REALMS.filter((r,ri)=>this.read(ri)).length; },
+  // one chapter as a panel: the boss in its own colours beside the tale
+  card(ri, id){
+    const c=this.CH[ri], r=REALMS[ri], f=this.boss(ri);
+    return `<div class="panel sagaCh" id="${id||'sagaNew'}" style="border-color:${r.col};text-align:left">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:${r.col}">📜 CHAPTER ${ri+1} OF ${this.CH.length} · ${r.nm.toUpperCase()}</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-top:6px">
+        <canvas width="96" height="96" style="width:64px;height:64px;flex:0 0 64px" aria-hidden="true" data-saga="${ri}"></canvas>
+        <div style="flex:1;min-width:0">
+          <h2 style="font-size:16px;color:var(--gold);margin:0">${c.t}</h2>
+          <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">${c.b}</div>
+          <div class="small" style="margin-top:6px;opacity:.75">The fall of ${f.nm}.</div>
+        </div>
+      </div>
+    </div>`;
+  },
+  // a chapter not yet read: its number and where to read it, and nothing of the tale
+  locked(ri){
+    const r=REALMS[ri];
+    return `<div class="panel sagaCh" id="saga-${ri}" style="text-align:left;opacity:.65">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em">📜 CHAPTER ${ri+1} OF ${this.CH.length} · ???</div>
+      <div class="sub" style="margin-top:6px;font-size:14px">Beat the boss of ${r.nm} to read it.</div>
+    </div>`;
+  },
+  // the bosses into their canvases, once the html is in place
+  paint(root){
+    (root||document).querySelectorAll('canvas[data-saga]').forEach(c=>Bestiary.shot(c, this.boss(+c.dataset.saga), true));
+  },
+  render(){
+    const list=document.getElementById('sagaList'); if(!list) return;
+    const n=this.count(), N=this.CH.length;
+    document.getElementById('sagaCount').textContent=`${n} of ${N} chapters read`+(n===N?' · the whole saga 🏆':'');
+    document.getElementById('sagaBar').style.width=(n/N*100)+'%';
+    list.innerHTML=`<div class="panel" id="saga-open" style="text-align:left">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--gold)">📜 THE OPENING</div>
+        <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">${OPENING.map(o=>o.b).join(' ')}</div>
+      </div>`+
+      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri)).join('');
+    this.paint(list);
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9953,9 +10037,11 @@ const Battle = {
           <div class="small">Longest streak this battle: ${g.stats.best}</div>
           ${this.learnedHtml()}
         </div>
+        ${this.foe.boss&&first?Saga.card(this.ri):''}
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
+      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
@@ -15080,6 +15166,7 @@ const UI = {
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-bestiary') Bestiary.render();
+    if(id==='s-saga') Saga.render();
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
@@ -15699,6 +15786,7 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📜 Why a blade of mathematics</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">The tale you were told at the gate, in three cards.</div>
          <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
+         <button class="btn sm ghost" style="width:auto" onclick="UI.go('s-saga')">📜 The saga so far</button>
        </div>` +
       WorkshopIndex.html() +
       `<div class="panel" style="border-color:var(--gold-dk)">
