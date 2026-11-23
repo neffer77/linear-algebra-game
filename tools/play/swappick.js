@@ -33,11 +33,11 @@ module.exports = {
       /Then turn it round: see an integral to swap, and pick which of four numbers goes in front of the answer\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeSwap');
     t.eq('the swap workshop opens', await t.screen(), 's-swap');
-    t.eq('picking a u by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('picking a u by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6566));
     await t.tapText(/Which number in front\?/);
-    t.eq('which number in front is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which number in front is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the integrals, the figure, the u buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('usBox').innerText)).startsWith(

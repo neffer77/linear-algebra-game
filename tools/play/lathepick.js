@@ -36,11 +36,11 @@ module.exports = {
       /Then turn it round: see a curve spun into a solid, and pick which of four numbers is its volume\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLathe');
     t.eq('the lathe workshop opens', await t.screen(), 's-lathe');
-    t.eq('measuring it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('measuring it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5353));
     await t.tapText(/Which volume\?/);
-    t.eq('which volume is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which volume is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the solids, drawing, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('vlBox').innerText)).startsWith(

@@ -169,6 +169,7 @@ const SUITES = [
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/taylorturn'), // see four functions cut off after a few terms, call each P over, exact or under
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
+  require('./play/latheturn'), // see four pairs of curves spun into solids, call whether f's holds more than g's, the same or less
   require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
   require('./play/hillfence'), // walk a fence across a hill to its lowest point, where ∇f lines up with ∇g
   require('./play/pathpick'), // see a hill, a path and a moment, pick which of four numbers is dz/dt
@@ -188,6 +189,7 @@ const SUITES = [
   require('./play/optturn'), // see four slopes that are 0 at a point, call each a peak, a valley or neither
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
+  require('./play/swapturn'), // see four integrals with their u, call whether the rest is du exactly, up to a number, or leaves an x over
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
