@@ -64,7 +64,7 @@ module.exports = {
     t.ok('the check opens', await t.ev(() => !document.getElementById('chmCheck').disabled));
     await check(t);
     r = await read(t);
-    t.ok('the slip is caught and worked', r.startsWith('3 of 4 right. Fix the ones in red and check again. For B, the trace is 2 + 3 = 5 and det A = (2)(3) − (1)(2) = 4, so det(A − λI) = λ² − 5λ + 4: that is 4. You had 2, λ² − 5λ + 6: the trace matches, but det A does not.'), r);
+    t.ok('the slip is caught and worked', r.startsWith('3 of 4 right. Fix the ones in red and check again. For B, the trace is 2 + 3 = 5 and det B = (2)(3) − (1)(2) = 4, so det(A − λI) = λ² − 5λ + 4: that is 4. You had 2, λ² − 5λ + 6: the trace matches, but det B does not.'), r);
     t.eq('only the polynomial picked wrongly is ringed', await t.ev(() => document.querySelectorAll('#chmFig [data-k="miss"]').length), 1);
     t.ok('the answers are not given away', await t.ev(() => !document.querySelector('#chmFig [data-k="who"], #chmFig [data-k="root"]')));
     t.eq('nothing is found for a slip', await found(t), []);
@@ -95,13 +95,13 @@ module.exports = {
         return seen;
       }));
       if (i === 1) {
-        t.ok('a curve that misses the axis is explained', /C has no real eigenvalues: its trace squared, 0, is less than 4 × det A = 4, so its curve never meets the axis\./.test(await read(t)), await read(t));
+        t.ok('a curve that misses the axis is explained', /C has no real eigenvalues: its trace squared, 0, is less than 4 × det C = 4, so its curve never meets the axis\./.test(await read(t)), await read(t));
         t.ok('and a root counted twice is told', /D 2 twice\./.test(await read(t)), await read(t));
         t.eq('and dotted once', await t.ev(() => document.querySelectorAll('#chmFig [data-k="root"]').length), 5);
       }
       if (i === 2) {
-        t.ok('a zero det is explained', /A has det A = 0, so λ = 0 is an eigenvalue: its curve passes through 0\./.test(await read(t)), await read(t));
-        t.ok('two with one det are told apart', /C and D share det A = 2, so only the trace tells them apart: 3 against 2\./.test(await read(t)), await read(t));
+        t.ok('a zero det is explained', /A has det 0, so λ = 0 is an eigenvalue: its curve passes through 0\./.test(await read(t)), await read(t));
+        t.ok('two with one det are told apart', /C and D both have det 2, so only the trace tells them apart: 3 against 2\./.test(await read(t)), await read(t));
       }
     }
     r = await read(t);

@@ -25853,17 +25853,17 @@ const CharMatch = {
       out.push('Yes: all four are matched.');
       const ns=this.nones(), zs=this.zeros(), tw=this.twins();
       if(ns.length){ const A=M[ns[0]], t=this.tr(A), d=this.det(A);
-        out.push(`${this.L[ns[0]]} has no real eigenvalues: its trace squared, ${t*t}, is less than 4 × det A = ${4*d}, so its curve never meets the axis.`); }
-      if(zs.length) out.push(`${this.list(zs)} ${zs.length>1?'have':'has'} det A = 0, so λ = 0 is an eigenvalue: ${zs.length>1?'each curve passes':'its curve passes'} through 0.`);
+        out.push(`${this.L[ns[0]]} has no real eigenvalues: its trace squared, ${t*t}, is less than 4 × det ${this.L[ns[0]]} = ${4*d}, so its curve never meets the axis.`); }
+      if(zs.length) out.push(`${this.list(zs)} ${zs.length>1?'have':'has'} det 0, so λ = 0 is an eigenvalue: ${zs.length>1?'each curve passes':'its curve passes'} through 0.`);
       if(tw.length){ const [i,j]=tw[0];
-        out.push(`${this.L[i]} and ${this.L[j]} share det A = ${neg(this.det(M[i]))}, so only the trace tells them apart: ${neg(this.tr(M[i]))} against ${neg(this.tr(M[j]))}.`); }
+        out.push(`${this.L[i]} and ${this.L[j]} both have det ${neg(this.det(M[i]))}, so only the trace tells them apart: ${neg(this.tr(M[i]))} against ${neg(this.tr(M[j]))}.`); }
       out.push(`The eigenvalues: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.eig(M[i])}`).join(', ')}.`);
     } else if(this.marks){
       const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
       out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
       for(const i of bad){ const A=M[i], [[a,b],[c,d]]=A, t=this.tr(A), D=this.det(A), n=this.truth(i), k=this.calls[i], B=M[this.owner(k)];
-        const off = this.tr(B)===t ? 'the trace matches, but det A does not' : this.det(B)===D ? 'det A matches, but the trace does not' : 'neither the trace nor det A matches';
-        out.push(`For ${this.L[i]}, the trace is ${neg(a)} + ${neg(d)} = ${neg(t)} and det A = ${this.par(a)}${this.par(d)} − ${this.par(b)}${this.par(c)} = ${neg(D)}, so det(A − λI) = ${this.poly(A)}: that is ${n+1}. You had ${k+1}, ${this.P(k)}: ${off}.`); }
+        const X = this.L[i], off = this.tr(B)===t ? `the trace matches, but det ${X} does not` : this.det(B)===D ? `det ${X} matches, but the trace does not` : `neither the trace nor det ${X} matches`;
+        out.push(`For ${X}, the trace is ${neg(a)} + ${neg(d)} = ${neg(t)} and det ${X} = ${this.par(a)}${this.par(d)} − ${this.par(b)}${this.par(c)} = ${neg(D)}, so det(A − λI) = ${this.poly(A)}: that is ${n+1}. You had ${k+1}, ${this.P(k)}: ${off}.`); }
     } else {
       out.push(this.RULE);
       out.push(`${this.count()} of 4 matched.`);
