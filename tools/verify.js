@@ -17123,6 +17123,171 @@ const haloNotes = (() => {
   if (figs.size < 100) fail('labels', 'figures', `only ${figs.size} figures are found`);
   return { figs: figs.size };
 })();
+/* More than the box? The slice workshop's third mode, worked again from
+   scratch: every volume found a second way, by adding up thin columns over
+   the rectangle, the centre height checked as the average of the four
+   corners, every call and every readout, a slip on every pane both other
+   ways, each pane read back with its rectangle, corners and centre, and the
+   hunt for every goal. */
+const sliceTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Slice = {render(){ env.renders++; }};" +
+    cut('const SliceTurn = {', '/* ---------- Which volume? The slice workshop turned round') + 'return SliceTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L = 'ABCD';
+  const WD = { 1: 'more', 0: 'the same', [-1]: 'less' };
+  const NAME = { 1: 'V is more than the box', 0: 'V is the same as the box', [-1]: 'V is less than the box' };
+  const MARK = { 1: 'more ▲ more', 0: 'same = same', [-1]: 'less ▼ less' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const half = n => (n % 2 === 0 ? neg(n / 2) : `${neg(n)}/2`);
+  const term = (k, v, first) => { const m = Math.abs(k) === 1 && v ? '' : String(Math.abs(k));
+    return first ? `${k < 0 ? '−' : ''}${m}${v}` : `${k < 0 ? '−' : '+'} ${m}${v}`; };
+  const work = ri => S.ROUNDS[ri].map(([a, b, c, p, q, h]) => {
+    const key = `round ${ri + 1}`;
+    const f = (x, y) => a * x + b * y + c;
+    // the volume, added up as n × n thin columns, each standing at its own middle
+    const n = 60; let V = 0;
+    for (let u = 0; u < n; u++) for (let v = 0; v < n; v++) V += f((u + 0.5) * p / n, (v + 0.5) * q / n) * (p / n) * (q / n);
+    const corners = [f(0, 0), f(p, 0), f(0, q), f(p, q)];
+    const mid = corners.reduce((s, x) => s + x, 0) / 4;
+    if (Math.abs(f(p / 2, q / 2) - mid) > 1e-9) fail('sliceturn', key, 'the centre height is not the average of the corners');
+    if (Math.abs(V - p * q * mid) > 1e-6) fail('sliceturn', key, 'the volume added up in columns is not the rectangle times the centre height');
+    if (!Number.isInteger(mid)) fail('sliceturn', key, 'a centre height is not whole');
+    if (corners.some(x => x <= 0)) fail('sliceturn', key, 'a plane dips to the floor or under it over its rectangle');
+    if (!(p >= 1 && p <= 4 && q >= 1 && q <= 4 && h > 0)) fail('sliceturn', key, 'a rectangle or a box is out of range');
+    const Vi = Math.round(V), box = p * q * h, t = Math.sign(Vi - box);
+    const fs = [a ? term(a, 'x', true) : null, b ? term(b, 'y', !a) : null, term(c, '', !a && !b)].filter(Boolean).join(' ');
+    const parts = [String(c)]; if (a) parts.push(`${a < 0 ? '−' : '+'} ${Math.abs(a * p / 2)}`); if (b) parts.push(`${b < 0 ? '−' : '+'} ${Math.abs(b * q / 2)}`);
+    const centre = `f(${half(p)}, ${half(q)}) = ${parts.join(' ')} = ${neg(mid)}`;
+    return { a, b, c, p, q, h, f, corners, mid, V: Vi, box, t, fs, centre, rect: `0 ≤ x ≤ ${p}, 0 ≤ y ≤ ${q}`,
+      same: t === 0, tilt: a * b < 0, level: (a === 0) !== (b === 0) };
+  });
+  if (S.ROUNDS.length !== 6) fail('sliceturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('sliceturn', key, `it holds ${Q.length} solids, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('sliceturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.V(i) !== w.V || S.box(i) !== w.box || S.mid(i) !== w.mid) fail('sliceturn', key, `${L[i]} gives V = ${S.V(i)}, box ${S.box(i)}, centre ${S.mid(i)}, not ${w.V}, ${w.box} and ${w.mid}`);
+      if (S.truth(i) !== w.t) fail('sliceturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.fs(i) !== w.fs) fail('sliceturn', key, `${L[i]} is written f = ${S.fs(i)}, not ${w.fs}`);
+      if (w.same && !w.a && !w.b) fail('sliceturn', key, `${L[i]} matches its box but is flat`);
+    });
+    if (new Set(truth).size < 3) fail('sliceturn', key, 'it does not hold all three calls');
+    const sm = [], tl = [], lv = [];
+    W.forEach((w, i) => { if (w.same) sm.push(i); if (w.tilt) tl.push(i); if (w.level) lv.push(i); });
+    const tags = [sm.length ? 'same' : null, tl.length ? 'tilt' : null, lv.length ? 'level' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('sliceturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('sliceturn', key, 'it does not hold a match, a climb against a fall and a plane level one way');
+    const why = w => `The centre is at (${half(w.p)}, ${half(w.q)}): ${w.centre}. So V = ${w.p} × ${w.q} × ${neg(w.mid)} = ${neg(w.V)}, against the box's ${w.p} × ${w.q} × ${w.h} = ${w.box}: ${WD[w.t]}.`;
+    // every solid called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f = ${w.fs} over ${w.rect}: ${why(w)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('sliceturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(corner|mid|centre|vol|more|same|less)"/.test(svg)) fail('sliceturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or the centres are given away`);
+        if (S.solved || S.streak) fail('sliceturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('sliceturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('sliceturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('sliceturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="sltCheck" disabled /.test(S.html())) fail('sliceturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="sltCheck" disabled /.test(S.html())) fail('sliceturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('sliceturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="SliceTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('sliceturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`SliceTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('sliceturn', key, `${L[i]} does not offer more, the same and less`);
+    });
+    if (S.calls.join() !== truth.join()) fail('sliceturn', key, 'the buttons cannot make the right calls');
+    if (/id="sltCheck" disabled /.test(S.html())) fail('sliceturn', key, 'the check stays shut with every solid called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (sm.length) { const w = W[sm[0]];
+      want.push(`In ${L[sm[0]]}, the plane is tilted, yet its centre stands at exactly ${neg(w.mid)}, the box's height: the part above the box on one side fills the gap below it on the other, so V = ${neg(w.V)} is the box's volume exactly.`); }
+    if (tl.length) { const w = W[tl[0]];
+      want.push(`In ${L[tl[0]]}, f ${w.a > 0 ? 'climbs' : 'falls'} along x and ${w.b > 0 ? 'climbs' : 'falls'} along y: half way across, that comes to ${neg(w.a * w.p / 2)} and ${neg(w.b * w.q / 2)} on top of ${w.c}, so the centre stands at ${neg(w.mid)}.`); }
+    if (lv.length) { const w = W[lv[0]], d = w.a === 0 ? 'x' : 'y', o = w.a === 0 ? 'y' : 'x';
+      want.push(`In ${L[lv[0]]}, f stays level along ${d}, so every slice cut that way is alike, and only the middle of ${o} counts: ${w.centre}.`); }
+    want.push(`Centre heights against the boxes: ${W.map((w, i) => `${L[i]} ${neg(w.mid)} and ${w.h}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('sliceturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the plane and the box, the rectangle from above, its corners and its centre
+    const svg = S.svg();
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('sliceturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, x0 = X + 26, y0 = Y + 112;
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('sliceturn', key, `${L[i]}'s pane is out of place`);
+      if (!pg.includes(`data-k="f" x="${X + 172}" y="${Y + 19}" fill="blue" font-size="12" text-anchor="end">f = ${w.fs}</text>`)) fail('sliceturn', key, `${L[i]}'s plane is not written in blue`);
+      if (!pg.includes(`data-k="box" x="${X + 172}" y="${Y + 35}" fill="gold" font-size="11" text-anchor="end">box ${w.p} × ${w.q} × ${w.h}</text>`)) fail('sliceturn', key, `${L[i]}'s box is not written in gold`);
+      if (!pg.includes(`data-k="rect" x="${x0}" y="${y0 - w.q * 14}" width="${w.p * 14}" height="${w.q * 14}"`)) fail('sliceturn', key, `${L[i]}'s rectangle is not drawn ${w.p} by ${w.q}`);
+      const sides = [...pg.matchAll(/data-k="(p|q)"[^>]*>([^<]*)</g)].map(m => m[1] + m[2]).join();
+      if (sides !== `p${w.p},q${w.q}`) fail('sliceturn', key, `${L[i]}'s sides are labelled ${sides}`);
+      const cs = [...pg.matchAll(/data-k="corner" x="([-\d.]+)" y="([-\d.]+)"[^>]*>([^<]*)</g)];
+      if (cs.map(m => m[3]).join() !== w.corners.map(neg).join()) fail('sliceturn', key, `${L[i]}'s corners read ${cs.map(m => m[3]).join()}`);
+      // each corner height sits by its own corner: left ones left of the rectangle, far ones above it
+      const spots = [[0, 0], [w.p, 0], [0, w.q], [w.p, w.q]];
+      cs.forEach((m, j) => { const [x, y] = spots[j], cx = +m[1], cy = +m[2];
+        if ((x ? cx <= x0 + w.p * 14 : cx >= x0) || (y ? cy >= y0 - w.q * 14 : cy <= y0)) fail('sliceturn', key, `${L[i]}'s corner (${x}, ${y}) is written away from its corner`); });
+      const md = pg.match(/data-k="mid" cx="([-\d.]+)" cy="([-\d.]+)"/);
+      if (!md || +md[1] !== x0 + w.p * 7 || +md[2] !== y0 - w.q * 7) fail('sliceturn', key, `${L[i]}'s centre is not marked at the middle of its rectangle`);
+      if (!pg.includes(`>centre ${neg(w.mid)}</text>`) || !pg.includes(`>V ${neg(w.V)} · box ${w.box}</text>`)) fail('sliceturn', key, `${L[i]}'s centre and volume are not written in once the round is right`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(more|same|less)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('sliceturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="sltNext"') || /onclick="SliceTurn\.call/.test(hh.replace(/disabled onclick="SliceTurn\.call/g, ''))) fail('sliceturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('sliceturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('sliceturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('sliceturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,level,same,tilt'], [false, 'fix,level,one,same,tilt'], [false, 'fix,level,one,same,tilt'], [false, 'fix,level,one,same,three,tilt']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('sliceturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ The centre matches the box · A climb against a fall · Level one way · A slip caught and fixed | ✓ Right on the first check') fail('sliceturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'BOX BREAKER / every centre found') fail('sliceturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24624,6 +24789,7 @@ console.log(`  solids weighed    ${pad(latheTurnNotes.checks.toLocaleString(), 1
 console.log(`  swaps fitted      ${pad(swapTurnNotes.checks.toLocaleString(), 12)}  (checks of four integrals called as du fitting exactly, up to a number or leaving an x over in the swap workshop, ${swapTurnNotes.wrongs} of them with one called wrong and caught, and ${swapTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits weighed    ${pad(partsTurnNotes.checks.toLocaleString(), 12)}  (checks of four splits called as leaving something easier, the same kind or harder in the parts workshop, ${partsTurnNotes.wrongs} of them with one called wrong and caught, and ${partsTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits compared   ${pad(coverTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions called as A bigger than B, the same or smaller in the cover-up workshop, ${coverTurnNotes.wrongs} of them with one called wrong and caught, and ${coverTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  boxes weighed     ${pad(sliceTurnNotes.checks.toLocaleString(), 12)}  (checks of four solids under planes called as more than a box, the same or less in the slice workshop, ${sliceTurnNotes.wrongs} of them with one called wrong and caught, and ${sliceTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);

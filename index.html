@@ -1607,7 +1607,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLICE WORKSHOP ============ -->
   <div class="screen" id="s-slice">
     <div class="panel"><h2>🍞 Slice Workshop</h2><div class="sub">A double integral over a rectangle is done one variable at a time. Hold one still and the solid under f is cut into slices, each an ordinary integral in the other. Sweep the slices from edge to edge and their areas add up to the whole.</div></div>
-    <div id="scTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Sweep the slices by hand or pick the volume"></div>
+    <div id="scTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Sweep the slices by hand, pick the volume, or call whether it holds more than a box"></div>
     <div class="panel">
       <div id="dqBox"></div>
       <div id="scSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which function"></div>
@@ -15574,7 +15574,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🍞 Slice Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer. Then turn it round: see a plane over a rectangle, and pick which of four numbers is the volume under it.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer. Then turn it round: see a plane over a rectangle, and pick which of four numbers is the volume under it. Or call four solids: does each hold more than its box, the same, or less?</div>
          <button class="btn sm" id="tomeSlice" style="width:auto;margin-top:8px" onclick="Slice.open()">Open the slice workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -30030,6 +30030,176 @@ const Cover = {
   }
 };
 
+/* ---------- More than the box? The slice workshop's third mode ----------
+   Four planes f(x, y) = ax + by + c, each over a rectangle 0 ≤ x ≤ p,
+   0 ≤ y ≤ q, and a box over the same rectangle h tall. The player calls
+   whether the volume under the plane is more than the box, the same, or
+   less. The rule is the one the slices teach: a plane's average height over
+   a rectangle is its height at the centre, so V = p × q × f(p/2, q/2) and
+   only that height needs setting against h. Every round holds a box that
+   matches exactly, a plane that climbs one way and falls the other, and one
+   that is level along x or y. Each pane draws its rectangle from above with
+   the plane and the box written beside it; once the round is right, the
+   four corner heights and the centre are written in. A slip rings that pane
+   and works its centre through. Nothing is saved, and there is no clock. */
+const SliceTurn = {
+  // [a, b, c, p, q, h]: f = ax + by + c over 0 ≤ x ≤ p, 0 ≤ y ≤ q, against a box h tall
+  ROUNDS:[
+    [[-2,2,5,2,3,5], [0,2,8,2,2,12], [0,1,4,3,4,6], [-1,0,4,2,3,2]],
+    [[2,0,9,1,3,11], [-3,1,9,2,2,9], [2,1,5,1,4,7], [2,-2,5,3,1,7]],
+    [[1,2,2,2,4,7], [-2,-1,7,1,2,7], [0,2,4,2,4,8], [1,-2,7,2,3,3]],
+    [[2,-2,7,2,3,7], [1,-2,9,2,1,11], [2,0,6,1,4,6], [-2,1,9,2,2,8]],
+    [[0,2,7,3,1,7], [2,-1,5,2,2,7], [2,2,1,3,2,6], [2,0,3,2,3,3]],
+    [[1,0,4,2,4,6], [0,2,2,1,1,2], [-1,2,4,2,2,6], [1,-1,8,4,4,8]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four solids right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'same', t:'Call a tilted plane that holds exactly as much as its box.', toast:'The centre matches the box',
+     ok:K=>K.kinds.has('same')},
+    {id:'tilt', t:'Call a plane that climbs one way and falls the other.', toast:'A climb against a fall',
+     ok:K=>K.kinds.has('tilt')},
+    {id:'level',t:'Call a plane that stays level along x or along y.', toast:'Level one way',
+     ok:K=>K.kinds.has('level')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A plane\'s average height over a rectangle is its height at the centre, half way along x and half way along y: what it gains on one side it loses on the other. So the volume is V = p × q × f(p/2, q/2), and the box is p × q × h over the same rectangle. Set the centre height against h: taller holds more than the box, lower holds less.',
+  L:'ABCD',
+  WORD:{1:'more', 0:'the same', [-1]:'less'},
+  NAMES:{1:'V is more than the box', 0:'V is the same as the box', [-1]:'V is less than the box'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [a,b,c,p,q,h]=this.R()[i]; return {a,b,c,p,q,h}; },
+  f(i,x,y){ const {a,b,c}=this.Q(i); return a*x+b*y+c; },
+  mid(i){ const {p,q}=this.Q(i); return this.f(i,p/2,q/2); },
+  V(i){ const {p,q}=this.Q(i); return p*q*this.mid(i); },
+  box(i){ const {p,q,h}=this.Q(i); return p*q*h; },
+  // 1 more than the box, 0 the same, −1 less
+  truth(i){ return Math.sign(this.V(i)-this.box(i)); },
+  // ax + by + c written out: 2x − y + 5, −x + 4, 3y + 2
+  fs(i){ const {a,b,c}=this.Q(i), out=[];
+    for(const [k,v] of [[a,'x'],[b,'y']]) if(k) out.push([k, (Math.abs(k)===1 ? '' : Math.abs(k))+v]);
+    out.push([c, String(Math.abs(c))]);
+    return out.map(([k,t],j)=>j ? `${k<0?'−':'+'} ${t}` : `${k<0?'−':''}${t}`).join(' '); },
+  rect(i){ const {p,q}=this.Q(i); return `0 ≤ x ≤ ${p}, 0 ≤ y ≤ ${q}`; },
+  sames(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  tilts(){ return [0,1,2,3].filter(i=>this.Q(i).a*this.Q(i).b<0); },
+  levels(){ return [0,1,2,3].filter(i=>(this.Q(i).a===0)!==(this.Q(i).b===0)); },
+  tags(){ const t=[]; if(this.sames().length) t.push('same'); if(this.tilts().length) t.push('tilt'); if(this.levels().length) t.push('level'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  half:n=>Number.isInteger(n/2) ? neg(n/2) : `${neg(n)}/2`,
+  // the centre height worked: c + a·p/2 + b·q/2 = …
+  centre(i){ const {a,b,c,p,q}=this.Q(i), parts=[String(c)];
+    if(a) parts.push(`${a<0?'−':'+'} ${Math.abs(a*p/2)}`);
+    if(b) parts.push(`${b<0?'−':'+'} ${Math.abs(b*q/2)}`);
+    return `f(${this.half(p)}, ${this.half(q)}) = ${parts.join(' ')} = ${neg(this.mid(i))}`; },
+  why(i){
+    const {p,q,h}=this.Q(i), t=this.truth(i);
+    return `The centre is at (${this.half(p)}, ${this.half(q)}): ${this.centre(i)}. So V = ${p} × ${q} × ${neg(this.mid(i))} = ${neg(this.V(i))}, against the box's ${p} × ${q} × ${h} = ${this.box(i)}: ${t===0 ? 'the same' : t>0 ? 'more' : 'less'}.`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const sm=this.sames(), tl=this.tilts(), lv=this.levels();
+      if(sm.length){ const i=sm[0], {c}=this.Q(i);
+        out.push(`In ${this.L[i]}, the plane is tilted, yet its centre stands at exactly ${neg(this.mid(i))}, the box's height: the part above the box on one side fills the gap below it on the other, so V = ${neg(this.V(i))} is the box's volume exactly.`); }
+      if(tl.length){ const i=tl[0], {a,b,p,q}=this.Q(i);
+        out.push(`In ${this.L[i]}, f ${a>0?'climbs':'falls'} along x and ${b>0?'climbs':'falls'} along y: half way across, that comes to ${neg(a*p/2)} and ${neg(b*q/2)} on top of ${this.Q(i).c}, so the centre stands at ${neg(this.mid(i))}.`); }
+      if(lv.length){ const i=lv[0], {a}=this.Q(i), w=a===0 ? 'x' : 'y', o=a===0 ? 'y' : 'x';
+        out.push(`In ${this.L[i]}, f stays level along ${w}, so every slice cut that way is alike, and only the middle of ${o} counts: ${this.centre(i)}.`); }
+      out.push(`Centre heights against the boxes: ${[0,1,2,3].map(i=>`${this.L[i]} ${neg(this.mid(i))} and ${this.Q(i).h}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad) out.push(`In ${this.L[i]}, f = ${this.fs(i)} over ${this.rect(i)}: ${this.why(i)} You had it as ${this.WORD[this.calls[i]]}.`);
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the plane and its box written at the top, and the rectangle
+     from above, 14 to a unit. Once the round is right, its four corner
+     heights are written at its corners and the centre is marked with its
+     height, against the box's. */
+  svg(){
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four solids under planes, each against a box: ${[0,1,2,3].map(i=>`${this.L[i]}, f = ${this.fs(i)} over ${this.rect(i)} against a box ${this.Q(i).h} tall`).join('; ')}${this.solved?', each with its corner heights and its centre height written in':''}">`;
+    for(let i=0;i<4;i++){
+      const {p,q,h}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, s=14, x0=X+26, y0=Y+112;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="f" x="${X+172}" y="${Y+19}" fill="${FIG_COL.b}" font-size="12" text-anchor="end">f = ${this.fs(i)}</text>`;
+      out+=`<text data-k="box" x="${X+172}" y="${Y+35}" fill="${FIG_COL.a}" font-size="11" text-anchor="end">box ${p} × ${q} × ${h}</text>`;
+      out+=`<rect data-k="rect" x="${x0}" y="${y0-q*s}" width="${p*s}" height="${q*s}" fill="${FIG_COL.fill}" stroke="${FIG_COL.b}" stroke-width="1.5"/>`;
+      out+=`<text data-k="p" x="${x0+p*s/2}" y="${y0+11}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${p}</text>`;
+      out+=`<text data-k="q" x="${x0-5}" y="${y0-q*s/2+3}" fill="${FIG_COL.dim}" font-size="10" text-anchor="end">${q}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i), cx=x0+p*s/2, cy=y0-q*s/2;
+        for(const [x,y,ax,dy] of [[0,0,'end',4],[p,0,'start',4],[0,q,'end',-2],[p,q,'start',-2]])
+          out+=`<text data-k="corner" x="${x0+x*s+(ax==='end'?-3:3)}" y="${y0-y*s+dy+(y?0:6)}" fill="${FIG_COL.ink}" font-size="10" text-anchor="${ax}">${neg(this.f(i,x,y))}</text>`;
+        out+=`<circle data-k="mid" cx="${cx}" cy="${cy}" r="3.5" fill="${FIG_COL.c}"/>`;
+        out+=`<text data-k="centre" x="${X+172}" y="${Y+70}" fill="${FIG_COL.c}" font-size="11" text-anchor="end">centre ${neg(this.mid(i))}</text>`;
+        out+=`<text data-k="vol" x="${X+172}" y="${Y+86}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">V ${neg(this.V(i))} · box ${this.box(i)}</text>`;
+        out+=`<text data-k="${{1:'more',0:'same',[-1]:'less'}[t]}" x="${X+172}" y="${Y+120}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ more',0:'= same',[-1]:'▼ less'}[t]}</text>`; }
+    }
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Slice.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Slice.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Slice.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="SliceTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four planes, each over a rectangle with a box beside it. Does the solid under the plane hold more than the box, the same, or less?</div>`;
+    out+=`<div id="sltFig">${this.svg()}<div class="figcap">Each rectangle is seen from above, with its plane in blue and its box in gold. Once all four are called right, the corner heights are written in and the centre is marked in green with its height.</div></div>`;
+    out+=`<div id="sltStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="sltStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]}</b>`+
+        this.btn(i,1,'▲ More')+this.btn(i,0,'= Same')+this.btn(i,-1,'▼ Less')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="sltRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sltNext" onclick="SliceTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="sltCheck" ${this.ready()?'':'disabled '}onclick="SliceTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="sltGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="sltGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('BOX BREAKER','every centre found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which volume? The slice workshop turned round ----------
    A plane f(x, y) = ax + by + c, with whole a and b (not 0) and whole c,
    that stays above the floor over the rectangle 0 ≤ x ≤ p, 0 ≤ y ≤ q, and
@@ -30288,11 +30458,11 @@ const Slice = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('scTab').innerHTML=[['hand','🍞 Sweep it by hand','Sweep the slices across by hand and watch their areas add up'],['pick','🎯 Which volume?','See a plane over a rectangle, and pick which of four numbers is the volume under it']]
+    document.getElementById('scTab').innerHTML=[['hand','🍞 Sweep it by hand','Sweep the slices across by hand and watch their areas add up'],['pick','🎯 Which volume?','See a plane over a rectangle, and pick which of four numbers is the volume under it'],['turn','🧱 More than the box?','See four planes over rectangles, and call whether each holds more than its box, the same, or less']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Slice.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['scSets','scHold','scFig','scStep','scRead','scGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('dqBox').innerHTML=pick ? SlicePick.html() : '';
+    document.getElementById('dqBox').innerHTML=!pick ? '' : this.tab==='pick' ? SlicePick.html() : SliceTurn.html();
     if(pick) return;
     document.getElementById('scSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Slice.pick(${i})" aria-label="f(x, y) = ${s.fs} over 0 to ${s.a} by 0 to ${s.b}">${s.btn}</button>`).join('');

@@ -1,18 +1,60 @@
 {
-  "change": "Keep figure labels readable where a curve runs under them",
+  "change": "Add a More than the box mode to the slice workshop",
   "mutations": [
     {
-      "name": "the labels lose their rim",
+      "name": "the centre is taken at the far corner",
       "file": "index.html",
-      "find": "[id$=\"Fig\"] svg text{paint-order:stroke;",
-      "replace": "[id$=\"Fig\"] svg text{",
+      "find": "mid(i){ const {p,q}=this.Q(i); return this.f(i,p/2,q/2); },",
+      "replace": "mid(i){ const {p,q}=this.Q(i); return this.f(i,p,q); },",
       "run": "verify"
     },
     {
-      "name": "the rim is drawn in another colour",
+      "name": "the volume forgets the width",
       "file": "index.html",
-      "find": "svg text{paint-order:stroke;stroke:var(--panel);",
-      "replace": "svg text{paint-order:stroke;stroke:var(--gold);",
+      "find": "V(i){ const {p,q}=this.Q(i); return p*q*this.mid(i); },",
+      "replace": "V(i){ const {p,q}=this.Q(i); return q*this.mid(i); },",
+      "run": "verify"
+    },
+    {
+      "name": "the volume is set against the box's height alone",
+      "file": "index.html",
+      "find": "truth(i){ return Math.sign(this.V(i)-this.box(i)); },",
+      "replace": "truth(i){ return Math.sign(this.V(i)-this.Q(i).h); },",
+      "run": "verify"
+    },
+    {
+      "name": "a falling term is written as climbing",
+      "file": "index.html",
+      "find": "out.map(([k,t],j)=>j ? `${k<0?'−':'+'} ${t}`",
+      "replace": "out.map(([k,t],j)=>j ? `${k<0?'+':'−'} ${t}`",
+      "run": "verify"
+    },
+    {
+      "name": "a climb against a fall is not looked for",
+      "file": "index.html",
+      "find": "tilts(){ return [0,1,2,3].filter(i=>this.Q(i).a*this.Q(i).b<0); },",
+      "replace": "tilts(){ return [0,1,2,3].filter(i=>this.Q(i).a*this.Q(i).b>0); },",
+      "run": "verify"
+    },
+    {
+      "name": "half of an odd side is written as a decimal",
+      "file": "index.html",
+      "find": "half:n=>Number.isInteger(n/2) ? neg(n/2) : `${neg(n)}/2`,",
+      "replace": "half:n=>neg(n/2),",
+      "run": "verify"
+    },
+    {
+      "name": "the corners are written before the round is right",
+      "file": "index.html",
+      "find": "if(this.solved){ const t=this.truth(i), cx=x0+p*s/2",
+      "replace": "{ const t=this.truth(i), cx=x0+p*s/2",
+      "run": "verify"
+    },
+    {
+      "name": "a call still moves once the round is right",
+      "file": "index.html",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slice.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slice.render();",
       "run": "verify"
     }
   ]
