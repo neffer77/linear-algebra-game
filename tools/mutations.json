@@ -1,26 +1,61 @@
 {
-  "change": "Make eight figure captions name the colours they really draw",
+  "change": "Add a Match them up mode to the Taylor workshop",
   "mutations": [
     {
-      "name": "a caption names gold for what is drawn blue",
+      "name": "cos x is said to bend up at 0",
       "file": "index.html",
-      "find": "Once all four are called right, A in blue and B in gold are written in",
-      "replace": "Once all four are called right, A in gold and B in blue are written in",
+      "find": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[-1,2]]},",
+      "replace": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[1,2]]},",
       "run": "verify"
     },
     {
-      "name": "a check stands blue and gold the wrong way round",
-      "file": "tools/verify.js",
-      "find": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
-      "replace": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
+      "name": "f″(0) is taken as the x² term itself",
+      "file": "index.html",
+      "find": "return b===2 ? [a,1] : b%2===0 ? [a,b/2] : [2*a,b]; },",
+      "replace": "return [a,b]; },",
       "run": "verify"
     },
     {
-      "name": "the figures draw a in gold",
+      "name": "each function is matched by its own place, not its polynomial's",
       "file": "index.html",
-      "find": "a:'#5aa9e6'",
-      "replace": "a:'#f2c14e'",
+      "find": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order.indexOf(i); },",
+      "replace": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order[i]; },",
       "run": "verify"
+    },
+    {
+      "name": "the functions are drawn before the round is right",
+      "file": "index.html",
+      "find": "      if(this.solved){\n        // the function itself",
+      "replace": "      if(this.marks){\n        // the function itself",
+      "run": "verify"
+    },
+    {
+      "name": "a match still moves once the round is right",
+      "file": "index.html",
+      "find": "    if(this.solved || this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "replace": "    if(this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "run": "verify"
+    },
+    {
+      "name": "the check opens before all four are matched",
+      "file": "index.html",
+      "find": "id=\"tymCheck\" ${this.ready()?'':'disabled '}onclick",
+      "replace": "id=\"tymCheck\" onclick",
+      "run": "verify"
+    },
+    {
+      "name": "a wrong slope is blamed on the x² term",
+      "file": "index.html",
+      "find": "                  : !this.same(o[1],c[1]) ? `it starts at the right height, but its x term",
+      "replace": "                  : false ? `it starts at the right height, but its x term",
+      "run": "verify"
+    },
+    {
+      "name": "the Tome never mentions matching them up",
+      "file": "index.html",
+      "find": " Or match them up: four functions and four polynomials, and which hugs which near 0.",
+      "replace": "",
+      "run": "play:taylormatch"
     }
   ]
 }
