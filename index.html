@@ -8933,6 +8933,38 @@ const Reckon = {
   }
 };
 
+/* A waymark. The first fight in a realm where nothing has been beaten yet
+   opens with the realm's name across the screen in its own colour and, under
+   it, a line of what its land is made of, so crossing into new mathematics
+   feels like arriving somewhere. It greets each fight there until a foe of
+   the realm falls; a boss, which has its herald, is never greeted by it.
+   Campaign fights only. Nothing is saved. */
+const Waymark = {
+  SAY: {
+    'Vale of Vectors':  'every arrow here has a length and a way it points',
+    'Matrix Marches':   'here a grid of numbers moves the whole land at once',
+    'Cliffs of Change': 'here the ground tilts, and the tilt is the question',
+    'Integral Abyss':   'its depth is measured one thin strip at a time',
+    'Eigen Citadel':    'only some directions pass its walls unturned',
+    'Spectral Reach':   'here every matrix comes apart into what it does',
+    'Infinite Expanse': 'its roads run on forever, and some still arrive',
+    'Gradient Summit':  'every step here is the steepest way up'
+  },
+  fresh(g, ri){
+    const c=(g && g.cleared) || {};
+    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);
+  },
+  on(B, g){
+    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));
+  },
+  text(r){ return '🗺️ '+r.nm.toUpperCase(); },
+  announce(B, g){
+    if(!this.on(B, g)) return false;
+    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], B.realm.col, ()=>Sfx.milestone());
+    return true;
+  }
+};
+
 /* A herald. A realm's boss is announced as it arrives: its name across the
    screen in its own colour, and under it what it is in its own mathematics,
    the same trick the Saga tells once it has fallen, so the fight that ends a
@@ -10721,6 +10753,7 @@ const Battle = {
     this.nextQuestion();
     Talk.say('meet');
     Herald.announce(this);   // a realm's boss arrives announced
+    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
