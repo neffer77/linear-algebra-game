@@ -9274,6 +9274,12 @@ const Folio = {
       </div>
     </div>`;
   },
+  // a campaign foe not yet beaten wears a mark on its nameplate: its page is still to be written
+  tag(B){
+    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';
+    const c=(Game.s && Game.s.cleared) || {};
+    return c[B.ri+':'+B.fi] ? '' : ' <span class="pips" title="Not yet in your Bestiary">✨ New</span>';
+  },
   // the foe's likeness on its new page, drawn as the Bestiary draws it
   paint(p){
     const el=p && document.getElementById('folioPic'); if(!el) return false;
@@ -10880,7 +10886,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'')+Folio.tag(this);   // and a foe still to be written in the Bestiary
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +

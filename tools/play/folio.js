@@ -1,6 +1,7 @@
 /* Folio.
  *
- * The first time a campaign foe is beaten, the victory card opens its page
+ * A campaign foe not yet beaten is marked new on its nameplate. The first
+ * time it is beaten, the victory card opens its page
  * in the Bestiary: its line of lore, where its weak point lies, and how many
  * of the realms' foes the book now holds. Beaten again, the card says
  * nothing of it. Under the experience a win pays, a bar fills toward the next
@@ -72,6 +73,9 @@ module.exports = {
     });
 
     await fight(t, 0, 0, true);
+    await sleep(300);
+    const plate0 = await t.ev(() => document.getElementById('foeName').innerText);
+    t.ok('a foe not yet beaten is marked new on its nameplate', /✨ New/.test(plate0) && /Meadow Slime/.test(plate0), plate0);
     let c = await finish(t);
     t.ok('the first Meadow Slime beaten opens its page: the first of the book, with its lore', c.screen === 's-result'
       && /📖 A new page in the Bestiary · 1 of 32/.test(c.page || '') && /wobbles the same distance/.test(c.page || ''), JSON.stringify(c));
@@ -79,6 +83,9 @@ module.exports = {
     t.ok('the page carries the foe\'s likeness, drawn in', c.inked > 400, JSON.stringify(c));
 
     await fight(t, 0, 0, false);
+    await sleep(300);
+    const plate1 = await t.ev(() => document.getElementById('foeName').innerText);
+    t.ok('once beaten, its nameplate is plain', !/✨/.test(plate1) && /Meadow Slime/.test(plate1), plate1);
     c = await finish(t);
     t.ok('beaten again, the card opens no page', c.page === null, JSON.stringify(c));
     t.ok('under the experience, a bar fills to where the knight stands on the way to the next level',
