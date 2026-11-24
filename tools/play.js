@@ -74,6 +74,7 @@ const SUITES = [
   require('./play/greedy'),      // a beaten foe comes back with triple gold and flees after six questions
   require('./play/riddle'),      // a chest's riddle on the fight's topic raises its find a rarity
   require('./play/heroic'),      // a beaten foe fought again with the hardest riddles, for double gold
+  require('./play/scout'),       // study the next foe's weak point first, and strikes on it land twice as hard
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

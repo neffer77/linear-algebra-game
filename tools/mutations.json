@@ -1,82 +1,82 @@
 {
-  "change": "A heroic rematch: a beaten foe fought again with the hardest riddles and harder blows, for double gold",
+  "change": "Scouting: study the next foe's weak point on the victory card, and strikes on it land twice as hard",
   "mutations": [
     {
-      "name": "a heroic purse is no fatter",
+      "name": "a prepared strike lands no harder",
       "file": "index.html",
-      "find": "GOLD: 2, XP: 1.5, ATK: 1.25,",
-      "replace": "GOLD: 1, XP: 1.5, ATK: 1.25,",
+      "find": "  MUL: 1.5, PREP: 2,",
+      "replace": "  MUL: 1.5, PREP: 1.5,",
       "run": "verify"
     },
     {
-      "name": "a heroic foe hits no harder",
+      "name": "the chip says half again when prepared",
       "file": "index.html",
-      "find": "      atk:Math.round(foe.atk*this.ATK), heroic:true});",
-      "replace": "      heroic:true});",
+      "find": "🎯 weak point ×${B.prepared ? this.PREP : this.MUL}",
+      "replace": "🎯 weak point ×${this.MUL}",
       "run": "verify"
     },
     {
-      "name": "a heroic foe changes the realm's own foe",
+      "name": "a scouting is never spent",
       "file": "index.html",
-      "find": "return Object.assign({}, foe, {gold:Math.round(foe.gold*this.GOLD)",
-      "replace": "return Object.assign(foe, {gold:Math.round(foe.gold*this.GOLD)",
+      "find": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n    this.at=null;\n",
+      "replace": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n",
       "run": "verify"
     },
     {
-      "name": "an arena fight can be heroic",
+      "name": "an arena fight is fought prepared",
       "file": "index.html",
-      "find": "on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.heroic); },",
-      "replace": "on(B){ return !!(B && B.foe && B.foe.heroic); },",
+      "find": "if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;",
+      "replace": "if(!B || !this.ready(B.ri, B.fi)) return false;",
       "run": "verify"
     },
     {
-      "name": "a heroic fight's riddles are no harder",
+      "name": "a scouting prepares for every foe of the realm",
       "file": "index.html",
-      "find": "const base = (this.mode==='arena' || Heroic.on(this) ? 3",
-      "replace": "const base = (this.mode==='arena' ? 3",
+      "find": "return !!(this.at && this.at.ri===ri && this.at.fi===fi); },",
+      "replace": "return !!(this.at && this.at.ri===ri); },",
       "run": "verify"
     },
     {
-      "name": "a foe never beaten can be fought heroic",
+      "name": "a miss prepares the knight",
       "file": "index.html",
-      "find": "this._start(heroic && beaten ? Heroic.make(",
-      "replace": "this._start(heroic ? Heroic.make(",
-      "run": "play:heroic"
+      "find": "    if(ok){\n      this.at={ri:this.ri, fi:this.fi};",
+      "replace": "    if(true){\n      this.at={ri:this.ri, fi:this.fi};",
+      "run": "verify"
     },
     {
-      "name": "the card offers no heroic rematch",
+      "name": "the card offers no scouting",
       "file": "index.html",
-      "find": "        ${Heroic.button(this)}\n",
+      "find": "        ${Scout.html(nx)}\n",
       "replace": "",
-      "run": "play:heroic"
+      "run": "play:scout"
     },
     {
-      "name": "a heroic rematch is not said as it arrives",
+      "name": "the scouted fight is not prepared",
       "file": "index.html",
-      "find": "    else if(Heroic.on(this)) UI.toast(Heroic.intro(f));\n",
+      "find": "this.prepared=Scout.spend(this);",
+      "replace": "this.prepared=false;",
+      "run": "play:scout"
+    },
+    {
+      "name": "the prepared fight says nothing as it starts",
+      "file": "index.html",
+      "find": "    else if(this.prepared) UI.toast(Scout.intro(f));\n",
       "replace": "",
-      "run": "play:heroic"
+      "run": "play:scout"
     },
     {
-      "name": "a heroic foe's name is not marked",
+      "name": "scouting answers are not counted",
       "file": "index.html",
-      "find": "(this.foe.heroic?'⚔️ Heroic ':'')+",
+      "find": "    Game.recordAnswer(q.key, ok, 1);      // studying counts toward the topic\n",
       "replace": "",
-      "run": "play:heroic"
+      "run": "play:scout"
     },
     {
-      "name": "a heroic victory says nothing on the card",
+      "name": "a miss offers no other question",
       "file": "index.html",
-      "find": "          ${Heroic.line(this)}\n",
+      "find": "\n        <button class=\"btn\" id=\"scoutAgain\" onclick=\"Scout.ask()\">🔍 Try another question</button>",
       "replace": "",
-      "run": "play:heroic"
-    },
-    {
-      "name": "every rematch is heroic",
-      "file": "index.html",
-      "find": "this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])",
-      "replace": "this._start(beaten ? Heroic.make(this.realm.foes[fi])",
-      "run": "play:heroic"
+      "run": "play:scout"
     }
   ]
 }
