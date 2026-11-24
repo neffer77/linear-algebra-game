@@ -2937,6 +2937,71 @@ const coupNotes = (() => {
   return checks;
 })();
 
+/* Straight on: a campaign victory offers the next fight on the road. Worked
+   here from its own source with the road, the war path and the health stubbed,
+   and its place on the victory screen read off the source. */
+const nextFightNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const NextFight = {'), html.indexOf('const Battle = {'));
+  let next = null, low = null, rested = false;
+  const UI = { nextFoe: () => next };
+  const WarPath = { n: 0, STEP: 0.1, CAP: 5, pct(n) { return Math.round(this.STEP * Math.min(this.CAP, Math.max(0, n - 1)) * 100); } };
+  const Game = { lowFor: () => low, rest: () => rested };
+  const removed = [];
+  const document = { getElementById: id => id === 'nextLow' ? { remove: () => removed.push(id) } : null };
+  const N = new Function('UI', 'WarPath', 'Game', 'document', src + ';return NextFight;')(UI, WarPath, Game, document);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('nextfight', key, msg); };
+  const slime = { nm: 'Meadow Slime', hp: 52, atk: 9 }, wyrm = { nm: 'The Vector Wyrm', hp: 165, atk: 20, boss: true };
+  // the next fight, unless it is the one just won
+  next = null;
+  want(N.of(0, 0) === null && N.html(null) === '', 'end of the road', 'offers a fight when none is left');
+  for (const [ri, fi] of [[0, 0], [0, 1], [1, 3], [2, 0]]) {
+    next = { ri, fi, f: slime };
+    want(N.of(ri, fi) === null, `the fight just won, ${ri}:${fi}`, 'is offered as the next one');
+    want(N.of(ri, fi + 1) === next && N.of(ri + 1, fi) === next, `${ri}:${fi} after another`, 'is not offered');
+  }
+  // what it says, on every length of war path
+  for (const f of [slime, wyrm]) {
+    for (let n = 0; n <= 9; n++) {
+      WarPath.n = n; low = null; next = { ri: 1, fi: 3, f };
+      const h = N.html(N.of(0, 0));
+      want(h.includes(`Next on the road: <b>${f.boss ? '👑 ' : ''}${f.nm}</b> · ❤️ ${f.hp} · ⚔️ ${f.atk}.`), `${f.nm}, path ${n}`, `names it as ${h.slice(0, 160)}`);
+      want(h.includes(`id="nextGo" onclick="Battle.begin(1,3)">⚔️ Fight ${f.nm}</button>`), `${f.nm}, path ${n}`, 'the button does not start that fight');
+      const pct = Math.round(10 * Math.min(5, n));
+      want(n >= 1 ? h.includes(`Win it for <b>+${pct}%</b> gold on your war path.`) : !h.includes('war path'), `${f.nm}, path ${n}`, `says ${h.match(/Win it[^<]*<b>[^<]*<\/b>[^.]*\./) || 'nothing'} of the war path, not +${pct}%`);
+      want(!h.includes('nextLow') && !h.includes('nextRest'), `${f.nm}, path ${n}`, 'warns a knight above half health');
+    }
+  }
+  // below half health: warned, and a rest offered when it can be paid for
+  WarPath.n = 0; next = { ri: 0, fi: 1, f: slime };
+  low = { hp: 30, max: 100, hit: 9, cost: 12, afford: true };
+  let h = N.html(N.of(0, 0));
+  want(h.includes('id="nextLow"') && h.includes('You are at ❤️ 30 of 100 · a miss costs about 9') && h.includes('🔥 Rest first · 🪙 12'), 'low, can pay', `says ${h}`);
+  want(h.indexOf('nextRest') < h.indexOf('nextGo'), 'low, can pay', 'the rest is not offered first');
+  low = { hp: 30, max: 100, hit: 9, cost: 12, afford: false };
+  h = N.html(N.of(0, 0));
+  want(h.includes('id="nextLow"') && !h.includes('nextRest'), 'low, cannot pay', 'a rest that cannot be paid for is offered');
+  // a rest from the victory screen
+  const btn = { gone: false, remove() { this.gone = true; } };
+  rested = false; removed.length = 0;
+  want(N.rest(btn) === false && !btn.gone && removed.length === 0, 'a rest refused', 'the offer goes when nothing was paid');
+  rested = true;
+  want(N.rest(btn) === true && btn.gone && removed.join() === 'nextLow', 'a rest paid', 'the offer and the warning do not go');
+
+  // its place on the victory screen
+  const Bt = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const win = Bt.slice(Bt.indexOf('\n  win(){'), Bt.indexOf('\n  lose(){'));
+  const at = win.indexOf("const nx=this.mode==='campaign' ? NextFight.of(this.ri, this.fi) : null;");
+  want(at > win.indexOf("UI.go('s-result');") && at > win.indexOf('g.cleared[key]=true;'), 'win', 'the next fight is found before this one is counted as beaten');
+  want(win.indexOf("if(this.mode==='arena')") < at && win.indexOf("if(this.mode==='dungeon')") < at, 'win', 'the arena or a descent reaches the next fight');
+  const btns = win.indexOf('${NextFight.html(nx)}');
+  want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')"), 'win', 'the next fight is not the first button');
+  want(win.includes(`<button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>`), 'win', 'the map keeps the gold when there is a next fight');
+  want(!/(Game\.s|\bg|this\.s)\.next(Fight|Foe)\b/.test(html), 'save', 'the next fight is saved');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26287,6 +26352,7 @@ console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 1
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
 console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);
 console.log(`  coups de grâce checked     ${pad(coupNotes.toLocaleString(), 10)}  (a foe on its last 15% of health finished by a right answer, judged as it is asked, warned of beside a wind-up, never in a rite or the daily, with nothing saved)`);
+console.log(`  next fights checked        ${pad(nextFightNotes.toLocaleString(), 10)}  (a campaign victory offers the next foe on the road, never the one just won, with its war path pay, a warning and a rest below half health, before the map)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
