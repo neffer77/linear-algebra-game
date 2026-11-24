@@ -278,6 +278,10 @@ const SUITES = [
   require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
   require('./play/pwa'),         // the installed game finds the newest build
+  require('./play/haul'),        // the victory card's totals as chips, its bonuses folded
+  require('./play/topics'),      // a closed realm on the map names three topics
+  require('./play/nameplate'),   // a long foe nameplate keeps the health on a phone's screen
+  require('./play/ware'),        // the Smithy compares each piece with what is worn
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

@@ -893,6 +893,11 @@ The game is built so that losing teaches you as much as winning.
   realms ahead no longer fill the screen with small print; open one and it names them all.
 - **🪧 A nameplate that fits.** A foe's nameplate (crown, elite title, greedy and heroic marks, pips, phase) wraps
   within its own half of the bars on a phone, and the foe's health beside it stays whole and on the screen.
+- **⚖️ A Smithy that compares.** Each blade and coat in the Smithy says what it would do beside what is
+  worn: "+7 damage, +2% crit over your Vector Saber" in green, or "6 less damage, 2% less crit than your
+  Vector Saber" for going back to an old one. The list runs only to the next two pieces out of reach; the
+  dearer ones wait behind a fold that says how many and how dear ("＋ 3 dearer blades, up to 🪙 5200").
+  Nothing new is saved.
 - **💫 Dazed.** A beaten foe lies where it fell with three little gold stars circling its head until the
   victory card comes up.
 - **🛡️ Dents.** The knight wears their wounds as well: each quarter of their health lost beats a dent into
@@ -3503,6 +3508,7 @@ Inside `index.html` the code is organised as:
 | `Haul` | the victory card's totals as chips, the find a chip only when there is one; the bonuses one list under its count, emptied when there are none, shown whole up to four, folded past the first three behind one opener that says how many more and opens them by a tap or Enter or Space, never another key; folded by a clip that keeps every line in the card's text, never hidden; the wiring, every bonus line inside the list |
 | `Topics` | a closed realm's first three topics named in order and the rest counted; opened, every topic named once and in order, and the count gone; a short list never cut; no topics or a topic with no label; the wiring, the old full line gone |
 | `Nameplate` | the bars' halves free to shrink below their content, the foe's name wrapping, the health beside it never wrapped or squeezed; the labels where the rules expect them |
+| `Ware` | every piece beside every worn piece: green only when nothing is lost, each difference at its true size, the worn piece named; the fold shows to the next two out of reach, never hides an owned or affordable piece or a lone row, opens when asked; wired into the Smithy |
 | `Daze` | three gold stars circling a beaten foe's head, found by turning the crown by the angle a foe falls at, at the foe's own size; on a ring round the head, circling; the canvas state kept; drawn only on a won fight; the wiring |
 | `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Waymark` | every realm greeted with a line of its own, none alike; only campaign fights in a realm with no foe yet beaten, never a boss, never the daily, an arena or a dungeon; the name in capitals and the realm's colour; once, as the fight opens, after the herald; the wiring |

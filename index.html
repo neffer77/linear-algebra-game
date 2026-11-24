@@ -156,6 +156,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .nm{font-weight:800;font-size:14px}
 .item .ds{font-size:12px;color:var(--dim)}
 .item.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.3)}
+.item .vs{font-size:12px;font-weight:700;color:var(--dim)}
+.item .vs.up{color:var(--green)}
+.wareMore{margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
 
 #powerbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px}
@@ -9398,6 +9401,42 @@ const Topics = {
   }
 };
 
+/* Ware. The Smithy listed every blade and every coat at full length, from the
+   one in hand to one that costs seven purses, and said what each did but not
+   what it would do for you. Each row now says what it adds over what you wear,
+   or what it would cost you to go back to it; and the list runs only to the
+   next two you cannot yet afford, the dearer ones behind a fold that names how
+   dear they get. Nothing new is saved: the fold opens for this sitting. */
+const Ware = {
+  AHEAD:2, open:{},
+  // what a piece does beside the one worn: null for the worn piece itself
+  gain(kind,it,worn){
+    if(!it||!worn||it.id===worn.id) return null;
+    const f=kind==='w'
+      ? [[it.dmg-worn.dmg,' damage',' less damage'],[Math.round(it.crit*100)-Math.round(worn.crit*100),'% crit','% less crit']]
+      : [[it.def-worn.def,' defence',' less defence'],[it.hp-worn.hp,' health',' less health']];
+    const up=f.filter(x=>x[0]>0), down=f.filter(x=>x[0]<0);
+    if(!up.length&&!down.length) return {up:false, text:'The same as your '+worn.nm};
+    if(!down.length) return {up:true, text:up.map(x=>'+'+x[0]+x[1]).join(', ')+' over your '+worn.nm};
+    if(!up.length) return {up:false, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};
+    return {up:false, text:f.filter(x=>x[0]).map(x=>(x[0]>0?'+':'−')+Math.abs(x[0])+x[1]).join(', ')+' against your '+worn.nm};
+  },
+  line(kind,it,worn){ const g=this.gain(kind,it,worn); return g?`<div class="vs${g.up?' up':''}">${g.text}</div>`:''; },
+  // how many rows to show: up to the next AHEAD pieces not owned and out of reach
+  shown(kind,list,owned,gold){
+    if(this.open[kind]) return list.length;
+    const i=list.findIndex(x=>!owned(x)&&x.cost>gold);
+    if(i<0) return list.length;
+    const n=i+this.AHEAD;
+    return list.length-n<2 ? list.length : n;   // one more row is shown, not folded
+  },
+  more(kind,rest){
+    if(!rest.length) return '';
+    const top=Math.max(...rest.map(x=>x.cost)), what=kind==='w'?'blades':'coats';
+    return `<div class="wareMore" id="wareMore${kind}" role="button" tabindex="0" onclick="Ware.open['${kind}']=1;UI.renderShop()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Ware.open['${kind}']=1;UI.renderShop()}">＋ ${rest.length} dearer ${what}, up to 🪙 ${top}</div>`;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -17681,29 +17720,33 @@ const UI = {
     const g=Game.s, out=[];
     const buy=(kind,id,cost,owned)=>`onclick="Shop.buy('${kind}','${id}',${cost})"`;
     out.push('<div class="panel"><h2>⚔️ Weapons</h2>');
-    WEAPONS.filter(w=>!w.forge).forEach(w=>{
+    const own=x=>!!g.owned[x.id], ws=WEAPONS.filter(w=>!w.forge), wn=Ware.shown('w',ws,own,g.gold), wWorn=Game.weapon();
+    ws.slice(0,wn).forEach(w=>{
       const owned=!!g.owned[w.id], eq=g.weapon===w.id;
       out.push(`<div class="item ${eq?'equipped':''}">
         <div class="ic">${Arms.bladeSvg(w.id)||w.ic}</div>
         <div style="flex:1"><div class="nm">${w.nm}</div><div class="ds">${w.ds}</div>
-          <div class="ds">⚔️ ${w.dmg} damage · ${Math.round(w.crit*100)}% crit</div></div>
+          <div class="ds">⚔️ ${w.dmg} damage · ${Math.round(w.crit*100)}% crit</div>${Ware.line('w',w,wWorn)}</div>
         ${eq?'<span class="pill">equipped</span>':
           owned?`<button class="btn sm" style="width:auto" onclick="Shop.equip('w','${w.id}')">Equip</button>`:
           `<button class="btn sm gold" style="width:auto" ${buy('w',w.id,w.cost)}>🪙 ${w.cost}</button>`}
       </div>`);
     });
+    out.push(Ware.more('w',ws.slice(wn)));   // the dearer blades, behind a fold
     out.push('</div><div class="panel"><h2>🛡️ Armour</h2>');
-    ARMORS.filter(a=>!a.forge).forEach(a=>{
+    const as=ARMORS.filter(a=>!a.forge), an=Ware.shown('a',as,own,g.gold), aWorn=Game.armor();
+    as.slice(0,an).forEach(a=>{
       const owned=!!g.owned[a.id], eq=g.armor===a.id;
       out.push(`<div class="item ${eq?'equipped':''}">
         <div class="ic">${Arms.plateSvg(a.id)||a.ic}</div>
         <div style="flex:1"><div class="nm">${a.nm}</div><div class="ds">${a.ds}</div>
-          <div class="ds">🛡️ ${a.def} defence · ❤️ +${a.hp} health</div></div>
+          <div class="ds">🛡️ ${a.def} defence · ❤️ +${a.hp} health</div>${Ware.line('a',a,aWorn)}</div>
         ${eq?'<span class="pill">equipped</span>':
           owned?`<button class="btn sm" style="width:auto" onclick="Shop.equip('a','${a.id}')">Equip</button>`:
           `<button class="btn sm gold" style="width:auto" ${buy('a',a.id,a.cost)}>🪙 ${a.cost}</button>`}
       </div>`);
     });
+    out.push(Ware.more('a',as.slice(an)));   // and the dearer coats
     /* The benches that spend what the realms give up — ore, essence, herbs,
        pages — are rooms of the Keep now, not the bottom of this list. What is
        left here is what gold buys, and a door to the rest. */

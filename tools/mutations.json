@@ -1,33 +1,82 @@
 {
-  "change": "Nameplate: a long foe nameplate wraps in its own half of the bars and never pushes the foe's health off a phone's screen",
+  "change": "A Smithy that compares: each blade and coat says what it adds over what is worn, and the dear ones wait behind a fold",
   "mutations": [
     {
-      "name": "the health pushed off the screen",
+      "name": "a worse piece shown green",
       "file": "index.html",
-      "find": ".bars>.bar{min-width:0}\n",
+      "find": "    if(!up.length) return {up:false, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};",
+      "replace": "    if(!up.length) return {up:true, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};",
+      "run": "verify"
+    },
+    {
+      "name": "crit left out of the comparison",
+      "file": "index.html",
+      "find": ",[Math.round(it.crit*100)-Math.round(worn.crit*100),'% crit','% less crit']]",
+      "replace": "]",
+      "run": "verify"
+    },
+    {
+      "name": "health left out of the comparison",
+      "file": "index.html",
+      "find": ",[it.hp-worn.hp,' health',' less health']];",
+      "replace": "];",
+      "run": "verify"
+    },
+    {
+      "name": "the fold hides one more piece than it should",
+      "file": "index.html",
+      "find": "    const n=i+this.AHEAD;\n",
+      "replace": "    const n=i+1;\n",
+      "run": "verify"
+    },
+    {
+      "name": "a lone row folded",
+      "file": "index.html",
+      "find": "    return list.length-n<2 ? list.length : n;",
+      "replace": "    return list.length-n<1 ? list.length : n;",
+      "run": "verify"
+    },
+    {
+      "name": "the fold never opens",
+      "file": "index.html",
+      "find": "    if(this.open[kind]) return list.length;\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "a long name never wraps",
+      "name": "the blades not compared in the Smithy",
       "file": "index.html",
-      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
+      "find": "${Ware.line('w',w,wWorn)}</div>",
+      "replace": "</div>",
+      "run": "verify"
+    },
+    {
+      "name": "the dear blades dropped with no fold",
+      "file": "index.html",
+      "find": "    out.push(Ware.more('w',ws.slice(wn)));   // the dearer blades, behind a fold\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "the health pushed off the screen, seen in play",
+      "name": "the blades not compared, seen in play",
       "file": "index.html",
-      "find": ".bars>.bar{min-width:0}\n.bar .lbl{gap:6px}\n#foeName{min-width:0; overflow-wrap:anywhere}\n#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
-      "replace": "\n",
-      "run": "play:nameplate"
+      "find": "${Ware.line('w',w,wWorn)}</div>",
+      "replace": "</div>",
+      "run": "play:ware"
     },
     {
-      "name": "a long name never wraps, seen in play",
+      "name": "the coats never folded, seen in play",
       "file": "index.html",
-      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
-      "replace": "#foeName{min-width:0}\n",
-      "run": "play:nameplate"
+      "find": "const as=ARMORS.filter(a=>!a.forge), an=Ware.shown('a',as,own,g.gold), aWorn=Game.armor();",
+      "replace": "const as=ARMORS.filter(a=>!a.forge), an=as.length, aWorn=Game.armor();",
+      "run": "play:ware"
+    },
+    {
+      "name": "the better line not green",
+      "file": "index.html",
+      "find": ".item .vs.up{color:var(--green)}\n",
+      "replace": "\n",
+      "run": "verify"
     }
   ]
 }
