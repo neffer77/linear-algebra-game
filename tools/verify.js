@@ -2875,6 +2875,68 @@ const riposteNotes = (() => {
   return checks;
 })();
 
+/* Coup de grâce: a foe on its last 15% of health is finished by a right answer.
+   Worked here from its own rule, and its place in a fight read off the source. */
+const coupNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Coup = {'), html.indexOf('const Battle = {'));
+  const said = [];
+  const Anim = { float: (x, y, text) => said.push(text) };
+  const C = new Function('Anim', 'H', src + ';return Coup;')(Anim, 640);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('coup', key, msg); };
+  want(C.FRAC === 0.15, 'rule', `a foe is on its last legs at ${C.FRAC} of its health, not 0.15`);
+  // every health from none to full, on foes small and large, in every mode
+  for (const emax of [52, 78, 165, 270, 1000]) {
+    for (let ehp = 0; ehp <= emax; ehp++) {
+      for (const mode of ['campaign', 'arena', 'daily']) {
+        for (const rite of [null, { motes: [1, 2] }]) {
+          const on = mode !== 'daily' && !rite && ehp > 0 && ehp * 100 <= emax * 15;
+          const B = { mode, rite, ehp, emax };
+          if (C.ready(B) !== on) want(false, `${mode}, ${ehp} of ${emax}${rite ? ', in a rite' : ''}`, `is ${on ? 'not ' : ''}taken as on its last legs`);
+          else checks++;
+        }
+      }
+    }
+  }
+  want(C.ready(null) === false, 'no fight', 'a missing fight is on its last legs');
+  // a right answer on its last legs takes all it has left, and never less than the blow
+  for (const ehp of [1, 7, 24, 40]) {
+    for (const hit of [1, 5, 24, 60]) {
+      said.length = 0;
+      const B = { coup: true, ehp, lastCoup: false };
+      const got = C.through(B, hit);
+      want(got === Math.max(hit, ehp) && B.lastCoup === true && said.join() === 'COUP DE GRÂCE', `a blow of ${hit} on ${ehp} left`, `takes ${got}, says ${said.join()}`);
+      said.length = 0;
+      const P = { coup: false, ehp, lastCoup: false };
+      const plain = C.through(P, hit);
+      want(plain === hit && P.lastCoup === false && said.length === 0, `a plain blow of ${hit} on ${ehp} left`, `takes ${plain}, says ${said.join()}`);
+    }
+  }
+  for (const [nm, hp] of [['Meadow Slime', 7], ['The Eigen Dragon', 41]]) {
+    const t = C.tele(nm, hp);
+    want(t.includes(`<b>${nm}</b> is down to its last <b>${hp}</b> health`) && t.includes('finish it'), 'tele', `warns ${t}`);
+  }
+
+  // its place in a fight
+  const Bt = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const start = Bt.slice(Bt.indexOf('\n  _start(f){'), Bt.indexOf('\n  }', Bt.indexOf('\n  _start(f){')));
+  want(start.includes('this.coup=false; this.lastCoup=false;'), 'begin', 'a fight starts with a foe already on its last legs');
+  const next = Bt.slice(Bt.indexOf('\n  nextQuestion(){'), Bt.indexOf('\n  }', Bt.indexOf('\n  nextQuestion(){')));
+  const ready = next.indexOf('this.coup=Coup.ready(this);');
+  want(ready > next.indexOf('this.rite = {motes:') && ready > next.indexOf("tg.style.display='none';"), 'warning', 'the last legs are judged before the rite is or the warning is cleared');
+  want(next.includes("tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);"), 'warning', 'the question does not warn of the last legs, beside a wind-up');
+  const ans = Bt.slice(Bt.indexOf('\n  answer(btn, choice){'), Bt.indexOf('\n  showExplain('));
+  const okAt = ans.indexOf('    if(ok){\n      this.combo++;'), shown = ans.indexOf('} else if(this.shownWork){');
+  const thr = ans.indexOf('const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;');
+  want(thr > okAt && thr < shown, 'answer', 'a right answer on its last legs does not finish it');
+  want((html.match(/Coup\.through\(/g) || []).length === 1, 'answer', 'the coup lands somewhere else too');
+  const reset = ans.indexOf('this.lastRiposte=false; this.lastCoup=false;');
+  want(reset > -1 && reset < okAt, 'answer', 'a coup is not forgotten before the next answer');
+  want(!/(Game\.s|\bg|this\.s)\.(coup|lastCoup)\b/.test(html), 'save', 'the coup is saved');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26224,6 +26286,7 @@ console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
 console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);
+console.log(`  coups de grâce checked     ${pad(coupNotes.toLocaleString(), 10)}  (a foe on its last 15% of health finished by a right answer, judged as it is asked, warned of beside a wind-up, never in a rite or the daily, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);

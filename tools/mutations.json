@@ -1,68 +1,68 @@
 {
-  "change": "Riposte: a right answer as the foe winds up lands half again as hard",
+  "change": "Coup de grâce: a right answer finishes a foe on its last 15% of health",
   "mutations": [
     {
-      "name": "a riposte lands twice as hard",
+      "name": "a foe is on its last legs at a fifth",
       "file": "index.html",
-      "find": "const Riposte = {\n  MUL: 1.5,",
-      "replace": "const Riposte = {\n  MUL: 2,",
+      "find": "const Coup = {\n  FRAC: 0.15,",
+      "replace": "const Coup = {\n  FRAC: 0.2,",
       "run": "verify"
     },
     {
-      "name": "every right answer ripostes",
+      "name": "a rite is finished like any question",
       "file": "index.html",
-      "find": "  on(B){ return !!(B && B.slamNext); },",
-      "replace": "  on(B){ return !!B; },",
+      "find": "B.mode!=='daily' && !B.rite && B.ehp>0",
+      "replace": "B.mode!=='daily' && B.ehp>0",
       "run": "verify"
     },
     {
-      "name": "the riposte is told every time",
+      "name": "the daily finishes foes too",
       "file": "index.html",
-      "find": "if(!B.riposted){ B.riposted=true; UI.toast(",
-      "replace": "if(true){ B.riposted=true; UI.toast(",
+      "find": "ready(B){ return !!(B && B.mode!=='daily' && ",
+      "replace": "ready(B){ return !!(B && ",
       "run": "verify"
     },
     {
-      "name": "a fight remembers the last fight's riposte",
+      "name": "the coup takes only the blow",
       "file": "index.html",
-      "find": "    this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight\n",
+      "find": "    return Math.max(hit, B.ehp);\n  }\n};",
+      "replace": "    return hit;\n  }\n};",
+      "run": "verify"
+    },
+    {
+      "name": "the coup is not said on the scene",
+      "file": "index.html",
+      "find": "    Anim.float(610, H-410, 'COUP DE GRÂCE', '#ffb3c1', true);\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the riposte is left out of the strike",
+      "name": "the warning leaves out the health",
       "file": "index.html",
-      "find": "* Weak.bonus(this) * Riposte.bonus(this);",
-      "replace": "* Weak.bonus(this);",
+      "find": "is down to its last <b>${hp}</b> health.",
+      "replace": "is on its last legs.",
       "run": "verify"
     },
     {
-      "name": "the explanation never names the riposte",
+      "name": "a coup is never forgotten",
       "file": "index.html",
-      "find": "      Riposte.line(!inRite && this.lastRiposte)+\n",
-      "replace": "",
+      "find": "    this.lastRiposte=false; this.lastCoup=false;",
+      "replace": "    this.lastRiposte=false;",
       "run": "verify"
     },
     {
-      "name": "the warning no longer names the riposte",
+      "name": "the warning drops the wind-up beside it",
       "file": "index.html",
-      "find": "      tg.innerHTML=Riposte.tele(this.foe.nm);",
-      "replace": "      tg.innerHTML=`⚡ <b>${this.foe.nm}</b> is winding up — answer correctly to brace the blow!`;",
+      "find": "tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);",
+      "replace": "tg.innerHTML=Coup.tele(this.foe.nm, this.ehp);",
       "run": "verify"
     },
     {
-      "name": "a riposte's line outlives its answer",
+      "name": "the warning is never shown in a fight",
       "file": "index.html",
-      "find": "    this.lastRiposte=false;\n    this.redo = (",
-      "replace": "    this.redo = (",
-      "run": "verify"
-    },
-    {
-      "name": "a riposte turns the slam aside as well",
-      "file": "index.html",
-      "find": "this.lastSlam=this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));",
-      "replace": "this.lastSlam=this.lastRiposte ? 0 : this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));",
-      "run": "play:riposte"
+      "find": "      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);\n      tg.style.display='block';",
+      "replace": "      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);",
+      "run": "play:coup"
     }
   ]
 }

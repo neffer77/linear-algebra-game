@@ -699,6 +699,12 @@ The game is built so that losing teaches you as much as winning.
   RIPOSTE on the scene and a line in the explanation. The first riposte in a fight is told in a
   toast. A miss on that turn ripostes nothing, the slam still lands either way, and it stacks
   with a weak point. Nothing is saved.
+- **💀 Coup de grâce.** A foe down to its last 15% of health is on its last legs, and the
+  question says so as it is asked ("Meadow Slime is down to its last 7 health. Answer correctly
+  to finish it!"). A right answer to it finishes the foe, however small the blow, with COUP DE
+  GRÂCE on the scene. It spares a tail of chip damage on a foe beaten in all but name and lets
+  the knight see the last question coming. A miss costs what it always did, a rite keeps its own
+  pace, the daily is left alone, and nothing is saved.
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
@@ -3239,6 +3245,7 @@ Inside `index.html` the code is organised as:
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
+| `Coup` | a foe on its last 15% of health as a question is asked is on its last legs, said in the warning; a right answer to it takes all the health it has left, said as COUP DE GRÂCE; never in a rite or the daily; a miss earns none; never saved |
 | `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
@@ -3346,6 +3353,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
+| `coup` | a foe on its last 15% is warned of as the question is asked, beside a wind-up too; a right answer finishes it with the smallest blow, on the scene; a miss leaves it standing; above 15% there is no warning and the blow is its own; a rite is left to its pace; nothing is saved |
 | `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
