@@ -3904,6 +3904,73 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* Wayfarers. About one campaign victory in six meets one, never another
+   kind of fight; only a topic of the realm already met is asked, and a
+   knight who has met none meets no one; every kind says what it gives and
+   gives just that, the smith's purse growing with the realm. The wiring is
+   checked where it lives: a meeting is rolled at the victory, one answer
+   wins one prize, a miss gives nothing, and the answer counts toward the
+   topic. */
+const wayNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Wayfarer = {'), html.indexOf('/* Scouting. The victory card'));
+  let seed = 23;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const GEN = { a: 1, b: 1, c: 1, d: 1 };
+  const W = new Function('R', 'Game', 'GEN', src + ';return Wayfarer;')({ chance: p => rand() < p, pick: a => a[rnd(a.length)] }, Game, GEN);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('wayfarer', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  let wins = 0, met = 0;
+  const kinds = new Set();
+  for (let step = 0; step < 30000; step++) {
+    const pool = ['a', 'b', 'c', 'd', 'nosuch'].filter(() => rnd(3) > 0);
+    const stats = {};
+    pool.forEach(k => { if (rnd(2)) stats[k] = { seen: rnd(4) }; });
+    Game.s = { topicStats: stats };
+    const B = { mode: modes[rnd(6)], ri: rnd(8), realm: { pool } };
+    const may = pool.filter(k => GEN[k] && stats[k] && stats[k].seen > 0);
+    const w = W.roll(B);
+    if (B.mode === 'campaign' && may.length) wins++;
+    if (w) {
+      met++; kinds.add(w.kind.id);
+      want(B.mode === 'campaign' && may.includes(w.key) && w.ri === B.ri && W.KINDS.includes(w.kind), `meet ${step}`, `a ${B.mode} victory met ${JSON.stringify([w.kind.id, w.key])} with ${JSON.stringify(may)} met`);
+    }
+  }
+  want(met > wins * 0.14 && met < wins * 0.19, 'odds', `${met} meetings in ${wins} campaign victories with a topic met`);
+  want(kinds.size === 4 && W.KINDS.length === 4, 'kinds', `${kinds.size} kinds met`);
+  want(W.roll(null) === null && W.html(null) === '', 'none', 'no fight met a wayfarer');
+  const give = { scholar: ['potion', 1], hermit: ['insight', 1], bard: ['rage', 1] };
+  for (const kind of W.KINDS) {
+    for (let ri = 0; ri < 8; ri++) {
+      Game.s = { gold: 100, items: { potion: 1, insight: 1, rage: 1 } };
+      const w = { kind, ri, key: 'a' };
+      const before = JSON.stringify(Game.s), p = kind.prize(w);
+      kind.give(w);
+      if (kind.id === 'smith') {
+        want(Game.s.gold === 100 + 30 + 15 * ri && p === `${30 + 15 * ri} gold`, `smith ${ri}`, `${p}: ${JSON.stringify(Game.s)}`);
+        want(JSON.stringify(Game.s.items) === JSON.stringify({ potion: 1, insight: 1, rage: 1 }), `smith items ${ri}`, 'the smith gave an item');
+      } else {
+        const [item, n] = give[kind.id];
+        const g = JSON.parse(before); g.items[item] += n;
+        want(JSON.stringify(Game.s) === JSON.stringify(g), `${kind.id} ${ri}`, `${p}: ${before} became ${JSON.stringify(Game.s)}`);
+      }
+      const h = W.html(w);
+      want(h.includes('id="wayfarer"') && h.includes('id="wayGo"') && h.includes('Answer for ' + p) && h.includes(kind.say), `html ${kind.id} ${ri}`, h);
+    }
+  }
+  // the wiring
+  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('${Wayfarer.html(way)}'), 'wired', 'a victory does not roll or show a wayfarer');
+  const ans = src.slice(src.indexOf('  answer('));
+  want(ans.includes('this.cur=null;     // one question, one prize') && ans.includes('Game.recordAnswer(q.key, ok, 1);') && ans.includes('if(ok){ w.kind.give(w);') && !/else[^;]*give/.test(ans), 'answer', 'a meeting pays twice, is not counted, or pays a miss');
+  const ask = src.slice(src.indexOf('  ask('), src.indexOf('  answer('));
+  want(ask.includes('if(!w || !el || this.q) return;'), 'once', 'a meeting asks more than one question');
+  return checks;
+})();
+
 /* Scouting. Every campaign foe with a weak point the game can ask can be
    scouted, and the card offers it by name, or says the knight is prepared
    once they are; only the scouted foe's next campaign fight is prepared, and
@@ -27433,6 +27500,7 @@ console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10
 console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10)}  (each rarity rises one step and the legendary offers none; only a campaign find with a topic offers one; a find made at a rarity is of it, and a rolled find keeps its context; offered once, counted toward the topic, a miss keeps the find)`);
 console.log(`  heroic rematches checked   ${pad(heroicNotes.toLocaleString(), 10)}  (twice the gold, half again the experience, a quarter harder blows and all else kept; only a campaign fight, only a beaten foe asked for, never elite or greedy as well; the hardest riddles)`);
 console.log(`  scouting checked           ${pad(scoutNotes.toLocaleString(), 10)}  (every foe with a weak point offered by name; only its next campaign fight prepared, and spent by it; prepared, its weak point lands ×2 and says so; the rule shown before the question; a miss prepares nothing)`);
+console.log(`  wayfarers checked          ${pad(wayNotes.toLocaleString(), 10)}  (about one campaign victory in six, on a topic of the realm already met; four kinds, each giving just the prize it names; one answer, one prize, a miss nothing, counted toward the topic)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

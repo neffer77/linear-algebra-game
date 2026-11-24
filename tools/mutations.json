@@ -1,82 +1,89 @@
 {
-  "change": "Scouting: study the next foe's weak point on the victory card, and strikes on it land twice as hard",
+  "change": "Wayfarers: now and then someone on the road asks a question for a small prize",
   "mutations": [
     {
-      "name": "a prepared strike lands no harder",
+      "name": "no victory meets a wayfarer",
       "file": "index.html",
-      "find": "  MUL: 1.5, PREP: 2,",
-      "replace": "  MUL: 1.5, PREP: 1.5,",
-      "run": "verify"
+      "find": "    const way=Wayfarer.roll(this);",
+      "replace": "    const way=null;",
+      "run": "play:wayfarer"
     },
     {
-      "name": "the chip says half again when prepared",
+      "name": "the card hides the meeting",
       "file": "index.html",
-      "find": "🎯 weak point ×${B.prepared ? this.PREP : this.MUL}",
-      "replace": "🎯 weak point ×${this.MUL}",
-      "run": "verify"
-    },
-    {
-      "name": "a scouting is never spent",
-      "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n    this.at=null;\n",
-      "replace": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n",
-      "run": "verify"
-    },
-    {
-      "name": "an arena fight is fought prepared",
-      "file": "index.html",
-      "find": "if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;",
-      "replace": "if(!B || !this.ready(B.ri, B.fi)) return false;",
-      "run": "verify"
-    },
-    {
-      "name": "a scouting prepares for every foe of the realm",
-      "file": "index.html",
-      "find": "return !!(this.at && this.at.ri===ri && this.at.fi===fi); },",
-      "replace": "return !!(this.at && this.at.ri===ri); },",
-      "run": "verify"
-    },
-    {
-      "name": "a miss prepares the knight",
-      "file": "index.html",
-      "find": "    if(ok){\n      this.at={ri:this.ri, fi:this.fi};",
-      "replace": "    if(true){\n      this.at={ri:this.ri, fi:this.fi};",
-      "run": "verify"
-    },
-    {
-      "name": "the card offers no scouting",
-      "file": "index.html",
-      "find": "        ${Scout.html(nx)}\n",
+      "find": "${Wayfarer.html(way)}",
       "replace": "",
-      "run": "play:scout"
+      "run": "play:wayfarer"
     },
     {
-      "name": "the scouted fight is not prepared",
+      "name": "an arena victory meets wayfarers too",
       "file": "index.html",
-      "find": "this.prepared=Scout.spend(this);",
-      "replace": "this.prepared=false;",
-      "run": "play:scout"
+      "find": "    if(!B || B.mode!=='campaign' || !R.chance(this.CHANCE)) return null;",
+      "replace": "    if(!B || !R.chance(this.CHANCE)) return null;",
+      "run": "verify"
     },
     {
-      "name": "the prepared fight says nothing as it starts",
+      "name": "a wayfarer asks topics never met",
       "file": "index.html",
-      "find": "    else if(this.prepared) UI.toast(Scout.intro(f));\n",
+      "find": "    return pool.filter(k=>GEN[k] && g && g.topicStats[k] && g.topicStats[k].seen>0);",
+      "replace": "    return pool.filter(k=>GEN[k]);",
+      "run": "verify"
+    },
+    {
+      "name": "wayfarers come every victory",
+      "file": "index.html",
+      "find": "  CHANCE: 1/6,\n  KINDS: [",
+      "replace": "  CHANCE: 1,\n  KINDS: [",
+      "run": "verify"
+    },
+    {
+      "name": "the smith pays the same in every realm",
+      "file": "index.html",
+      "find": "  gold(w){ return 30 + 15*((w && w.ri)||0); },",
+      "replace": "  gold(w){ return 30; },",
+      "run": "verify"
+    },
+    {
+      "name": "the hermit gives a draught, not an insight",
+      "file": "index.html",
+      "find": "prize:()=>\"a Sage's Insight\", give(){ Game.s.items.insight++; }},",
+      "replace": "prize:()=>\"a Sage's Insight\", give(){ Game.s.items.potion++; }},",
+      "run": "verify"
+    },
+    {
+      "name": "a miss wins the prize too",
+      "file": "index.html",
+      "find": "    if(ok){ w.kind.give(w); Sfx.good(); Haptic.hit(); } else Sfx.bad();",
+      "replace": "    w.kind.give(w); if(ok){ Sfx.good(); Haptic.hit(); } else Sfx.bad();",
+      "run": "verify"
+    },
+    {
+      "name": "a meeting pays again and again",
+      "file": "index.html",
+      "find": "    this.cur=null;     // one question, one prize\n",
       "replace": "",
-      "run": "play:scout"
+      "run": "verify"
     },
     {
-      "name": "scouting answers are not counted",
+      "name": "wayfarer answers are not counted",
       "file": "index.html",
-      "find": "    Game.recordAnswer(q.key, ok, 1);      // studying counts toward the topic\n",
+      "find": "    Game.recordAnswer(q.key, ok, 1);      // the road teaches either way\n",
       "replace": "",
-      "run": "play:scout"
+      "run": "verify"
     },
     {
-      "name": "a miss offers no other question",
+      "name": "a right answer is not said",
       "file": "index.html",
-      "find": "\n        <button class=\"btn\" id=\"scoutAgain\" onclick=\"Scout.ask()\">🔍 Try another question</button>",
-      "replace": "",
-      "run": "play:scout"
+      "find": "Well answered! You are given ${w.kind.prize(w)}.",
+      "replace": "Well answered!",
+      "run": "play:wayfarer"
+    },
+    {
+      "name": "a miss does not show the answer",
+      "file": "index.html",
+      "find": "Not this time, and it costs you nothing. The answer was <b>${q.a}</b>. ${q.ex||''}",
+      "replace": "Not this time, and it costs you nothing.",
+      "run": "play:wayfarer"
     }
   ]
 }
