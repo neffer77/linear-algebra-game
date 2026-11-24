@@ -9141,6 +9141,27 @@ const Riposte = {
   line(on){ return on ? \`<div class="miss again" id="riposteLine">🤺 <b>Riposte!</b> You answered right as it wound up, so your strike landed half again as hard.</div>\` : ''; }
 };
 
+/* Coup de grâce. A foe nearly beaten, down to its last 15% of health, is
+   said to be on its last legs as the question is asked, and a right answer to
+   that question finishes it, however small the blow. It spares the knight a
+   tail of chip damage on a foe already beaten in all but name, and it makes
+   the last question of a fight one the knight can see coming. It never makes
+   a miss cost more, a rite is left to its own pace, the daily is left as it is
+   for everyone, and nothing is saved. */
+const Coup = {
+  FRAC: 0.15,
+  // on its last legs as this question is asked?
+  ready(B){ return !!(B && B.mode!=='daily' && !B.rite && B.ehp>0 && B.ehp<=B.emax*this.FRAC); },
+  tele(nm, hp){ return \`💀 <b>\${nm}</b> is down to its last <b>\${hp}</b> health. Answer correctly to finish it!\`; },
+  // what a right answer's blow takes: all it has left, on its last legs
+  through(B, hit){
+    if(!B.coup) return hit;
+    B.lastCoup=true;
+    Anim.float(610, H-410, 'COUP DE GRÂCE', '#ffb3c1', true);
+    return Math.max(hit, B.ehp);
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9201,6 +9222,7 @@ const Battle = {
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
     this.weakHit=false;              // the weak point is told once a fight
     this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
+    this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9448,6 +9470,11 @@ const Battle = {
       tg.style.display='block';
       tg.innerHTML=Riposte.tele(this.foe.nm);
     } else tg.style.display='none';
+    this.coup=Coup.ready(this);
+    if(this.coup){
+      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);
+      tg.style.display='block';
+    }
     this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
@@ -9752,7 +9779,7 @@ const Battle = {
        usual draw, so a struggling knight is never held on one topic. A first
        meeting is the lesson ladder's to pace, so it is left to it. */
     const owed=this.recover||0; this.recover=0; this.recovered=0;
-    this.lastRiposte=false;
+    this.lastRiposte=false; this.lastCoup=false;
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
@@ -9777,7 +9804,7 @@ const Battle = {
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
-      const hit=Elite.through(this, dmg), was=this.ehp;
+      const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;
       this.ehp=Math.max(0,this.ehp-hit);
       const rallied=Phase.check(this, was);
       Anim.strike('p',hit,crit,null,this.ehp<=0);
