@@ -80,6 +80,7 @@ const SUITES = [
   require('./play/rival'),       // Sir Corvin waits on the road of each realm's strongest foe and offers a duel
   require('./play/campfire'),    // a wounded knight goes over a slip by the fire, and a right answer mends half
   require('./play/treasure'),    // three wins at A or better make a map, and a win where X marks digs up a hoard
+  require('./play/gauntlet'),    // a realm all beaten runs again back to back for every first-clear purse
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
