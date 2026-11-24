@@ -4,7 +4,8 @@
  * own length and steel and each armour its own plate. These checks open a
  * real fight on a phone, read the frame's own calls, and count the gold of
  * the best blade and plate on the scene against the starting gear's.
- * A streak of five or more sets the blade burning. Nothing new is saved.
+ * A streak of five or more sets the blade burning, and the Smithy shows each
+ * piece as the fight will draw it. Nothing new is saved.
  */
 'use strict';
 
@@ -60,6 +61,19 @@ module.exports = {
     const hot = await burn(7), cold = await burn(0);
     t.ok('a streak of seven sets the drawn blade burning, and none leaves it cold', hot.length === 1 && hot[0] === 20 && cold.join() === '0', JSON.stringify([hot, cold]));
     await t.ev(() => { Battle.flee(); UI.go('s-map'); });
+    // the Smithy shows each piece as the fight will draw it
+    const shop = await t.ev(() => {
+      UI.go('s-shop');
+      const rows = [...document.querySelectorAll('#s-shop .item')].map(r => ({ nm: r.querySelector('.nm').innerText, s: r.querySelector('.ic svg.armsee') }));
+      const ws = WEAPONS.filter(w => !w.forge), as = ARMORS.filter(a => !a.forge);
+      const blade = ws.map(w => { const r = rows.find(x => x.nm.startsWith(w.nm)); return r && r.s ? +r.s.dataset.len : null; });
+      const plate = as.map(a => { const r = rows.find(x => x.nm.startsWith(a.nm)); return r && r.s ? r.s.dataset.skin : null; });
+      const box = document.querySelector('#s-shop .item .ic svg').getBoundingClientRect();
+      return { blade, plate, want: ws.map(w => Arms.len(w.id)), skins: as.map(a => Arms.PLATES[a.id].skin), box: [box.width, box.height], wide: document.documentElement.scrollWidth <= innerWidth + 1 };
+    });
+    t.ok('the Smithy shows every blade at the length the fight draws it, each longer than the last', shop.blade.join() === shop.want.join() && shop.blade.every((l, i) => !i || l > shop.blade[i - 1]), JSON.stringify(shop));
+    t.ok('and every armour in its own colours', shop.plate.join() === shop.skins.join(), JSON.stringify(shop));
+    t.ok('the pictures sit in the icon box and the Smithy fits the phone', shop.box[0] > 10 && shop.box[0] <= 48 && shop.box[1] <= 48 && shop.wide, JSON.stringify(shop));
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
   }
 };
