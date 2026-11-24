@@ -2761,7 +2761,7 @@ const warPathNotes = (() => {
   const flee = B.slice(B.indexOf('\n  flee(){'), B.indexOf('\n  }', B.indexOf('\n  flee(){')) + 4);
   const wp = win.indexOf("const wp=this.mode==='campaign' ? WarPath.won() : 1;");
   want(wp > win.indexOf("if(this.mode==='dungeon')") && wp < win.indexOf('const gold='), 'win', 'a victory is not counted once, for the campaign alone, before its gold');
-  want(/const gold=Math\.round\(this\.foe\.gold\*\(full\?1:0\.45\)\*\(Phase\.flawless\(this\)\?1\.25:1\)\*wp\);/.test(win), 'win', 'the gold is not paid at the war path\'s rate');
+  want(/const gold=Math\.round\(this\.foe\.gold\*\(full\?1:0\.45\)\*\(Phase\.flawless\(this\)\?1\.25:1\)\*wp\*Sky\.gold\(this\)\);/.test(win), 'win', 'the gold is not paid at the war path\'s rate');
   want(!/const xp=[^\n]*wp/.test(win), 'win', 'the war path pays experience too, not gold alone');
   want(win.includes('${WarPath.line()}') && win.indexOf('${WarPath.line()}') < win.indexOf('<hr>'), 'win', 'the victory does not say how long the path runs');
   want(win.includes("else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH'"), 'win', 'six in a row has no banner, or one on top of a level-up');
@@ -4232,7 +4232,7 @@ const stanceNotes = (() => {
   // the wiring
   want(html.includes("    this.flourish=false;   // nor any flourish\n    this.stance='even';"), 'start', 'a fight starts in the last one\'s stance');
   want(html.includes('const bonus = Stance.deal(this) * (this.perfect?3:1)') && html.split('Stance.deal(').length === 2, 'blow', 'the stance is not on the knight\'s blow');
-  want(html.includes('this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk)') && html.split('Stance.take(').length === 2, 'guard', 'the stance is not on the foe\'s blow');
+  want(html.includes('this.takeHit(Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk)') && html.split('Stance.take(').length === 2, 'guard', 'the stance is not on the foe\'s blow');
   want(html.includes("if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));"), 'bar', 'the bar does not offer the stance');
   return checks;
 })();
@@ -4289,6 +4289,68 @@ const peddlerNotes = (() => {
   // the wiring
   want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
   want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  return checks;
+})();
+
+/* The sky. A realm's sky is rolled once and kept for the sitting, and with
+   no chance at all every sky is plain. Every omen on every fight: what it
+   does to the knight's blow, the foe's and the gold, and only in the campaign
+   and only in its own realm; every omen a help and none a cost, each of a
+   different kind. What the map, the fight and the card say. A thousand
+   sittings rolled: every omen comes up, and so does a plain sky. Then the
+   wiring. */
+const skyNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Sky = {'), html.indexOf('/* A peddler. On the third victory'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('sky', key, msg); };
+  const toasts = [];
+  const make = () => new Function('UI', src + ';return Sky;')({ toast: t => toasts.push(t) });
+  const S = make(), K = S.KINDS;
+  want(S.ORDER.join() === 'moon,wind,mist' && S.ORDER.every(k => K[k]), 'order', S.ORDER.join());
+  for (const k of S.ORDER) {
+    const o = K[k], helps = [o.deal > 1, o.take < 1, o.gold > 1].filter(Boolean).length;
+    want(helps === 1 && o.deal >= 1 && o.take <= 1 && o.gold >= 1, 'help ' + k, 'an omen is not one plain help: ' + JSON.stringify(o));
+  }
+  want(new Set(S.ORDER.map(k => [K[k].deal > 1, K[k].take < 1, K[k].gold > 1].indexOf(true))).size === 3, 'kinds', 'two omens do the same');
+  const realm = { nm: 'Vale of Vectors' };
+  for (const sky of [null, 'moon', 'wind', 'mist', 'nonsense']) for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const ri of [0, 1]) {
+    S.sky = { 0: sky, 1: null }; S.CHANCE = 0.6;
+    const B = { mode, ri, realm }, key = JSON.stringify({ sky, mode, ri });
+    const o = mode === 'campaign' && ri === 0 && K[sky] ? K[sky] : null;
+    want(S.on(B) === o, 'on ' + key, JSON.stringify(S.on(B)));
+    want(S.deal(B) === (o ? o.deal : 1), 'deal ' + key, S.deal(B));
+    want(S.gold(B) === (o ? o.gold : 1), 'gold ' + key, S.gold(B));
+    for (const d of [0, 1, 2, 5, 33, 400]) {
+      const t = !o || o.take === 1 || d <= 0 ? d : Math.max(1, Math.round(d * o.take));
+      want(S.take(B, d) === t && (d === 0 || S.take(B, d) >= 1), 'take ' + key + d, `${d} lands as ${S.take(B, d)}`);
+    }
+    const nt = toasts.length, w = S.greet(B);
+    want(o ? w === `${o.ic} ${o.nm} over Vale of Vectors: ${o.say}.` && toasts.length === nt + 1 : w === '' && toasts.length === nt, 'greet ' + key, w);
+    const l = S.line(B);
+    want(o && o.gold > 1 ? l.includes('id="skyLine"') && l.includes('a quarter more gold') : l === '', 'line ' + key, l);
+    const tg = S.tag(ri), ok = ri === 0 && K[sky];
+    want(ok ? tg.includes('class="tag skyTag"') && tg.includes(K[sky].ic) && tg.includes(K[sky].say) : tg === '', 'tag ' + key, tg);
+    S.CHANCE = 0;
+    want(S.of(ri) === null && S.tag(ri) === '' && S.deal(B) === 1 && S.gold(B) === 1 && S.take(B, 9) === 9, 'plain ' + key, 'an omen with no chance of one');
+  }
+  // rolled once, kept, and every outcome comes up
+  const seen = {};
+  const real = Math.random;
+  for (let i = 0; i < 1000; i++) {
+    const T = make(); const a = T.of(i % 7);
+    want(T.of(i % 7) === a && T.of(i % 7) === a, 'kept ' + i, 'a realm\'s sky changes within a sitting');
+    seen[a] = (seen[a] || 0) + 1;
+  }
+  want(['moon', 'wind', 'mist', 'null'].every(k => seen[k] > 50) && seen.null > 250 && seen.null < 550, 'dice', JSON.stringify(seen));
+  Math.random = real;
+  // the wiring
+  want(html.includes("      : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));\n    Sky.greet(this);"), 'begin', 'a fight under an omen does not say so');
+  want(html.includes('(Phase.flawless(this)?1.25:1)*wp*Sky.gold(this));'), 'goldwire', 'a gold moon does not pay');
+  want(html.includes('(this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)') && html.split('Sky.deal(').length === 2, 'blow', 'a fair wind does not carry the blow');
+  want(html.includes('Stance.take(this, Sky.take(this, Combat.foeHit(') && html.split('Sky.take(').length === 2, 'guard', 'a mist does not lighten the foe\'s blow');
+  want(html.includes('${Treasure.tag(ri)}${Sky.tag(ri)}'), 'map', 'the map does not show the sky');
+  want(html.includes('          ${Gauntlet.line(gnt)}\n          ${Sky.line(this)}\n'), 'card', 'the card does not say what the moon paid');
   return checks;
 })();
 
@@ -28007,6 +28069,7 @@ console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
+console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

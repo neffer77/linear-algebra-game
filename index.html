@@ -9242,6 +9242,38 @@ const NextFight = {
   }
 };
 
+/* The sky. Each sitting every realm has its own sky, rolled the first time
+   it is looked at and kept for the sitting: most often an omen, now and then
+   nothing at all. A gold moon pays a quarter more gold for every victory
+   there; a fair wind lands the knight's blows a fifth harder; a mist has the
+   foes strike a fifth lighter. The map shows each realm's omen on its
+   heading and a fight under one says so as it starts, so a sitting begins
+   with a reason to pick one road over another, and the next sitting another.
+   Campaign fights only; the sky is the sitting's, and nothing is saved. */
+const Sky = {
+  CHANCE: 0.6,
+  ORDER: ['moon', 'wind', 'mist'],
+  KINDS: {
+    moon: { ic:'🌕', nm:'A gold moon', say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1.25 },
+    wind: { ic:'🌬️', nm:'A fair wind', say:'your blows land a fifth harder',      deal:1.2, take:1,   gold:1    },
+    mist: { ic:'🌫️', nm:'A mist',      say:'foes strike a fifth lighter',        deal:1,   take:0.8, gold:1    }
+  },
+  sky: {},
+  // a realm's omen this sitting, or null for a plain sky; no chance, no omens
+  of(ri){
+    if(!(ri in this.sky)) this.sky[ri] = Math.random()<this.CHANCE ? this.ORDER[Math.floor(Math.random()*this.ORDER.length)] : null;
+    return this.CHANCE>0 && this.KINDS[this.sky[ri]] ? this.sky[ri] : null;
+  },
+  on(B){ return B && B.mode==='campaign' ? this.KINDS[this.of(B.ri)] || null : null; },
+  deal(B){ const k=this.on(B); return k ? k.deal : 1; },
+  take(B, dmg){ const k=this.on(B); return !k || k.take===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*k.take)); },
+  gold(B){ const k=this.on(B); return k ? k.gold : 1; },
+  say(B){ const k=this.on(B); return k ? `${k.ic} ${k.nm} over ${B.realm.nm}: ${k.say}.` : ''; },
+  greet(B){ const w=this.say(B); if(w) UI.toast(w); return w; },
+  tag(ri){ const k=this.KINDS[this.of(ri)]; return k ? `<span class="tag skyTag" title="${k.nm}: ${k.say}">${k.ic}</span>` : ''; },
+  line(B){ const k=this.on(B); return k && k.gold>1 ? `<div id="skyLine" style="color:#ffe08a;font-weight:800;margin-top:6px">${k.ic} Under a gold moon: a quarter more gold.</div>` : ''; }
+};
+
 /* A peddler. On the third victory of a sitting, and every fifth after it,
    midway between the sitting's milestones, a peddler waits on the road with
    one thing to sell at half its price in the shop: whichever of a draught, an
@@ -10102,6 +10134,7 @@ const Battle = {
     if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival
     this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])
       : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
+    Sky.greet(this);   // a fight under an omen says so
   },
   beginDaily(){
     this.mode='daily';
@@ -10757,7 +10790,7 @@ const Battle = {
       const crit = R.chance(w.crit + this.combo*0.02);
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
-      const bonus = Stance.deal(this) * (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
+      const bonus = Stance.deal(this) * (this.perfect?3:1) * (this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)
                   * (staked?3:1) * (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
@@ -10844,7 +10877,7 @@ const Battle = {
       this.diceUp=false;
       let dmg=0;
       for(let i=0;i<blows;i++)
-        dmg += this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));
+        dmg += this.takeHit(Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));
       dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Comeback.note(this);
@@ -11125,7 +11158,7 @@ const Battle = {
     // A second phase got through without a miss pays a quarter more gold.
     // Victories in a row this sitting pay a tenth more each, up to half again.
     const wp=this.mode==='campaign' ? WarPath.won() : 1;
-    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp);
+    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp*Sky.gold(this));
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
     // graded on the health left as the foe falls, before a level-up restores it
@@ -11205,6 +11238,7 @@ const Battle = {
           ${Rival.line(rival)}
           ${Treasure.line(tr)}
           ${Gauntlet.line(gnt)}
+          ${Sky.line(this)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -16803,7 +16837,7 @@ const UI = {
       realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
+            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Sky.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
