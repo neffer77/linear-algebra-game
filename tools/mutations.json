@@ -1,39 +1,39 @@
 {
- "change": "Seen before it is bought: the Smithy shows every blade and armour as the fight will draw it",
+ "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
  "mutations": [
   {
-   "name": "the Smithy shows the old icons",
+   "name": "a pose on a fall",
    "file": "index.html",
-   "find": "        <div class=\"ic\">${Arms.bladeSvg(w.id)||w.ic}</div>",
-   "replace": "        <div class=\"ic\">${w.ic}</div>",
+   "find": "    if(!B || B.over!=='win') return null;",
+   "replace": "    if(!B || !B.over) return null;",
    "run": "verify"
   },
   {
-   "name": "every blade the same length at the Smithy",
+   "name": "no hop",
    "file": "index.html",
-   "find": "  len(id){ const b=this.BLADES[id]; return b ? Math.round(b.len*0.4) : 0; },",
-   "replace": "  len(id){ const b=this.BLADES[id]; return b ? 24 : 0; },",
+   "find": "hop:Math.round(Math.abs(Math.sin((t||0)*7))*9) };",
+   "replace": "hop:0 };",
    "run": "verify"
   },
   {
-   "name": "the blade's steel not shown",
+   "name": "the blade not raised",
    "file": "index.html",
-   "find": "<stop offset=\".5\" stop-color=\"${b.mid}\"/>",
-   "replace": "<stop offset=\".5\" stop-color=\"#dfe8f5\"/>",
+   "find": "  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);",
+   "replace": "  cx.rotate(0.22 + lunge*2.2);",
    "run": "verify"
   },
   {
-   "name": "the plate's shadow not shown",
+   "name": "the fight never poses",
    "file": "index.html",
-   "find": "fill=\"${p.skin}\" stroke=\"${p.dark}\" stroke-width=\"2\"/>",
-   "replace": "fill=\"${p.skin}\" stroke=\"#8b97a8\" stroke-width=\"2\"/>",
+   "find": "    const pose=Pose.of(B, Anim.t);\n",
+   "replace": "    const pose=null;\n",
    "run": "verify"
   },
   {
-   "name": "the Smithy shows the old armour icons, seen in play",
+   "name": "the fight never poses, seen in play",
    "file": "index.html",
-   "find": "        <div class=\"ic\">${Arms.plateSvg(a.id)||a.ic}</div>",
-   "replace": "        <div class=\"ic\">${a.ic}</div>",
+   "find": "    const pose=Pose.of(B, Anim.t);\n",
+   "replace": "    const pose=null;\n",
    "run": "play:arms"
   }
  ]

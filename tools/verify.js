@@ -4563,6 +4563,28 @@ const flameNotes = (() => {
   return checks;
 })();
 
+const poseNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Pose = {');
+  const src = html.slice(start, html.indexOf('/* --- knight (the player) --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('pose', key, msg); };
+  const P = new Function(src + ';return Pose;')();
+  for (const over of [undefined, null, false, 'lose', 'flee', 'win']) for (let t = 0; t < 3; t += 0.05) {
+    const p = P.of({ over }, t);
+    if (over !== 'win') { want(p === null, 'no pose ' + over, JSON.stringify(p)); continue; }
+    want(p && p.raise === P.RAISE && p.raise < -1.6 && p.raise > -3 && Number.isInteger(p.hop) && p.hop >= 0 && p.hop <= 9, 'pose ' + t.toFixed(2), JSON.stringify(p));
+  }
+  const hops = new Set(); for (let t = 0; t < 1; t += 0.01) hops.add(P.of({ over: 'win' }, t).hop);
+  want(hops.has(0) && hops.has(9) && hops.size > 5, 'hops', 'the knight does not hop: ' + [...hops].join());
+  want(P.of(null, 1) === null && P.of({ over: 'win' }).hop === 0, 'none', 'a pose with no fight');
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
+    && k.includes("  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);"), 'drawn', 'the knight is not drawn in the pose');
+  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));"), 'wired', 'the fight does not pose its knight');
+  return checks;
+})();
+
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -26834,6 +26856,7 @@ console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)
 console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
+console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
