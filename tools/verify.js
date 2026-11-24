@@ -4184,6 +4184,59 @@ const flourishNotes = (() => {
   return checks;
 })();
 
+/* A stance. Every state a fight can be in against whether the bar lets the
+   stance turn: only in the campaign, and only while nothing is answered. The
+   three stances in their order, round and round; what each does to the
+   knight's blow and to the foe's, never under one health; and that bold is
+   a real gamble and guarded a real cover: bold always ahead on the blow and
+   behind on the guard, guarded the other way about, so neither is simply
+   better. Then the wiring where it lives. */
+const stanceNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Stance = {'), html.indexOf('/* A flourish. A streak counts'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('stance', key, msg); };
+  const toasts = [];
+  const S = new Function('UI', src + ';return Stance;')({ toast: t => toasts.push(t) });
+  want(S.ORDER.join() === 'even,bold,guarded', 'order', S.ORDER.join());
+  const K = S.KINDS;
+  want(K.even.deal === 1 && K.even.take === 1, 'even', JSON.stringify(K.even));
+  want(K.bold.deal > 1 && K.bold.take > K.bold.deal, 'bold', 'bold is not a gamble: ' + JSON.stringify(K.bold));
+  want(K.guarded.deal < 1 && K.guarded.take < K.guarded.deal, 'guarded', 'guarded is not a cover: ' + JSON.stringify(K.guarded));
+  for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const over of [null, 'win']) for (const missed of [0, 1])
+    for (const runBest of [0, 3]) for (const combo of [0, 2]) for (const stance of [undefined, 'even', 'bold', 'guarded', 'odd']) {
+      const B = { mode, over, missed, runBest, combo, stance, pws: 0, renderPowers() { this.pws++; } };
+      const key = JSON.stringify({ mode, over, missed, runBest, combo, stance });
+      const of = mode === 'campaign' && ['even', 'bold', 'guarded'].includes(stance) ? stance : 'even';
+      const can = mode === 'campaign' && !over && !missed && !runBest && !combo;
+      want(S.of(B) === of, 'of ' + key, S.of(B));
+      want(S.can(B) === can, 'can ' + key, `turnable ${S.can(B)}`);
+      want(S.deal(B) === K[of].deal, 'deal ' + key, S.deal(B));
+      want(S.label(B) === `${K[of].ic} ${K[of].nm}`, 'label ' + key, S.label(B));
+      for (const d of [0, 1, 2, 3, 7, 40, 333]) {
+        const m = K[of].take, want_ = m === 1 || d <= 0 ? d : Math.max(1, Math.round(d * m));
+        want(S.take(B, d) === want_, 'take ' + key + d, `${d} lands as ${S.take(B, d)}`);
+        want(d === 0 || S.take(B, d) >= 1, 'floor ' + key + d, 'a blow through a stance lands as nothing');
+      }
+      const nt = toasts.length, r = S.turn(B);
+      const next = S.ORDER[(S.ORDER.indexOf(of) + 1) % 3];
+      want(can ? r === K[next] && B.stance === next && B.pws === 1 && toasts.length === nt + 1
+               : r === false && B.stance === stance && B.pws === 0 && toasts.length === nt, 'turn ' + key, JSON.stringify(B));
+    }
+  // three turns go round to where they began, each said in its own words
+  const B = { mode: 'campaign', over: null, missed: 0, runBest: 0, combo: 0, stance: 'even' }, said = [];
+  for (let i = 0; i < 3; i++) { S.turn(B); said.push(toasts[toasts.length - 1]); }
+  want(B.stance === 'even' && new Set(said).size === 3, 'round', JSON.stringify(said));
+  want(said[0].includes('third harder') && said[1].includes('halved') && said[2].includes('as ever'), 'words', JSON.stringify(said));
+  want(S.of(null) === 'even' && S.deal(null) === 1 && S.take(null, 9) === 9 && S.can(null) === false, 'none', 'no fight at all has a stance');
+  // the wiring
+  want(html.includes("    this.flourish=false;   // nor any flourish\n    this.stance='even';"), 'start', 'a fight starts in the last one\'s stance');
+  want(html.includes('const bonus = Stance.deal(this) * (this.perfect?3:1)') && html.split('Stance.deal(').length === 2, 'blow', 'the stance is not on the knight\'s blow');
+  want(html.includes('this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk)') && html.split('Stance.take(').length === 2, 'guard', 'the stance is not on the foe\'s blow');
+  want(html.includes("if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));"), 'bar', 'the bar does not offer the stance');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -26163,6 +26216,7 @@ console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}
 console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 10)}  (a scrap for a campaign win at A or better, the map whole at the third, X on a realm opened and fought in and not the one just won where there is another, nothing found while it waits, the hoard of its boss's gold paid once there)`);
 console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 10)}  (offered only for a realm all beaten and not run this sitting, stepped on only by the foe it waits on, broken off by any other fight, a fall or a flight, and paying the realm's every first-clear purse once at the last)`);
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
+console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
