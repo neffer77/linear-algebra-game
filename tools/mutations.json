@@ -1,89 +1,89 @@
 {
-  "change": "A stance: before the first answer of a campaign fight, go in bold or guarded",
+  "change": "A peddler: the third victory of a sitting meets one thing to buy at half price",
   "mutations": [
     {
-      "name": "bold costs nothing",
+      "name": "a peddler at every victory",
       "file": "index.html",
-      "find": "    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1.5 },",
-      "replace": "    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1   },",
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
+      "replace": "    if(!(wins>0) || this.sold===wins) return null;",
       "run": "verify"
     },
     {
-      "name": "guarded costs nothing",
+      "name": "a peddler on the milestones",
       "file": "index.html",
-      "find": "    guarded: { ic:'🛡️', nm:'Guarded', deal:0.8, take:0.5 }",
-      "replace": "    guarded: { ic:'🛡️', nm:'Guarded', deal:1,   take:0.5 }",
+      "find": "  AT: 3, EVERY: 5, OFF: 0.5,",
+      "replace": "  AT: 0, EVERY: 5, OFF: 0.5,",
       "run": "verify"
     },
     {
-      "name": "a stance in the arena too",
+      "name": "a peddler sells twice",
       "file": "index.html",
-      "find": "  of(B){ return B && B.mode==='campaign' && this.KINDS[B.stance]",
-      "replace": "  of(B){ return B && this.KINDS[B.stance]",
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
+      "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT)) return null;",
       "run": "verify"
     },
     {
-      "name": "a stance turned after the answer",
+      "name": "a peddler at the shop's price",
       "file": "index.html",
-      "find": "  can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.missed && !B.runBest && !B.combo); },",
-      "replace": "  can(B){ return !!(B && B.mode==='campaign' && !B.over); },",
+      "find": "  AT: 3, EVERY: 5, OFF: 0.5,",
+      "replace": "  AT: 3, EVERY: 5, OFF: 1,",
       "run": "verify"
     },
     {
-      "name": "the stance turns back on itself",
+      "name": "a peddler offers the most carried",
       "file": "index.html",
-      "find": "    B.stance = this.ORDER[(i+1) % this.ORDER.length];",
-      "replace": "    B.stance = this.ORDER[(i+2) % this.ORDER.length];",
+      "find": "sort((a,b)=>(it[a]||0)-(it[b]||0))[0];",
+      "replace": "sort((a,b)=>(it[b]||0)-(it[a]||0))[0];",
       "run": "verify"
     },
     {
-      "name": "a stance blow lands as nothing",
+      "name": "a peddler sells on credit",
       "file": "index.html",
-      "find": "return m===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*m)); },",
-      "replace": "return m===1 || dmg<=0 ? dmg : Math.round(dmg*m*0.01); },",
+      "find": "    if(!ITEMS[id] || this.sold===at || g.gold<cost) return false;",
+      "replace": "    if(!ITEMS[id] || this.sold===at) return false;",
       "run": "verify"
     },
     {
-      "name": "a fight starts in the last stance",
+      "name": "a sale is not kept",
       "file": "index.html",
-      "find": "    this.stance='even';   // and every fight starts even\n",
+      "find": "g.items[id]=(g.items[id]||0)+1; this.sold=at;",
+      "replace": "g.items[id]=(g.items[id]||0)+1;",
+      "run": "verify"
+    },
+    {
+      "name": "a sale is free",
+      "file": "index.html",
+      "find": "    g.gold-=cost; g.items[id]",
+      "replace": "    g.items[id]",
+      "run": "verify"
+    },
+    {
+      "name": "the card shows no peddler",
+      "file": "index.html",
+      "find": "        ${Peddler.html(pd)}\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "the blow ignores the stance",
+      "name": "in play, a sale goes nowhere",
       "file": "index.html",
-      "find": "const bonus = Stance.deal(this) * (this.perfect?3:1)",
-      "replace": "const bonus = (this.perfect?3:1)",
-      "run": "verify"
+      "find": "g.items[id]=(g.items[id]||0)+1; this.sold=at;",
+      "replace": "this.sold=at;",
+      "run": "play:peddler"
     },
     {
-      "name": "the guard ignores the stance",
+      "name": "in play, the button stays a button",
       "file": "index.html",
-      "find": "this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));",
-      "replace": "this.takeHit((Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));",
-      "run": "verify"
+      "find": "    if(btn){ btn.disabled=true;",
+      "replace": "    if(false){ btn.disabled=true;",
+      "run": "play:peddler"
     },
     {
-      "name": "in play, the bar offers no stance",
+      "name": "in play, a peddler on every win",
       "file": "index.html",
-      "find": "if(this.mode==='campaign') add('stance'",
-      "replace": "if(false) add('stance'",
-      "run": "play:stance"
-    },
-    {
-      "name": "in play, the bar is not drawn again",
-      "file": "index.html",
-      "find": "    if(B.renderPowers) B.renderPowers();\n    return k;",
-      "replace": "    return k;",
-      "run": "play:stance"
-    },
-    {
-      "name": "in play, a turn is not said",
-      "file": "index.html",
-      "find": "    UI.toast(B.stance==='bold'",
-      "replace": "    (()=>{})(B.stance==='bold'",
-      "run": "play:stance"
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
+      "replace": "    if(!(wins>0) || this.sold===wins) return null;",
+      "run": "play:peddler"
     }
   ]
 }

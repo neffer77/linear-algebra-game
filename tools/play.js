@@ -83,6 +83,7 @@ const SUITES = [
   require('./play/gauntlet'),    // a realm all beaten runs again back to back for every first-clear purse
   require('./play/flourish'),    // eight right in a row can be spent for one blow three times as hard
   require('./play/stance'),      // before the first answer, go in bold or guarded
+  require('./play/peddler'),     // the third victory of a sitting meets one thing to buy at half price
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
