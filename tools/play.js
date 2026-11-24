@@ -87,6 +87,7 @@ const SUITES = [
   require('./play/sky'),         // a realm's omen this sitting: a gold moon, a fair wind or a mist
   require('./play/ballad'),      // every victory card sings the fight in a line of its own
   require('./play/tale'),        // every campaign victory's verse kept on the map, newest first
+  require('./play/honours'),     // a star on the shield for every boss beaten, a shining blade from the third
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

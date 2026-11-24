@@ -1,75 +1,96 @@
 {
- "change": "The sitting's tale: every campaign victory's verse kept on the map, newest first",
+ "change": "Honours: a star on the shield for every boss beaten, a circlet for a realm at S, a shining blade from the third boss",
  "mutations": [
   {
-   "name": "the tale keeps the arena's verses too",
+   "name": "a plain foe sets a star",
    "file": "index.html",
-   "find": "    if(!B || B.mode!=='campaign' || !B.foe || !song) return false;\n    this.n++;",
-   "replace": "    if(!B || !B.foe || !song) return false;\n    this.n++;",
+   "find": "      if(r.foes.some((f, fi)=>f.boss && c[ri+':'+fi])) stars++;",
+   "replace": "      if(r.foes.some((f, fi)=>c[ri+':'+fi])) stars++;",
    "run": "verify"
   },
   {
-   "name": "the tale keeps every verse forever",
+   "name": "a realm crowned sets no circlet",
    "file": "index.html",
-   "find": "    if(this.log.length>this.MAX) this.log.shift();\n    return true;",
-   "replace": "    return true;",
-   "run": "verify"
-  },
-  {
-   "name": "the oldest verse is read first",
-   "file": "index.html",
-   "find": "    const rows=this.log.slice().reverse().map(e=>",
-   "replace": "    const rows=this.log.slice().map(e=>",
-   "run": "verify"
-  },
-  {
-   "name": "the fold counts only what is shown",
-   "file": "index.html",
-   "find": "📖 This sitting's tale · ${this.n} ${this.n===1?'verse':'verses'}",
-   "replace": "📖 This sitting's tale · ${this.log.length} ${this.log.length===1?'verse':'verses'}",
-   "run": "verify"
-  },
-  {
-   "name": "the earlier verses go unsaid",
-   "file": "index.html",
-   "find": "    const more=this.n>this.log.length ?",
-   "replace": "    const more=false ?",
-   "run": "verify"
-  },
-  {
-   "name": "the grade is dropped",
-   "file": "index.html",
-   "find": "grade: grade || 'C', k: song.k",
-   "replace": "grade: 'C', k: song.k",
-   "run": "verify"
-  },
-  {
-   "name": "an empty tale still shows",
-   "file": "index.html",
-   "find": "    if(!this.log.length) return '';\n    const rows=",
-   "replace": "    const rows=",
-   "run": "verify"
-  },
-  {
-   "name": "a victory writes nothing in",
-   "file": "index.html",
-   "find": "    Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale\n",
+   "find": "      if(Grade.crowned(c, ri, r.foes.length)) crowns++;\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "the map loses the tale",
+   "name": "the blade shines from the first boss",
    "file": "index.html",
-   "find": "Quarry.node(quarry)+Tale.html()+this.realmPath(cur);",
-   "replace": "Quarry.node(quarry)+this.realmPath(cur);",
-   "run": "play:tale"
+   "find": "  GLOW: 3,",
+   "replace": "  GLOW: 1,",
+   "run": "verify"
   },
   {
-   "name": "the tale keeps the wrong foe",
+   "name": "a new star goes unsaid",
    "file": "index.html",
-   "find": "    this.log.push({ nm: B.foe.nm,",
-   "replace": "    this.log.push({ nm: 'a foe',",
-   "run": "play:tale"
+   "find": "    if(b.stars>a.stars) out.push({ k:'star', n:b.stars });\n",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "the blade's shine is said every win",
+   "file": "index.html",
+   "find": "    if(b.glow && !a.glow) out.push({ k:'glow', n:b.stars });",
+   "replace": "    if(b.glow) out.push({ k:'glow', n:b.stars });",
+   "run": "verify"
+  },
+  {
+   "name": "the star miscounts the realms",
+   "file": "index.html",
+   "find": "${h.n} of ${REALMS.length} realms' bosses beaten.",
+   "replace": "${h.n} of ${REALMS.length-1} realms' bosses beaten.",
+   "run": "verify"
+  },
+  {
+   "name": "a star falls off the shield",
+   "file": "index.html",
+   "find": "x=Math.cos(a)*11, y=-3+Math.sin(a)*11;",
+   "replace": "x=Math.cos(a)*17, y=-3+Math.sin(a)*17;",
+   "run": "verify"
+  },
+  {
+   "name": "one star too many is drawn",
+   "file": "index.html",
+   "find": "    for(let i=0; i<n; i++){\n      const a=-Math.PI/2",
+   "replace": "    for(let i=0; i<=n; i++){\n      const a=-Math.PI/2",
+   "run": "verify"
+  },
+  {
+   "name": "the honours before the win are never read",
+   "file": "index.html",
+   "find": "    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "the shield wears no stars",
+   "file": "index.html",
+   "find": "  Honours.stars(hon.stars);\n",
+   "replace": "",
+   "run": "play:honours"
+  },
+  {
+   "name": "the card says nothing",
+   "file": "index.html",
+   "find": "          ${Honours.line(hon)}\n",
+   "replace": "",
+   "run": "play:honours"
+  },
+  {
+   "name": "a fight wears nothing it has won",
+   "file": "index.html",
+   "find": "    this.honours  = Honours.of(Game.s);   // and what they have done, worn where it shows\n",
+   "replace": "    this.honours  = {stars:0, crowns:0, glow:false};   // and what they have done, worn where it shows\n",
+   "run": "play:honours"
+  },
+  {
+   "name": "the honours before the win are read after it is marked",
+   "file": "index.html",
+   "find": "    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n    g.cleared[key]=true; g.stats.wins++;\n",
+   "replace": "    g.cleared[key]=true; g.stats.wins++;\n    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n",
+   "run": "verify"
   }
  ]
 }
