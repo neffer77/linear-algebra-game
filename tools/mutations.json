@@ -2,60 +2,39 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "no dents ever",
+      "name": "a foe never reels",
       "file": "index.html",
-      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
-      "replace": "    return 0;\n  },\n  beat(",
+      "find": "  reel(n, t){ return n>=3 ? Math.sin((t||0)*4.5)*this.REEL : 0; },",
+      "replace": "  reel(n, t){ return 0; },",
       "run": "verify"
     },
     {
-      "name": "a dent on a whole knight",
+      "name": "a foe reels too soon",
       "file": "index.html",
-      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
-      "replace": "    return k>=1 ? 1 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
+      "find": "  reel(n, t){ return n>=3 ? Math.sin((t||0)*4.5)*this.REEL : 0; },",
+      "replace": "  reel(n, t){ return n>=2 ? Math.sin((t||0)*4.5)*this.REEL : 0; },",
       "run": "verify"
     },
     {
-      "name": "a dent in the air",
+      "name": "a foe falls over",
       "file": "index.html",
-      "find": "  AT:[[-13,-62,7],[9,-109,6],[13,-41,6]],",
-      "replace": "  AT:[[-13,-62,7],[9,-139,6],[13,-41,6]],",
+      "find": "  REEL:0.07,",
+      "replace": "  REEL:0.9,",
       "run": "verify"
     },
     {
-      "name": "a dent in another colour",
+      "name": "a foe leans one way",
       "file": "index.html",
-      "find": "      cx.strokeStyle=dark; cx.lineWidth=3; cx.stroke();",
-      "replace": "      cx.strokeStyle='#1a1622'; cx.lineWidth=3; cx.stroke();",
+      "find": "  reel(n, t){ return n>=3 ? Math.sin((t||0)*4.5)*this.REEL : 0; },",
+      "replace": "  reel(n, t){ return n>=3 ? Math.abs(Math.sin((t||0)*4.5))*this.REEL : 0; },",
       "run": "verify"
     },
     {
-      "name": "the canvas state leaks",
+      "name": "the reel never drawn",
       "file": "index.html",
-      "find": "    cx.save(); cx.lineCap='round';\n    for(let i=0;i<n;i++){\n      const [x,y,r]",
-      "replace": "    cx.lineCap='round';\n    for(let i=0;i<n;i++){\n      const [x,y,r]",
+      "find": "  if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet\n",
+      "replace": "",
       "run": "verify"
-    },
-    {
-      "name": "the fight never dents its knight",
-      "file": "index.html",
-      "find": "pose, Dents.of(Game.s)));",
-      "replace": "pose, 0));",
-      "run": "verify"
-    },
-    {
-      "name": "the fight never dents its knight, seen in play",
-      "file": "index.html",
-      "find": "pose, Dents.of(Game.s)));",
-      "replace": "pose, 0));",
-      "run": "play:scars"
-    },
-    {
-      "name": "the foe never scarred, seen in play",
-      "file": "index.html",
-      "find": "eLunge, Anim.eh, B.over==='win', Scars.of(B)));",
-      "replace": "eLunge, Anim.eh, B.over==='win', 0));",
-      "run": "play:scars"
     }
   ]
 }

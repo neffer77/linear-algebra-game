@@ -7513,13 +7513,16 @@ const Dents = {
    across it: one past three quarters, two past half, three past a quarter.
    The cracks are drawn in the sprite's own frame, so they ride with its bob
    and its lunge, and a fight's progress reads off the foe itself as well as
-   off the bar. A fallen foe, or a fight that is over, wears none. Nothing
-   is saved. */
+   off the bar. A foe in its last quarter, crossed three times, reels on
+   its feet as well, swaying from where it stands. A fallen foe, or a fight
+   that is over, wears none. Nothing is saved. */
 const Scars = {
   CUTS:[ [[-18,-90],[-8,-80],[-15,-68],[-3,-58]],
          [[17,-98],[8,-86],[19,-75],[10,-62]],
          [[-26,-50],[-12,-46],[-6,-36],[7,-31]] ],
   DROP:{slime:28},       // the slime is short: its cracks sit lower
+  REEL:0.07,             // how far a foe in its last quarter sways, in radians
+  reel(n, t){ return n>=3 ? Math.sin((t||0)*4.5)*this.REEL : 0; },
   of(B){
     if(!B || !B.foe || B.over || !(B.emax>0)) return 0;
     const k=B.ehp/B.emax;
@@ -7545,6 +7548,7 @@ const Scars = {
 function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){
   cx.save();
   cx.translate(x - lunge*70, y);
+  if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet
   if(dead){ cx.rotate(0.9); cx.globalAlpha=.5; }
   cx.scale(s,s);                     // sprites are authored facing left, toward the knight
   const c = hurt>0 ? '#ffffff' : col;
