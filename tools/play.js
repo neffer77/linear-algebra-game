@@ -85,6 +85,7 @@ const SUITES = [
   require('./play/stance'),      // before the first answer, go in bold or guarded
   require('./play/peddler'),     // the third victory of a sitting meets one thing to buy at half price
   require('./play/dicer'),       // the fourth victory of a sitting offers double or nothing on the purse
+  require('./play/hearth'),      // a day streak pays the first victory of each sitting more gold
   require('./play/sky'),         // a realm's omen this sitting: a gold moon, a fair wind or a mist
   require('./play/ballad'),      // every victory card sings the fight in a line of its own
   require('./play/tale'),        // every campaign victory's verse kept on the map, newest first

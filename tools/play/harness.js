@@ -183,7 +183,8 @@ async function runSuite(browser, suite) {
   // A gilded question pays gold mid-fight, and a greedy foe pays three times
   // the gold and flees after six questions, and a wayfarer stops the knight
   // after a victory, all at random, and twenty right answers hatch a familiar
-  // that mends health, and a realm's sky may hold an omen. Suites that count
+  // that mends health, and a realm's sky may hold an omen, and a day streak
+  // adds gold to a sitting's first victory. Suites that count
   // a fight's gold or health or run long fights fight without them; their own
   // suites ask for them.
   await page.addInitScript(opts => addEventListener('DOMContentLoaded', () => {
@@ -192,7 +193,8 @@ async function runSuite(browser, suite) {
     if (!opts.wayfarer && typeof Wayfarer !== 'undefined') Wayfarer.CHANCE = 0;
     if (!opts.familiar && typeof Familiar !== 'undefined') Familiar.can = () => false;
     if (!opts.sky && typeof Sky !== 'undefined') Sky.CHANCE = 0;
-  }), { gild: !!suite.gild, greedy: !!suite.greedy, wayfarer: !!suite.wayfarer, familiar: !!suite.familiar, sky: !!suite.sky });
+    if (!opts.hearth && typeof Hearth !== 'undefined') Hearth.STEP = 0;
+  }), { gild: !!suite.gild, greedy: !!suite.greedy, wayfarer: !!suite.wayfarer, familiar: !!suite.familiar, sky: !!suite.sky, hearth: !!suite.hearth });
   let crash = null;
   try {
     await page.goto(URL);
