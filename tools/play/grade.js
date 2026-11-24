@@ -26,6 +26,7 @@ const fight = t => t.ev(() => {
   Satchel.n = 0;
   // and so may a boon's lucky find, or a fat purse change the gold
   Boon.open = false; Boon.held = null;
+  if (typeof Familiar !== 'undefined') { Familiar.n = 0; Familiar.kind = null; }
   window.__banners = [];
   return Battle.foe.nm;
 });
