@@ -9075,6 +9075,7 @@ const Grade = {
   tag(v){ const b=this.best(v); return b ? `<span class="tag" data-best="${b}" style="color:${this.COL[b]}">best ${b}</span>` : ''; },
   // every foe of a realm beaten at S: the realm wears a crown on the map
   crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },
+  countS(cleared){ return Object.values(cleared||{}).filter(v=>v==='S').length; },
   crown(on){ return on ? `<span class="crown" title="Every foe beaten at S" style="margin-left:6px;font-size:12px;color:var(--gold);font-weight:800">👑 all S</span>` : ''; }
 };
 
@@ -10351,7 +10352,13 @@ const TITLES = [
   {id:'magister', ic:'✨', nm:'Grand Magister',  ds:'Master every topic in the game',
     t:()=>Mastery.all().filter(x=>x.r.m>=0.85).length>=Object.keys(TOPIC_LABEL).length},
   {id:'devoted',  ic:'📅', nm:'Devoted',         ds:'Practise seven days running',
-    t:g=>(g.streak&&g.streak.days)>=7}
+    t:g=>(g.streak&&g.streak.days)>=7},
+  // read from each foe's best grade, kept in its clear on the map
+  {id:'exemplar', ic:'🏅', nm:'Exemplar',        ds:'Beat 10 foes at S',            t:g=>Grade.countS(g.cleared)>=10},
+  {id:'crowned',  ic:'🎖️', nm:'Crowned',         ds:'Beat every foe of a realm at S',
+    t:g=>REALMS.some((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))},
+  {id:'paragon',  ic:'💎', nm:'Paragon',         ds:'Beat every foe in every realm at S',
+    t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}
 ];
 
 const Titles = {
