@@ -874,7 +874,8 @@ The game is built so that losing teaches you as much as winning.
   steel, from the rusted trainer's short brown stub to the long gold of the Gradient Ascendant, and every armour
   its own plate, from the tunic's plain cloth to the Summit Regalia's gold, so a new blade or a new suit is seen
   at once in every fight. From a streak of five right answers the blade burns, hotter at six and seven, and a
-  miss puts the fire out.
+  miss puts the fire out. The Smithy shows every blade and every armour as the fight will draw it, so what a
+  purchase looks like is seen before it is bought.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
