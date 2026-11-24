@@ -3904,6 +3904,64 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* A chest riddle. Every rarity but the last rises one step and the last
+   offers no riddle; only a find that carries a fight's topic with a riddle to
+   ask may offer one; the find made at a rarity is of that rarity, whatever
+   the context, and a rolled find keeps its context so that it can be raised.
+   The wiring is checked where it lives: the campaign hands its topic to the
+   drop, the arena does not, the chest offers the riddle once and the answer
+   counts toward the topic. */
+const riddleNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('riddle', key, msg); };
+  const RARITY = { common: { nm: 'Common' }, uncommon: { nm: 'Uncommon' }, rare: { nm: 'Rare' }, epic: { nm: 'Epic' }, legendary: { nm: 'Legendary' } };
+  const GEN = { deriv: () => ({}), eigen: () => ({}) };
+  const csrc = html.slice(html.indexOf('const ChestRiddle = {'), html.indexOf('/* ------------------------------- bounties'));
+  const C = new Function('RARITY', 'GEN', csrc + ';return ChestRiddle;')(RARITY, GEN);
+  const ord = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+  ord.forEach((r, i) => want(C.next(r) === (ord[i + 1] || null), `next ${r}`, `${r} rises to ${C.next(r)}`));
+  want(C.next('mythic') === null, 'next unknown', 'an unknown rarity rises');
+  let seed = 41;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const keys = ['deriv', 'eigen', 'nosuch', null, undefined];
+  for (let step = 0; step < 4000; step++) {
+    const rar = ord[rnd(5)], key = keys[rnd(5)], hasCtx = rnd(4) > 0;
+    const it = { rar, ctx: hasCtx ? { key, tier: 2 } : undefined };
+    const can = hasCtx && (key === 'deriv' || key === 'eigen') && rar !== 'legendary';
+    want(C.can(it) === can, `can ${step}`, `${rar} find, topic ${key}, context ${hasCtx}: offered ${C.can(it)}`);
+    if (can) want(C.button(it).includes('id="criddle"') && C.button(it).includes('make it ' + RARITY[C.next(rar)].nm), `button ${step}`, C.button(it));
+  }
+  want(!C.can(null) && !C.can(undefined), 'can none', 'no find offered a riddle');
+  // the finds themselves
+  const lsrc = html.slice(html.indexOf('const Loot = {'), html.indexOf('/* The reveal.'));
+  const W = [{ id: 'w0' }, { id: 'w1', nm: 'Blade', ic: '🗡️', ds: 'x' }, { id: 'w2', nm: 'Edge', ic: '🗡️', ds: 'x' }];
+  const A = [{ id: 'a0' }, { id: 'a1', nm: 'Mail', ic: '🛡️', ds: 'x', hp: 5 }];
+  const game = { s: { owned: {}, items: { potion: 0, insight: 0, rage: 0, feather: 0 }, gold: 0 } };
+  const L = new Function('WEAPONS', 'ARMORS', 'Game', 'R', 'Sweep', 'Math', lsrc + ';return Loot;')(W, A, game,
+    { chance: p => rand() < p, pick: a => a[rnd(a.length)] }, { LUCK: 1.6 }, Object.assign(Object.create(Math), { random: rand }));
+  for (let step = 0; step < 3000; step++) {
+    game.s.owned = rnd(3) ? {} : { w1: 1, w2: 1, a1: 1 };
+    const ctx = { tier: 1 + rnd(6), key: keys[rnd(3)], boss: rnd(5) === 0 };
+    const rar = ord[rnd(5)], f = L.make(rar, ctx);
+    want(f && f.rar === rar && typeof f.apply === 'function' && f.nm, `make ${step}`, `a ${rar} find made as ${f && f.rar}`);
+    const r = L.roll(ctx);
+    want(r && r.ctx === ctx && ord.includes(r.rar), `roll ${step}`, 'a rolled find lost its context');
+  }
+  // the wiring
+  want(html.includes("tier:Math.min(6, this.ri+2), key:this.mode==='campaign' && this.cur ? this.cur.key : null, diff:this.curDiff||1})"), 'campaign', 'the campaign drop carries no topic');
+  want(html.includes("Loot.roll({boss:foe.boss, tier:Math.min(6, 2+Math.floor(this.wave/4))})"), 'arena', 'the arena drop carries a topic');
+  const ask = csrc.slice(csrc.indexOf('  ask(){'), csrc.indexOf('  answer('));
+  want(ask.includes('if(!it || this.done || !this.can(it)) return;') && ask.includes('this.done=true;'), 'once', 'a chest offers its riddle more than once');
+  const ans = csrc.slice(csrc.indexOf('  answer('));
+  want(ans.includes('Game.recordAnswer(q.key, ok, 1);') && ans.includes('find=Loot.make(this.next(it.rar), it.ctx)') && ans.includes('Chest.pending=find;'), 'answer', 'a riddle answered does not count or does not raise the find');
+  want(/if\(ok\)\{\s*find=Loot\.make/.test(ans) && !/else[^{]*Loot\.make/.test(ans), 'miss', 'a miss changes the find');
+  want(html.includes("ChestRiddle.done=false; ChestRiddle.q=null;") && html.includes("${ChestRiddle.can(item)?ChestRiddle.button(item):''}"), 'offer', 'a chest does not offer its riddle afresh');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -27266,6 +27324,7 @@ console.log(`  welcome backs checked      ${pad(freshNotes.toLocaleString(), 10)
 console.log(`  gilded questions checked   ${pad(gildNotes.toLocaleString(), 10)}  (fresh campaign questions only, about one in eight; a fifth of the foe's gold and at least a coin, paid once on a right answer into the purse and the fight's count; told above the question and on the card)`);
 console.log(`  oaths checked              ${pad(oathNotes.toLocaleString(), 10)}  (sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken)`);
 console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10)}  (only a beaten plain foe, about one in ten, its gold tripled and all else kept; flees once six questions are asked while it stands, in the campaign; a flight costs nothing)`);
+console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10)}  (each rarity rises one step and the legendary offers none; only a campaign find with a topic offers one; a find made at a rarity is of it, and a rolled find keeps its context; offered once, counted toward the topic, a miss keeps the find)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
