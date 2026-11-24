@@ -886,6 +886,9 @@ The game is built so that losing teaches you as much as winning.
 - **📖 A new page.** A foe you have not yet beaten is marked ✨ New on its nameplate. The first time it falls, the victory card opens its page in the Bestiary there and
   then: its likeness, its line of lore, where its weak point lies, and how many of the realms' foes the book now holds. Every eighth page filled, the
   Order pays a purse (60, 150 and 250 gold, and 500 for the whole book).
+- **🏆 Spoils at a glance.** The victory card leads with what you won: the gold, the experience and any find as
+  chips at the top, on a phone's first screen. Every bonus the win earned sits under them in one tidy list with its
+  count; a big win shows the first three and folds the rest behind a line that opens them in place.
 - **💫 Dazed.** A beaten foe lies where it fell with three little gold stars circling its head until the
   victory card comes up.
 - **🛡️ Dents.** The knight wears their wounds as well: each quarter of their health lost beats a dent into
@@ -3344,6 +3347,7 @@ Inside `index.html` the code is organised as:
 | `Dents` | a dent for each quarter of the knight's health lost, none at full health, none with no health to measure; the breastplate first, the helm second, the other side third, all on the plate; each in the plate's own dark with a light rim, the canvas state kept; the wiring in the knight's drawing |
 | `LevelBar` | the victory card's bar to the next level: read either side of the experience a win pays, by the game's own rule for a level, from empty after a level gained, filling once the card is up; the wiring |
 | `Folio` | an unbeaten campaign foe marked new on its nameplate, by its own clear; a foe's first fall opens its Bestiary page on the victory card: its likeness drawn as the Bestiary draws it, its lore, its weak point and the count the book holds, read after the win marks its clear; a purse at every eighth page, paid once; campaign only, and nothing once beaten; the wiring |
+| `Haul` | the victory card's totals as chips, the find a chip only when there is one; the bonuses one list under its count, emptied when there are none, shown whole up to four, folded past the first three behind one opener that says how many more and opens them by a tap or Enter or Space, never another key; folded by a clip that keeps every line in the card's text, never hidden; the wiring, every bonus line inside the list |
 | `Daze` | three gold stars circling a beaten foe's head, found by turning the crown by the angle a foe falls at, at the foe's own size; on a ring round the head, circling; the canvas state kept; drawn only on a won fight; the wiring |
 | `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Waymark` | every realm greeted with a line of its own, none alike; only campaign fights in a realm with no foe yet beaten, never a boss, never the daily, an arena or a dungeon; the name in capitals and the realm's colour; once, as the fight opens, after the herald; the wiring |
