@@ -43,10 +43,11 @@ const answer = (t, right, dmg = 20) => t.ev(([right, dmg]) => {
   Combat.foeHit = a => { atk = a; return 7; };
   Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0;
   const c = Battle.cur;
+  const weak = Weak.bonus(Battle);   // a question on the boss's weak point adds its own ×1.5, which is not the phase's
   Battle.answer(null, right ? c.a : '✗');
   Combat.strike = cs; Combat.foeHit = fh;
   Battle.updateBars();
-  return { ehp: Battle.ehp, phase: Battle.phase, charge: Battle.chargeMax, bonus, atk, run: Battle.phaseRun,
+  return { ehp: Battle.ehp, phase: Battle.phase, charge: Battle.chargeMax, bonus: bonus === null ? null : bonus / weak, atk, run: Battle.phaseRun,
            staggered: Battle.staggered, said: (Talk.turn || {}).text || null,
            name: document.getElementById('foeName').textContent, shown: window.__said.slice() };
 }, [right, dmg]);
