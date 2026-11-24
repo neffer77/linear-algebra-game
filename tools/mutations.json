@@ -1,61 +1,75 @@
 {
-  "change": "The sitting's tally: the map counts this sitting's victories, gold and best streak",
+  "change": "A sitting's milestones: every fifth victory of a sitting drops a sure chest",
   "mutations": [
     {
-      "name": "the tally counts every mode",
+      "name": "every fourth victory is a milestone",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign') return false;\n    this.wins++;",
-      "replace": "    if(!B) return false;\n    this.wins++;",
+      "find": "wins: 0, gold: 0, best: 0, EVERY: 5,",
+      "replace": "wins: 0, gold: 0, best: 0, EVERY: 4,",
       "run": "verify"
     },
     {
-      "name": "the tally keeps the last streak, not the best",
+      "name": "a sitting with no victory is a milestone",
       "file": "index.html",
-      "find": "this.best=Math.max(this.best, B.runBest||0);",
-      "replace": "this.best=B.runBest||0;",
+      "find": "mile(){ return this.wins>0 && this.wins%this.EVERY===0; },",
+      "replace": "mile(){ return this.wins%this.EVERY===0; },",
       "run": "verify"
     },
     {
-      "name": "the tally leaves the gold out",
+      "name": "the map names this milestone, not the next",
       "file": "index.html",
-      "find": "this.gold+=Math.max(0, gold|0);",
+      "find": "next(){ return (Math.floor(this.wins/this.EVERY)+1)*this.EVERY; },",
+      "replace": "next(){ return Math.ceil(this.wins/this.EVERY)*this.EVERY; },",
+      "run": "verify"
+    },
+    {
+      "name": "the 12th is said as the 12nd",
+      "file": "index.html",
+      "find": "((t>10&&t<14)?'th'",
+      "replace": "((t>10&&t<12)?'th'",
+      "run": "verify"
+    },
+    {
+      "name": "the card says no milestone",
+      "file": "index.html",
+      "find": "          ${Sitting.line(mile)}\n",
       "replace": "",
-      "run": "verify"
+      "run": "play:milestone"
     },
     {
-      "name": "the map shows a tally of nothing",
+      "name": "a milestone drops no sure chest",
       "file": "index.html",
-      "find": "    if(!this.wins) return '';\n    return `<div class=\"small center\" id=\"sittingTally\"",
-      "replace": "    return `<div class=\"small center\" id=\"sittingTally\"",
-      "run": "verify"
+      "find": "satchel || boon==='find' || march || mile ? 1",
+      "replace": "satchel || boon==='find' || march ? 1",
+      "run": "play:milestone"
     },
     {
-      "name": "the tally says one victories",
+      "name": "a milestone's chest can be plain",
       "file": "index.html",
-      "find": "${this.wins===1?'victory':'victories'}",
-      "replace": "victories",
-      "run": "verify"
+      "find": "if((ctx.satchel || ctx.mile) && (rar==='common'",
+      "replace": "if((ctx.satchel) && (rar==='common'",
+      "run": "play:milestone"
     },
     {
-      "name": "the tally is fed only the win's own gold",
+      "name": "the roll is not told of the milestone",
       "file": "index.html",
-      "find": "Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);",
-      "replace": "Sitting.won(this, gold);",
-      "run": "play:sitting"
+      "find": "sweep, satchel, march, mile, tier:",
+      "replace": "sweep, satchel, march, tier:",
+      "run": "play:milestone"
     },
     {
-      "name": "a win does not count in the tally",
+      "name": "the win asks for no milestone",
       "file": "index.html",
-      "find": "\n    Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);",
-      "replace": "",
-      "run": "play:sitting"
+      "find": "cGold) && Sitting.mile();",
+      "replace": "cGold) && false;",
+      "run": "play:milestone"
     },
     {
-      "name": "the map does not show the tally",
+      "name": "the map does not name the next milestone",
       "file": "index.html",
-      "find": "let realms=Sitting.html()+Quarry.node(quarry)",
-      "replace": "let realms=Quarry.node(quarry)",
-      "run": "play:sitting"
+      "find": " · 🎖️ a sure chest at <b>${this.next()}</b></div>`;",
+      "replace": "</div>`;",
+      "run": "play:milestone"
     }
   ]
 }

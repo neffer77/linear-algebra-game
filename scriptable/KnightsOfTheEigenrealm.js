@@ -9328,17 +9328,24 @@ const Revenge = {
    victories won, the gold they paid with every bonus counted in, and the
    longest streak of right answers in any one fight. It shows once there is
    a victory to count, so a session always shows what it has added up to.
+   Every fifth victory of a sitting is a milestone that drops a sure chest,
+   a rare find at the least, and the tally says where the next one falls.
    Nothing is saved: a new sitting starts the tally again. */
 const Sitting = {
-  wins: 0, gold: 0, best: 0,
+  wins: 0, gold: 0, best: 0, EVERY: 5,
   won(B, gold){
     if(!B || B.mode!=='campaign') return false;
     this.wins++; this.gold+=Math.max(0, gold|0); this.best=Math.max(this.best, B.runBest||0);
     return true;
   },
+  // every fifth victory of a sitting is a milestone, paid with a sure chest
+  mile(){ return this.wins>0 && this.wins%this.EVERY===0; },
+  next(){ return (Math.floor(this.wins/this.EVERY)+1)*this.EVERY; },
+  nth(n){ const t=n%100, e=n%10; return n+((t>10&&t<14)?'th':e===1?'st':e===2?'nd':e===3?'rd':'th'); },
+  line(on){ return on ? \`<div id="sittingMile" style="color:#ffd36b;font-weight:800;margin-top:6px">🎖️ Your \${this.nth(this.wins)} victory this sitting: a sure chest, a rare find at the least.</div>\` : ''; },
   html(){
     if(!this.wins) return '';
-    return \`<div class="small center" id="sittingTally" style="margin:0 0 8px;color:var(--dim)">This sitting: <b>\${this.wins}</b> \${this.wins===1?'victory':'victories'} · 🪙 <b>\${this.gold}</b> gold · best streak <b>\${this.best}</b></div>\`;
+    return \`<div class="small center" id="sittingTally" style="margin:0 0 8px;color:var(--dim)">This sitting: <b>\${this.wins}</b> \${this.wins===1?'victory':'victories'} · 🪙 <b>\${this.gold}</b> gold · best streak <b>\${this.best}</b> · 🎖️ a sure chest at <b>\${this.next()}</b></div>\`;
   }
 };
 
@@ -10475,7 +10482,8 @@ const Battle = {
     g.gold+=bGold;
     const cGold=Comeback.gold(this, gold);
     g.gold+=cGold;
-    Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);
+    // every fifth victory this sitting is a milestone with a sure chest
+    const mile=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold) && Sitting.mile();
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
@@ -10484,8 +10492,8 @@ const Battle = {
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
-    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march ? 1 : Sweep.odds(this, .5))
-      ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, tier:Math.min(6, this.ri+2)}) : null;
+    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile ? 1 : Sweep.odds(this, .5))
+      ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
     let unlocked=null;
@@ -10511,6 +10519,7 @@ const Battle = {
           \${Boon.line(boon, bGold)}
           \${March.line(march, this.realm.nm)}
           \${Comeback.line(cGold)}
+          \${Sitting.line(mile)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11997,7 +12006,7 @@ const Loot = {
     const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);
     let rar = this.rollRarity(luck);
     if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';     // a boss, or a clean sweep, always gives something
-    if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';   // a full satchel, a rare find at the least
+    if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';   // a full satchel or a sitting's milestone, a rare find at the least
     if(ctx.march && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least
     const pool = this.gearPool(ctx.tier);
 
