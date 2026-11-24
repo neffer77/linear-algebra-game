@@ -4526,6 +4526,28 @@ const armsNotes = (() => {
   return checks;
 })();
 
+const flameNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Flame = {');
+  const src = html.slice(start, html.indexOf('/* --- knight (the player) --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('flame', key, msg); };
+  const F = new Function(src + ';return Flame;')();
+  let last = 0;
+  for (let c = -1; c <= 30; c++) {
+    const f = F.of({ combo: c });
+    if (c < 5) { want(f === null, 'cold ' + c, JSON.stringify(f)); continue; }
+    want(f && /^#[0-9a-f]{6}$/.test(f.col) && f.blur >= 8 && f.blur <= 24, 'fire ' + c, JSON.stringify(f));
+    want(c <= 7 ? f.blur > last : f.blur === last, 'hotter ' + c, `${f.blur} after ${last}`);
+    last = f.blur;
+  }
+  want(new Set([5, 6, 7].map(c => F.of({ combo: c }).col)).size === 3, 'colours', 'the fire does not change as it grows');
+  want(F.of(null) === null && F.of({}) === null, 'none', 'a fire with no fight');
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(k.includes("  if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }\n  const fire=Flame.of(Battle);   // a streak sets the blade burning\n  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }\n  setFill(g);"), 'wired', 'the blade drawn does not burn with the streak');
+  return checks;
+})();
+
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -28530,6 +28552,7 @@ console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)
 console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
 console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is)`);
+console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
