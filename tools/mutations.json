@@ -1,89 +1,75 @@
 {
-  "change": "A campfire: a wounded knight goes over a slip from earlier by the fire, and a right answer mends half the wounds",
-  "mutations": [
-    {
-      "name": "a slip from the arena is kept",
-      "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;",
-      "replace": "    if(!B || !B.cur || !GEN[B.cur.key]) return false;",
-      "run": "verify"
-    },
-    {
-      "name": "a topic is kept twice",
-      "file": "index.html",
-      "find": "    this.slips=this.slips.filter(s=>s.key!==k);\n    this.slips.push",
-      "replace": "    this.slips.push",
-      "run": "verify"
-    },
-    {
-      "name": "slips are kept without end",
-      "file": "index.html",
-      "find": "    if(this.slips.length>this.MAX) this.slips.shift();\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "a whole knight is offered a camp",
-      "file": "index.html",
-      "find": "return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },",
-      "replace": "return this.slips.length>0 && !!g && g.hp>0; },",
-      "run": "verify"
-    },
-    {
-      "name": "a camp mends all the wounds",
-      "file": "index.html",
-      "find": "  MEND: 0.5, MAX: 8,",
-      "replace": "  MEND: 1, MAX: 8,",
-      "run": "verify"
-    },
-    {
-      "name": "the camp goes over the oldest slip",
-      "file": "index.html",
-      "find": "const s=this.cur=this.slips[this.slips.length-1],",
-      "replace": "const s=this.cur=this.slips[0],",
-      "run": "verify"
-    },
-    {
-      "name": "a camp asks at the easiest",
-      "file": "index.html",
-      "find": "    const q=this.q=buildQuestion(s.key, s.diff);",
-      "replace": "    const q=this.q=buildQuestion(s.key, 1);",
-      "run": "verify"
-    },
-    {
-      "name": "a miss by the fire mends too",
-      "file": "index.html",
-      "find": "    if(ok){\n      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);\n      this.slips=",
-      "replace": "    { const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n); }\n    if(ok){\n      this.slips=",
-      "run": "verify"
-    },
-    {
-      "name": "a slip gone over is kept",
-      "file": "index.html",
-      "find": "      this.slips=this.slips.filter(x=>x.key!==s.key);\n      Sfx.good();",
-      "replace": "      Sfx.good();",
-      "run": "verify"
-    },
-    {
-      "name": "a miss is never a slip",
-      "file": "index.html",
-      "find": "    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n",
-      "replace": "",
-      "run": "play:campfire"
-    },
-    {
-      "name": "the card offers no camp",
-      "file": "index.html",
-      "find": "        ${Campfire.html(this)}\n",
-      "replace": "",
-      "run": "play:campfire"
-    },
-    {
-      "name": "a miss by the fire shows no answer",
-      "file": "index.html",
-      "find": "said=`🔥 Not yet. The answer was <b>${q.a}</b>. ",
-      "replace": "said=`🔥 Not yet. ",
-      "run": "play:campfire"
-    }
-  ]
+ "change": "A cunning elite: riddles two steps harder, and every right answer against it lands half again as hard",
+ "mutations": [
+  {
+   "name": "the dice never bring a cunning elite",
+   "file": "index.html",
+   "find": "  ORDER:['armoured','vampiric','swift','frenzied','cunning'],",
+   "replace": "  ORDER:['armoured','vampiric','swift','frenzied'],",
+   "run": "verify"
+  },
+  {
+   "name": "a cunning elite asks only one step harder",
+   "file": "index.html",
+   "find": "  HARD:2, SHARP:1.5,",
+   "replace": "  HARD:1, SHARP:1.5,",
+   "run": "verify"
+  },
+  {
+   "name": "a cunning elite is struck no harder",
+   "file": "index.html",
+   "find": "  HARD:2, SHARP:1.5,",
+   "replace": "  HARD:2, SHARP:1,",
+   "run": "verify"
+  },
+  {
+   "name": "every foe asks harder",
+   "file": "index.html",
+   "find": "  hard(B){ return B && B.foe && B.foe.elite==='cunning' ? this.HARD : 0; },",
+   "replace": "  hard(B){ return B && B.foe ? this.HARD : 0; },",
+   "run": "verify"
+  },
+  {
+   "name": "every elite is struck harder",
+   "file": "index.html",
+   "find": "  bonus(B){ return B && B.foe && B.foe.elite==='cunning' ? this.SHARP : 1; },",
+   "replace": "  bonus(B){ return B && B.foe && B.foe.elite ? this.SHARP : 1; },",
+   "run": "verify"
+  },
+  {
+   "name": "the riddle forgets the cunning",
+   "file": "index.html",
+   "find": "(this.foe.boss?1:0) + Elite.hard(this), 1, 3))",
+   "replace": "(this.foe.boss?1:0), 1, 3))",
+   "run": "verify"
+  },
+  {
+   "name": "the blow forgets the cunning",
+   "file": "index.html",
+   "find": "* Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);",
+   "replace": "* Riposte.bonus(this) * SecondWind.bonus(this);",
+   "run": "verify"
+  },
+  {
+   "name": "in the fight, the riddle forgets the cunning",
+   "file": "index.html",
+   "find": "(this.foe.boss?1:0) + Elite.hard(this), 1, 3))",
+   "replace": "(this.foe.boss?1:0), 1, 3))",
+   "run": "play:elite"
+  },
+  {
+   "name": "in the fight, the blow forgets the cunning",
+   "file": "index.html",
+   "find": "* Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);",
+   "replace": "* Riposte.bonus(this) * SecondWind.bonus(this);",
+   "run": "play:elite"
+  },
+  {
+   "name": "the fight does not say what the cunning does",
+   "file": "index.html",
+   "find": "say:'its riddles come two steps harder, but every right answer lands half again as hard.'",
+   "replace": "say:'it is cunning.'",
+   "run": "play:elite"
+  }
+ ]
 }
