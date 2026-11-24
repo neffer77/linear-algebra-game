@@ -861,6 +861,10 @@ The game is built so that losing teaches you as much as winning.
 - **📖 The sitting's tale.** Every campaign victory's ballad is written into the tale of the sitting, with
   the foe and the grade it was won at, kept folded on the map under the sitting's tally. Opened, it reads newest
   verse first as the story of the session so far: the last twelve verses, and a count of the rest. Nothing is saved.
+- **⭐ Honours.** Your knight wears what you have done: a gold star in the ring on the shield for every
+  realm whose boss has fallen, a gold circlet on the helm (with a gem for each) once a realm is beaten at S foe
+  by foe, and a shining blade from the third boss on. The victory card says when a win adds one. It is worked
+  out from the foes you have beaten, so nothing new is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
