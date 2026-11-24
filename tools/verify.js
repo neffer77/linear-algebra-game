@@ -3966,6 +3966,82 @@ const campNotes = (() => {
   return checks;
 })();
 
+/* A treasure map. Long runs of campaign and other victories at every grade,
+   over clears of every shape, against a model of the map: a scrap only for a
+   campaign win at A or better while no map is whole, the map whole at the
+   third, X only on a realm opened and fought in, never the one just won in
+   unless it is the only one, every such realm marked in its turn, nothing
+   found while X waits, and the hoard, its realm boss's gold, paid once by the
+   next campaign win there and nowhere else, after which the scraps begin
+   again. Then the wiring: what the card says, and where. */
+const treasureNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Treasure = {'), html.indexOf('/* A campfire.'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  let seed = 41;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const R = { pick: a => a[rnd(a.length)] };
+  const Game = { s: null };
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('treasure', key, msg); };
+  const mk = new Function('R', 'Game', realms + src + ';return {Treasure, REALMS};');
+  const { REALMS } = mk(R, Game);
+  const boss = ri => REALMS[ri].foes[REALMS[ri].foes.length - 1].gold;
+  // the realms a clear opens and has a foe beaten in, worked out here from the clears alone
+  const opened = cl => REALMS.map((r, ri) => ri).filter(ri => (ri === 0 || cl[(ri - 1) + ':' + (REALMS[ri - 1].foes.length - 1)])
+    && REALMS[ri].foes.some((f, fi) => cl[ri + ':' + fi]));
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'], grades = ['S', 'A', 'B', 'C'];
+  const marked = {};
+  for (let run = 0; run < 400; run++) {
+    const { Treasure: T } = mk(R, Game);
+    // a knight some way into the campaign: every realm up to `far` opened, its foes beaten in order
+    const far = rnd(REALMS.length), cl = {};
+    for (let ri = 0; ri <= far; ri++) { const n = ri < far ? REALMS[ri].foes.length : 1 + rnd(REALMS[ri].foes.length); for (let fi = 0; fi < n; fi++) cl[ri + ':' + fi] = 'A'; }
+    // now and then a stray clear in a realm still sealed, which is no place to mark
+    const stray = far + 2 + rnd(REALMS.length);
+    if (stray < REALMS.length) cl[stray + ':' + rnd(REALMS[stray].foes.length)] = 'A';
+    Game.s = { cleared: cl, gold: 0 };
+    let n = 0, at = null, gold = 0;
+    want(T.n === 0 && T.at === null && REALMS.every((r, ri) => T.tag(ri) === ''), 'start ' + run, 'a sitting starts with a scrap or a mark');
+    for (let step = 0; step < 60; step++) {
+      const open = opened(cl), B = { mode: modes[rnd(6)], ri: open[rnd(open.length)] }, gr = grades[rnd(4)];
+      const t = T.won(B, gr);
+      let expect = null;
+      if (B.mode === 'campaign') {
+        if (at !== null) { if (B.ri === at) { expect = { dug: at, gold: boss(at) }; gold += boss(at); at = null; n = 0; } }
+        else if (gr === 'S' || gr === 'A') {
+          if (++n < 3) expect = { scrap: n };
+          else {
+            want(t && t.whole != null && open.includes(t.whole) && (open.length === 1 || t.whole !== B.ri), `mark ${run} ${step}`,
+              `X fell on ${t && t.whole} with ${JSON.stringify(open)} opened, won in ${B.ri}`);
+            if (t && t.whole != null) { at = t.whole; expect = { whole: at }; marked[open.length === 1 ? 'only' : at] = 1; }
+          }
+        }
+      }
+      want(JSON.stringify(t) === JSON.stringify(expect), `won ${run} ${step}`, `${B.mode} in ${B.ri} at ${gr}: ${JSON.stringify(t)}, not ${JSON.stringify(expect)}`);
+      want(T.n === n && T.at === at && Game.s.gold === gold, `state ${run} ${step}`, `${T.n} scraps, X on ${T.at}, ${Game.s.gold} gold, not ${n}, ${at}, ${gold}`);
+      want(REALMS.every((r, ri) => (T.tag(ri) !== '') === (ri === at)), `tag ${run} ${step}`, 'the map marks a realm X is not on');
+      const ln = T.line(t);
+      want(!t ? ln === '' : t.dug != null ? ln.includes('id="treasureWon"') && ln.includes(REALMS[t.dug].nm) && ln.includes('+' + t.gold + ' gold')
+        : t.whole != null ? ln.includes('id="treasureWhole"') && ln.includes(REALMS[t.whole].nm) && ln.includes('🪙 ' + boss(t.whole))
+        : ln.includes('id="treasureScrap"') && ln.includes(t.scrap + '/3'), `line ${run} ${step}`, ln.slice(0, 90));
+    }
+  }
+  // every realm is marked in some run, and a lone realm is marked when it is the only one
+  want(REALMS.every((r, ri) => marked[ri]) && marked.only, 'marks', `X fell on ${JSON.stringify(Object.keys(marked))}`);
+  // nothing found with no game, and nothing for a fight that is not a victory's
+  const { Treasure: T0 } = mk(R, Game);
+  Game.s = null; want(T0.won({ mode: 'campaign', ri: 0 }, 'S') === null && T0.n === 0, 'none', 'a scrap is found with no game');
+  // the wiring
+  want(html.includes("    const tr=Treasure.won(this, Grade.of(marks));\n    if(tr && tr.gold && counted) Sitting.gold+=tr.gold;") && html.split('Treasure.won(').length === 2,
+    'won', 'a victory does not look for a scrap or a hoard on its own grade, once, or the tally leaves the hoard out');
+  want(html.includes('${Rival.line(rival)}\n          ${Treasure.line(tr)}'), 'card', 'the victory card does not say what was found');
+  want(html.includes('${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}'), 'map', 'the map does not mark the realm X is on');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -27676,6 +27752,7 @@ console.log(`  wayfarers checked          ${pad(wayNotes.toLocaleString(), 10)} 
 console.log(`  familiars checked          ${pad(familiarNotes.toLocaleString(), 10)}  (twenty right campaign answers of a sitting hatch one of four kinds; then each right answer mends 3% of full health, 6% once grown at sixty, never past full; shown on the streak line; never touches the foe)`);
 console.log(`  rivals checked             ${pad(rivalNotes.toLocaleString(), 10)}  (Sir Corvin rides each realm's strongest plain foe, waits only once it is beaten, a tenth harder for twice the gold; a duel won leaves the realm be for the sitting; asked for, said, offered and told)`);
 console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}  (a campaign miss is a slip, one to a topic, eight at most; a wounded knight with a slip is offered a camp on the latest; a right answer mends half the wounds and puts the slip behind; one answer, counted, paid once)`);
+console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 10)}  (a scrap for a campaign win at A or better, the map whole at the third, X on a realm opened and fought in and not the one just won where there is another, nothing found while it waits, the hoard of its boss's gold paid once there)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

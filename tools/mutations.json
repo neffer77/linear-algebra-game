@@ -1,75 +1,89 @@
 {
-  "change": "A cunning elite: riddles two steps harder, and every right answer against it lands half again as hard",
+  "change": "A treasure map: three wins at A or better make a map, and a win where X marks digs up a hoard",
   "mutations": [
     {
-      "name": "the dice never bring a cunning elite",
+      "name": "a B finds a scrap",
       "file": "index.html",
-      "find": "  ORDER:['armoured','vampiric','swift','frenzied','cunning'],",
-      "replace": "  ORDER:['armoured','vampiric','swift','frenzied'],",
+      "find": "    if(grade!=='S' && grade!=='A') return null;",
+      "replace": "    if(grade==='C') return null;",
       "run": "verify"
     },
     {
-      "name": "a cunning elite asks only one step harder",
+      "name": "a hoard is dug up anywhere",
       "file": "index.html",
-      "find": "  HARD:2, SHARP:1.5,",
-      "replace": "  HARD:1, SHARP:1.5,",
+      "find": "      if(B.ri!==this.at) return null;\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a cunning elite is struck no harder",
+      "name": "two scraps make a map",
       "file": "index.html",
-      "find": "  HARD:2, SHARP:1.5,",
-      "replace": "  HARD:2, SHARP:1,",
+      "find": "  NEED: 3,",
+      "replace": "  NEED: 2,",
       "run": "verify"
     },
     {
-      "name": "every foe asks harder",
+      "name": "X may fall where the knight just won",
       "file": "index.html",
-      "find": "  hard(B){ return B && B.foe && B.foe.elite==='cunning' ? this.HARD : 0; },",
-      "replace": "  hard(B){ return B && B.foe ? this.HARD : 0; },",
+      "find": "pick=away.length ? away : all;",
+      "replace": "pick=all;",
       "run": "verify"
     },
     {
-      "name": "every elite is struck harder",
+      "name": "X may fall on a sealed realm",
       "file": "index.html",
-      "find": "  bonus(B){ return B && B.foe && B.foe.elite==='cunning' ? this.SHARP : 1; },",
-      "replace": "  bonus(B){ return B && B.foe && B.foe.elite ? this.SHARP : 1; },",
+      "find": "      return (ri===0 || !!g.cleared[key]) && REALMS[ri]",
+      "replace": "      return REALMS[ri]",
       "run": "verify"
     },
     {
-      "name": "the riddle forgets the cunning",
+      "name": "X may fall on a realm never fought in",
       "file": "index.html",
-      "find": "(this.foe.boss?1:0) + Elite.hard(this), 1, 3))",
-      "replace": "(this.foe.boss?1:0), 1, 3))",
+      "find": "      return (ri===0 || !!g.cleared[key]) && REALMS[ri].foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);",
+      "replace": "      return (ri===0 || !!g.cleared[key]);",
       "run": "verify"
     },
     {
-      "name": "the blow forgets the cunning",
+      "name": "the hoard is the first foe's gold",
       "file": "index.html",
-      "find": "* Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);",
-      "replace": "* Riposte.bonus(this) * SecondWind.bonus(this);",
+      "find": "return f ? f[f.length-1].gold : 0; },",
+      "replace": "return f ? f[0].gold : 0; },",
       "run": "verify"
     },
     {
-      "name": "in the fight, the riddle forgets the cunning",
+      "name": "the scraps never begin again",
       "file": "index.html",
-      "find": "(this.foe.boss?1:0) + Elite.hard(this), 1, 3))",
-      "replace": "(this.foe.boss?1:0), 1, 3))",
-      "run": "play:elite"
+      "find": "      this.at=null; this.n=0; g.gold+=gold;",
+      "replace": "      this.at=null; g.gold+=gold;",
+      "run": "verify"
     },
     {
-      "name": "in the fight, the blow forgets the cunning",
+      "name": "the hoard pays nothing",
       "file": "index.html",
-      "find": "* Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);",
-      "replace": "* Riposte.bonus(this) * SecondWind.bonus(this);",
-      "run": "play:elite"
+      "find": "      this.at=null; this.n=0; g.gold+=gold;",
+      "replace": "      this.at=null; this.n=0;",
+      "run": "verify"
     },
     {
-      "name": "the fight does not say what the cunning does",
+      "name": "the arena finds scraps",
       "file": "index.html",
-      "find": "say:'its riddles come two steps harder, but every right answer lands half again as hard.'",
-      "replace": "say:'it is cunning.'",
-      "run": "play:elite"
+      "find": "    if(!B || B.mode!=='campaign' || !g) return null;\n    if(this.at!==null){",
+      "replace": "    if(!B || !g) return null;\n    if(this.at!==null){",
+      "run": "verify"
+    },
+    {
+      "name": "the card does not say what was found",
+      "file": "index.html",
+      "find": "          ${Treasure.line(tr)}\n",
+      "replace": "",
+      "run": "play:treasure"
+    },
+    {
+      "name": "the map does not mark the realm",
+      "file": "index.html",
+      "find": "${Treasure.tag(ri)}",
+      "replace": "",
+      "run": "play:treasure"
     }
   ]
 }
