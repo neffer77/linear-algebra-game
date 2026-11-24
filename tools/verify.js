@@ -3279,7 +3279,7 @@ const quarryNotes = (() => {
   want(win.includes('const full=first || !!this.foe.elite || quarry;'), 'full', 'the quarry does not pay its full gold');
   want(win.includes('${Quarry.line(quarry && !this.foe.elite)}'), 'card', 'the victory card does not say the quarry');
   const map = html.slice(html.indexOf('  renderMap(){'), html.indexOf("realms+='</details>';"));
-  want(map.includes('let realms=Quarry.node(quarry)+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
+  want(map.includes('Quarry.node(quarry)+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
   want(map.includes("${Quarry.tag(quarry===ri+':'+fi)}") && map.includes("${Quarry.dt(quarry===ri+':'+fi)}"), 'mapnode', 'the quarry\'s own place on the map is not marked');
   return checks;
 })();
@@ -3644,6 +3644,39 @@ const comebackNotes = (() => {
   want(html.includes('      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);') && html.includes('      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);'), 'blows', 'a blow does not mark the comeback');
   want(html.includes('this.overkill=0; this.low=false;'), 'fresh', 'a fight starts with a comeback marked');
   want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
+  return checks;
+})();
+
+/* The sitting's tally on the map: the campaign's victories this sitting,
+   the gold they paid with every bonus, and the longest streak in any one
+   fight. Worked over a long run of wins in every mode: only the campaign's
+   count, the gold adds up exactly, the best streak never falls, the map
+   shows nothing until the first victory and the right words after it, and
+   the win feeds it the whole of the gold the card counts. */
+const sittingNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Sitting = {'), html.indexOf('/* A comeback.'));
+  const S = new Function(src + ';return Sitting;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('sitting', key, msg); };
+  const modes = ['campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  let seed = 53;   // mulberry32
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n); };
+  want(S.html() === '', 'empty', 'the map shows a tally before any victory');
+  let wins = 0, gold = 0, best = 0;
+  for (let step = 0; step < 4000; step++) {
+    const B = { mode: modes[rnd(5)], runBest: rnd(30) }, g = rnd(600);
+    const counted = S.won(B, g);
+    if (B.mode === 'campaign') { wins++; gold += g; best = Math.max(best, B.runBest); }
+    want(counted === (B.mode === 'campaign'), `won ${step}`, `a ${B.mode} win counted ${counted}`);
+    want(S.wins === wins && S.gold === gold && S.best === best, `tally ${step}`, `${S.wins}/${S.gold}/${S.best}, not ${wins}/${gold}/${best}`);
+    const h = S.html();
+    want(h.includes(`<b>${wins}</b> ${wins === 1 ? 'victory' : 'victories'}`) && h.includes(`<b>${gold}</b> gold`) && h.includes(`best streak <b>${best}</b>`), `html ${step}`, h);
+  }
+  want(S.won(null, 10) === false && S.wins === wins, 'none', 'a win with no fight counts');
+  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);'), 'fed', 'the tally is not fed the gold the card counts');
+  want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)'), 'shown', 'the map does not show the tally');
   return checks;
 })();
 
@@ -27003,6 +27036,7 @@ console.log(`  satchels checked           ${pad(satchelNotes.toLocaleString(), 1
 console.log(`  boons checked              ${pad(boonNotes.toLocaleString(), 10)}  (offered only by a campaign level-up with none held; picked only from an open offer; spent once, on the next campaign win; a fat purse pays half again, a lucky find drops a sure chest)`);
 console.log(`  marches checked            ${pad(marchNotes.toLocaleString(), 10)}  (paid when the last foe of a realm is beaten with no fall or flight between, once a realm a sitting, in the campaign only; counted on the map; a march's chest never finds less than epic)`);
 console.log(`  comebacks checked          ${pad(comebackNotes.toLocaleString(), 10)}  (marked when a blow leaves health above 0 and at a quarter or under, never cleared in the fight; paid in the campaign only, a quarter more gold; a new fight starts without it)`);
+console.log(`  sitting tallies checked    ${pad(sittingNotes.toLocaleString(), 10)}  (the campaign's victories, their gold with every bonus and the best streak this sitting; nothing shown before the first victory)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

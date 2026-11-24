@@ -1,75 +1,61 @@
 {
-  "change": "Comeback: a win from a quarter of your health or less pays a quarter more gold",
+  "change": "The sitting's tally: the map counts this sitting's victories, gold and best streak",
   "mutations": [
     {
-      "name": "a knight on 0 health marks a comeback",
+      "name": "the tally counts every mode",
       "file": "index.html",
-      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
-      "replace": "  note(B){ const g=Game.s; if(B && g && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
+      "find": "    if(!B || B.mode!=='campaign') return false;\n    this.wins++;",
+      "replace": "    if(!B) return false;\n    this.wins++;",
       "run": "verify"
     },
     {
-      "name": "a comeback marks at half health",
+      "name": "the tally keeps the last streak, not the best",
       "file": "index.html",
-      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
-      "replace": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*0.5) B.low=true; return !!(B && B.low); },",
+      "find": "this.best=Math.max(this.best, B.runBest||0);",
+      "replace": "this.best=B.runBest||0;",
       "run": "verify"
     },
     {
-      "name": "a blow above a quarter clears the mark",
+      "name": "the tally leaves the gold out",
       "file": "index.html",
-      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
-      "replace": "  note(B){ const g=Game.s; if(B && g) B.low = g.hp>0 && g.hp <= g.maxHp*this.AT; return !!(B && B.low); },",
+      "find": "this.gold+=Math.max(0, gold|0);",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a comeback pays in every mode",
+      "name": "the map shows a tally of nothing",
       "file": "index.html",
-      "find": "on(B){ return !!(B && B.mode==='campaign' && B.low); },",
-      "replace": "on(B){ return !!(B && B.low); },",
+      "find": "    if(!this.wins) return '';\n    return `<div class=\"small center\" id=\"sittingTally\"",
+      "replace": "    return `<div class=\"small center\" id=\"sittingTally\"",
       "run": "verify"
     },
     {
-      "name": "a comeback pays half again",
+      "name": "the tally says one victories",
       "file": "index.html",
-      "find": "gold(B, gold){ return this.on(B) ? Math.round(gold*this.MUL) : 0; },",
-      "replace": "gold(B, gold){ return this.on(B) ? Math.round(gold*0.5) : 0; },",
+      "find": "${this.wins===1?'victory':'victories'}",
+      "replace": "victories",
       "run": "verify"
     },
     {
-      "name": "a slam does not mark a comeback",
+      "name": "the tally is fed only the win's own gold",
       "file": "index.html",
-      "find": "      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);\n",
-      "replace": "      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n",
-      "run": "verify"
+      "find": "Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);",
+      "replace": "Sitting.won(this, gold);",
+      "run": "play:sitting"
     },
     {
-      "name": "a fight starts with the last one's comeback",
+      "name": "a win does not count in the tally",
       "file": "index.html",
-      "find": "this.overkill=0; this.low=false;",
-      "replace": "this.overkill=0;",
-      "run": "play:comeback"
+      "find": "\n    Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);",
+      "replace": "",
+      "run": "play:sitting"
     },
     {
-      "name": "a miss's blow does not mark a comeback",
+      "name": "the map does not show the tally",
       "file": "index.html",
-      "find": "      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);\n",
-      "replace": "      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n",
-      "run": "play:comeback"
-    },
-    {
-      "name": "a comeback pays no gold",
-      "file": "index.html",
-      "find": "const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;",
-      "replace": "const cGold=Comeback.gold(this, gold);",
-      "run": "play:comeback"
-    },
-    {
-      "name": "the card leaves the comeback out of the gold it counts",
-      "file": "index.html",
-      "find": "gold+sGold+oGold+rGold+bGold+cGold, 900);",
-      "replace": "gold+sGold+oGold+rGold+bGold, 900);",
-      "run": "play:comeback"
+      "find": "let realms=Sitting.html()+Quarry.node(quarry)",
+      "replace": "let realms=Quarry.node(quarry)",
+      "run": "play:sitting"
     }
   ]
 }
