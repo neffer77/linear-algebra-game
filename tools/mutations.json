@@ -1,89 +1,19 @@
 {
-  "change": "The reckoning: under every open fight on the map, the plain blows that fell the foe and the foe's blows that would fell you",
+  "change": "The reckoning on the victory card: the next fight on the road says the blows it takes and the blows that fell you",
   "mutations": [
     {
-      "name": "blows rounded down",
+      "name": "no reckoning under the next fight",
       "file": "index.html",
-      "find": "    return { blow, hit, hp, blows:Math.ceil(f.hp/blow), falls:Math.ceil(hp/hit) };",
-      "replace": "    return { blow, hit, hp, blows:Math.floor(f.hp/blow), falls:Math.ceil(hp/hit) };",
+      "find": "      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "falls rounded to nearest",
+      "name": "no reckoning under the next fight, seen in play",
       "file": "index.html",
-      "find": "    return { blow, hit, hp, blows:Math.ceil(f.hp/blow), falls:Math.ceil(hp/hit) };",
-      "replace": "    return { blow, hit, hp, blows:Math.ceil(f.hp/blow), falls:Math.round(hp/hit) };",
-      "run": "verify"
-    },
-    {
-      "name": "armour left out of the foe's blow",
-      "file": "index.html",
-      "find": "const blow=this.blow(), hit=Combat.foeHit(f.atk, this.def(), 1)",
-      "replace": "const blow=this.blow(), hit=Combat.foeHit(f.atk, 0, 1)",
-      "run": "verify"
-    },
-    {
-      "name": "runes left out of the armour",
-      "file": "index.html",
-      "find": "  def(){ return Game.armor().def + Runes.def(); },\n  of(f, g){",
-      "replace": "  def(){ return Game.armor().def; },\n  of(f, g){",
-      "run": "verify"
-    },
-    {
-      "name": "the knight's full health, not their health now",
-      "file": "index.html",
-      "find": "hp=Math.max(1, Math.round(g.hp));\n    return { blow,",
-      "replace": "hp=Math.max(1, Math.round(g.maxHp||g.hp));\n    return { blow,",
-      "run": "verify"
-    },
-    {
-      "name": "never red",
-      "file": "index.html",
-      "find": "    const risk=s.falls<=s.blows ? ' style=\"color:#ff8f6b\"' : '';",
-      "replace": "    const risk='';",
-      "run": "verify"
-    },
-    {
-      "name": "red the wrong way round",
-      "file": "index.html",
-      "find": "    const risk=s.falls<=s.blows ? ' style=\"color:#ff8f6b\"' : '';",
-      "replace": "    const risk=s.falls>=s.blows ? ' style=\"color:#ff8f6b\"' : '';",
-      "run": "verify"
-    },
-    {
-      "name": "the sum shows the wrong divisor",
-      "file": "index.html",
-      "find": "const tip=`${f.hp} ÷ ${s.blow} = ",
-      "replace": "const tip=`${f.hp} ÷ ${s.hit} = ",
-      "run": "verify"
-    },
-    {
-      "name": "one blow said as blows",
-      "file": "index.html",
-      "find": "${s.blows===1?'blow fells':'blows fell'} it",
-      "replace": "blows fell it",
-      "run": "verify"
-    },
-    {
-      "name": "sealed fights reckoned too",
-      "file": "index.html",
-      "find": "${open?Reckon.line(f, g):''}",
-      "replace": "${Reckon.line(f, g)}",
-      "run": "verify"
-    },
-    {
-      "name": "sealed fights reckoned too, seen in play",
-      "file": "index.html",
-      "find": "${open?Reckon.line(f, g):''}",
-      "replace": "${Reckon.line(f, g)}",
-      "run": "play:reckon"
-    },
-    {
-      "name": "the knight's full health, seen in play",
-      "file": "index.html",
-      "find": "hp=Math.max(1, Math.round(g.hp));\n    return { blow,",
-      "replace": "hp=Math.max(1, Math.round(g.maxHp||g.hp));\n    return { blow,",
-      "run": "play:reckon"
+      "find": "      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you\n",
+      "replace": "",
+      "run": "play:nextfight"
     }
   ]
 }
