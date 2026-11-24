@@ -64,6 +64,7 @@ const SUITES = [
   require('./play/revenge'),     // the foe that felled you holds your lost gold until you beat it
   require('./play/satchel'),     // twenty-five right answers open a chest with a rare find
   require('./play/boon'),        // a level-up offers a fat purse or a lucky find for the next win
+  require('./play/march'),       // every foe of a realm beaten with no fall between drops an epic chest
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

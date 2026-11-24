@@ -9302,6 +9302,29 @@ const Revenge = {
    least. Then it starts again from nothing. A miss takes nothing out. The
    daily, the arena, the dungeon and the rites keep their own rewards. It
    lasts the sitting: nothing is saved. */
+/* A realm march. Beat every foe of one realm in a sitting with no fall and no
+   flight from a live fight between, in any order, and the last of them drops
+   a sure chest with an epic find at the least. The map counts the march on
+   the realm's heading. A fall, or a flight, sets every march back to
+   nothing; each realm pays its march once a sitting. Nothing is saved. */
+const March = {
+  done: {}, paid: {},
+  won(B){
+    if(!B || B.mode!=='campaign' || !B.realm) return false;
+    const r=B.ri, d=(this.done[r]=this.done[r]||{});
+    d[B.fi]=1;
+    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length) return false;
+    this.paid[r]=1; return true;
+  },
+  broke(){ this.done={}; },
+  count(ri){ return this.done[ri] ? Object.keys(this.done[ri]).length : 0; },
+  tag(ri, n){
+    const c=this.count(ri);
+    return !this.paid[ri] && c>0 && c<n ? `<span class="tag marchTag">🥾 ${c}/${n} in a row</span>` : '';
+  },
+  line(on, nm){ return on ? `<div id="marchWon" style="color:#c792ea;font-weight:800;margin-top:6px">🥾 Realm march: every foe of ${nm} beaten with no fall between, for a sure chest with an epic find at the least.</div>` : ''; }
+};
+
 /* A level-up boon. When a campaign win lifts the knight a level, the victory
    card offers a choice of two boons for the next campaign win: a fat purse,
    which pays half again that win's gold, or a lucky find, which drops a sure
@@ -10396,14 +10419,16 @@ const Battle = {
     // a boon chosen at the last level-up is spent on this win
     const boon=Boon.take(this), bGold=Boon.gold(boon, gold);
     g.gold+=bGold;
+    // the last foe of a realm beaten with no fall between is a realm march
+    const march=March.won(this);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
     Boon.offer(this, ups);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
-    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' ? 1 : Sweep.odds(this, .5))
-      ? Loot.roll({boss:this.foe.boss, sweep, satchel, tier:Math.min(6, this.ri+2)}) : null;
+    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march ? 1 : Sweep.odds(this, .5))
+      ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? `<span style="color:${RARITY[drop.rar].col}">${drop.ic} ${drop.nm}</span>` : null;
     // boss unlocks the next realm
     let unlocked=null;
@@ -10427,6 +10452,7 @@ const Battle = {
           ${Sweep.line(sweep)}
           ${Satchel.line(satchel)}
           ${Boon.line(boon, bGold)}
+          ${March.line(march, this.realm.nm)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10470,7 +10496,7 @@ const Battle = {
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
-    const path=WarPath.broke();
+    const path=WarPath.broke(); March.broke();
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
     const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;
@@ -10511,6 +10537,7 @@ const Battle = {
     if(this.mode==='dungeon'){ Dungeon.leave(true); return; }
     UI.go('s-map');
     const path=live && this.mode==='campaign' ? WarPath.broke() : 0;
+    if(live && this.mode==='campaign') March.broke();
     UI.toast(path>=2 ? `🏃 You slip away into the trees, and your war path of ${path} victories ends.` : '🏃 You slip away into the trees.');
   }
 };
@@ -11913,6 +11940,7 @@ const Loot = {
     let rar = this.rollRarity(luck);
     if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';     // a boss, or a clean sweep, always gives something
     if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';   // a full satchel, a rare find at the least
+    if(ctx.march && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least
     const pool = this.gearPool(ctx.tier);
 
     // The high tiers hand over gear whenever any is still unowned.
@@ -15921,7 +15949,7 @@ const UI = {
       realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">${beaten}/${r.foes.length}</span>${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
+            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];

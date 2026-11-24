@@ -1,75 +1,75 @@
 {
-  "change": "Boon: a level-up offers a fat purse or a lucky find for the next win",
+  "change": "Realm march: every foe of a realm beaten with no fall between drops an epic chest",
   "mutations": [
     {
-      "name": "a boon is offered in every mode",
+      "name": "a march counts in every mode",
       "file": "index.html",
-      "find": "offer(B, ups){ if(ups && B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
-      "replace": "offer(B, ups){ if(ups && B && !this.held) this.open=true; return this.open; },",
+      "find": "if(!B || B.mode!=='campaign' || !B.realm) return false;",
+      "replace": "if(!B || !B.realm) return false;",
       "run": "verify"
     },
     {
-      "name": "a win with no level-up offers a boon",
+      "name": "a realm pays its march twice",
       "file": "index.html",
-      "find": "offer(B, ups){ if(ups && B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
-      "replace": "offer(B, ups){ if(B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
+      "find": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length) return false;",
+      "replace": "    if(Object.keys(d).length < B.realm.foes.length) return false;",
       "run": "verify"
     },
     {
-      "name": "a boon can be picked with no offer open",
+      "name": "a march pays one foe short",
       "file": "index.html",
-      "find": "if(!this.open || !(k in this.NAMES)) return false;",
-      "replace": "if(!(k in this.NAMES)) return false;",
+      "find": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length) return false;",
+      "replace": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length-1) return false;",
       "run": "verify"
     },
     {
-      "name": "the offer stays open after a pick",
+      "name": "a break sets no march back",
       "file": "index.html",
-      "find": "this.held=k; this.open=false;",
-      "replace": "this.held=k;",
+      "find": "broke(){ this.done={}; },",
+      "replace": "broke(){ },",
       "run": "verify"
     },
     {
-      "name": "a boon is spent in any mode",
+      "name": "a break lets a realm pay again",
       "file": "index.html",
-      "find": "take(B){ if(!B || B.mode!=='campaign' || !this.held) return null;",
-      "replace": "take(B){ if(!B || !this.held) return null;",
+      "find": "broke(){ this.done={}; },",
+      "replace": "broke(){ this.done={}; this.paid={}; },",
       "run": "verify"
     },
     {
-      "name": "a boon is never used up",
+      "name": "a march finds less than epic",
       "file": "index.html",
-      "find": "const k=this.held; this.held=null; return k; },",
-      "replace": "const k=this.held; return k; },",
+      "find": "    if(ctx.march && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a fat purse pays the whole gold again",
+      "name": "the map counts a march already paid",
       "file": "index.html",
-      "find": "gold(k, gold){ return k==='purse' ? Math.round(gold*this.PURSE) : 0; },",
-      "replace": "gold(k, gold){ return k==='purse' ? gold : 0; },",
+      "find": "return !this.paid[ri] && c>0 && c<n ?",
+      "replace": "return c>0 && c<n ?",
       "run": "verify"
     },
     {
-      "name": "a level-up offers no boon",
+      "name": "a fall does not end the march",
       "file": "index.html",
-      "find": "    const ups=Game.gainXp(xp);\n    Boon.offer(this, ups);",
-      "replace": "    const ups=Game.gainXp(xp);",
-      "run": "play:boon"
+      "find": "const path=WarPath.broke(); March.broke();",
+      "replace": "const path=WarPath.broke();",
+      "run": "play:march"
     },
     {
-      "name": "a lucky find drops no sure chest",
+      "name": "a flight from a live fight does not end the march",
       "file": "index.html",
-      "find": "satchel || boon==='find' ? 1 :",
-      "replace": "satchel ? 1 :",
-      "run": "play:boon"
+      "find": "    if(live && this.mode==='campaign') March.broke();\n",
+      "replace": "",
+      "run": "play:march"
     },
     {
-      "name": "the card leaves the purse out of the gold it counts",
+      "name": "a march drops no sure chest",
       "file": "index.html",
-      "find": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);",
-      "replace": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);",
-      "run": "play:boon"
+      "find": "|| boon==='find' || march ? 1 :",
+      "replace": "|| boon==='find' ? 1 :",
+      "run": "play:march"
     }
   ]
 }
