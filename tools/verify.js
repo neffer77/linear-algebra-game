@@ -4658,6 +4658,18 @@ const levelBarNotes = (() => {
     && (html.match(/LevelBar\.(html|fill)\(/g) || []).length === 2, 'wired', 'the victory card shows no level bar, or it never fills');
   return checks;
 })();
+const nameplateNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('nameplate', key, msg); };
+  // each half of the bars may shrink below its content, so a long name wraps rather than widening the row
+  want(html.includes('.bars>.bar{min-width:0}') && html.includes('.bar{flex:1}'), 'shrink', 'a long nameplate widens the bars past the screen');
+  want(html.includes('#foeName{min-width:0; overflow-wrap:anywhere}'), 'wrap', 'a long foe name does not wrap');
+  want(html.includes('#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}') && html.includes('.bar .lbl{gap:6px}'), 'health whole', 'the health is squeezed or broken across lines');
+  // the labels are where the CSS expects them
+  want(html.includes('<div class="lbl"><span>🛡️ You</span><span id="pHpTxt">100/100</span></div>') && html.includes('<div class="lbl"><span id="foeName">Foe</span><span id="eHpTxt">100/100</span></div>'), 'labels', 'the bars\' labels moved');
+  return checks;
+})();
 const topicsNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Topics = {');
@@ -27204,6 +27216,7 @@ console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}
 console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
 console.log(`  victory spoils checked     ${pad(haulNotes.toLocaleString(), 10)}  (the totals as chips at the top, the bonuses one list under them, folded past the first few and opened in place)`);
 console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)}  (a closed realm on the map names its first three topics and counts the rest; opened, it names them all, each once, in order)`);
+console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 10)}  (a long foe nameplate wraps in its own half of the bars, and the health beside it stays whole and on the screen)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
