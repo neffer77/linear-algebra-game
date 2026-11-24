@@ -1,82 +1,89 @@
 {
-  "change": "A greedy foe: a beaten foe comes back with three times the gold and flees after six questions",
+  "change": "A chest riddle: answer one question on the fight's topic to raise a chest's find a rarity",
   "mutations": [
     {
-      "name": "a greedy foe is always greedy",
+      "name": "a riddle raises the find two rarities",
       "file": "index.html",
-      "find": "CHANCE: 0.1, LEAVE: 6, MUL: 3,",
-      "replace": "CHANCE: 1, LEAVE: 6, MUL: 3,",
+      "find": "return i>=0 && i<this.ORDER.length-1 ? this.ORDER[i+1] : null; },",
+      "replace": "return i>=0 && i<this.ORDER.length-1 ? this.ORDER[Math.min(i+2, 4)] : null; },",
       "run": "verify"
     },
     {
-      "name": "an elite or a boss can be greedy",
+      "name": "a legendary find offers a riddle",
       "file": "index.html",
-      "find": "if(!foe || !beaten || foe.elite || foe.boss || !R.chance(this.CHANCE)) return foe;",
-      "replace": "if(!foe || !beaten || !R.chance(this.CHANCE)) return foe;",
+      "find": "GEN[it.ctx.key] && this.next(it.rar)); },",
+      "replace": "GEN[it.ctx.key]); },",
       "run": "verify"
     },
     {
-      "name": "a foe never beaten can be greedy",
+      "name": "a find with no topic offers a riddle",
       "file": "index.html",
-      "find": "if(!foe || !beaten || foe.elite",
-      "replace": "if(!foe || foe.elite",
+      "find": "return !!(it && it.ctx && it.ctx.key && GEN[it.ctx.key] &&",
+      "replace": "return !!(it && it.ctx &&",
       "run": "verify"
     },
     {
-      "name": "a greedy purse is no fatter",
+      "name": "a rolled find forgets its context",
       "file": "index.html",
-      "find": "{gold:Math.round(foe.gold*this.MUL), greedy:true}",
-      "replace": "{gold:foe.gold, greedy:true}",
-      "run": "verify"
-    },
-    {
-      "name": "a felled greedy foe still flees",
-      "file": "index.html",
-      "find": "!B.over && B.ehp>0 && (B.asked||0)>=this.LEAVE; },",
-      "replace": "!B.over && (B.asked||0)>=this.LEAVE; },",
-      "run": "verify"
-    },
-    {
-      "name": "a greedy foe never flees",
-      "file": "index.html",
-      "find": "    if(Greedy.gone(this)){ this.escape(); return; }\n",
+      "find": "    it.ctx=ctx;      // kept so that a chest riddle can raise the find\n",
       "replace": "",
-      "run": "play:greedy"
+      "run": "verify"
     },
     {
-      "name": "the questions are not counted",
+      "name": "a chest offers its riddle again and again",
       "file": "index.html",
-      "find": "    this.asked=(this.asked||0)+1;\n",
+      "find": "if(!it || this.done || !this.can(it)) return;\n    this.done=true;\n",
+      "replace": "if(!it || !this.can(it)) return;\n",
+      "run": "verify"
+    },
+    {
+      "name": "a miss raises the find too",
+      "file": "index.html",
+      "find": "    if(ok){\n      find=Loot.make(this.next(it.rar), it.ctx); find.ctx=it.ctx;",
+      "replace": "    if(true){\n      find=Loot.make(this.next(it.rar), it.ctx); find.ctx=it.ctx;",
+      "run": "verify"
+    },
+    {
+      "name": "a campaign chest carries no topic",
+      "file": "index.html",
+      "find": "key:this.mode==='campaign' && this.cur ? this.cur.key : null, diff:this.curDiff||1})",
+      "replace": "key:null, diff:this.curDiff||1})",
+      "run": "play:riddle"
+    },
+    {
+      "name": "the riddle is never shown",
+      "file": "index.html",
+      "find": "    const rb=document.getElementById('criddle'); if(rb) rb.style.display='';\n",
       "replace": "",
-      "run": "play:greedy"
+      "run": "play:riddle"
     },
     {
-      "name": "the scene does not count the questions",
+      "name": "the riddle's answer is not counted",
       "file": "index.html",
-      "find": "    if(Greedy.on(this)){ tg.innerHTML=",
-      "replace": "    if(false){ tg.innerHTML=",
-      "run": "play:greedy"
-    },
-    {
-      "name": "the scene does not say it is greedy as it arrives",
-      "file": "index.html",
-      "find": "    else if(Greedy.on(this)) UI.toast(Greedy.intro(f));\n",
+      "find": "    Game.recordAnswer(q.key, ok, 1);      // the lock teaches either way\n",
       "replace": "",
-      "run": "play:greedy"
+      "run": "play:riddle"
     },
     {
-      "name": "the card says nothing of the purse",
+      "name": "the victory card's loot line keeps the old find",
       "file": "index.html",
-      "find": "          ${Greedy.line(this)}\n",
+      "find": "      if(l) l.innerHTML=`Looted",
+      "replace": "      if(false) l.innerHTML=`Looted",
+      "run": "play:riddle"
+    },
+    {
+      "name": "no Collect after the riddle",
+      "file": "index.html",
+      "find": "    document.getElementById('cbtn').style.display='';\n  }\n};",
+      "replace": "  }\n};",
+      "run": "play:riddle"
+    },
+    {
+      "name": "the find is not shown again after the riddle",
+      "file": "index.html",
+      "find": "    card.style.display='';\n",
       "replace": "",
-      "run": "play:greedy"
-    },
-    {
-      "name": "no foe is ever greedy",
-      "file": "index.html",
-      "find": "this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));",
-      "replace": "this._start(Elite.roll(this.realm.foes[fi], beaten));",
-      "run": "play:greedy"
+      "run": "play:riddle"
     }
   ]
 }
