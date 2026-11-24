@@ -7319,6 +7319,44 @@ function withOutline(drawAt){
   drawAt();
 }
 
+/* Arms on show. The knight in the fight wears what they bought: each
+   blade is drawn its own length and in its own steel, from the rusted
+   trainer's short brown stub to the long gold of the Gradient Ascendant,
+   and each armour has its own plate, from the tunic's plain cloth to the
+   regalia's gold. Buying better gear is seen at once, in every fight.
+   It reads what is worn and writes nothing. */
+const Arms = {
+  // length of the blade above the guard, and its three steels from tip to hilt
+  BLADES: {
+    w0:{len:40, top:'#c9a27a', mid:'#a8774a', low:'#6e4a2c', guard:'#8a6a44'},
+    w1:{len:48, top:'#f0f3f7', mid:'#c3cad4', low:'#7d8794', guard:'#9aa3ae'},
+    w2:{len:54, top:'#ffffff', mid:'#dfe8f5', low:'#93a3ba', guard:'#f2c14e'},
+    w3:{len:58, top:'#ffffff', mid:'#e3d6c7', low:'#9c8a76', guard:'#c0763a'},
+    w4:{len:62, top:'#fffbe6', mid:'#d8e6a8', low:'#7c9a4a', guard:'#f2c14e'},
+    w5:{len:66, top:'#ffffff', mid:'#ffd0d2', low:'#e5484d', guard:'#f2c14e'},
+    w6:{len:70, top:'#ffffff', mid:'#d5c2ff', low:'#7b5cd6', guard:'#e9c46a'},
+    w7:{len:74, top:'#ffffff', mid:'#b8fff4', low:'#2bbcae', guard:'#e9c46a'},
+    w8:{len:78, top:'#ffffff', mid:'#c9d0ff', low:'#5f6de8', guard:'#ffd479'},
+    w9:{len:82, top:'#fffdf2', mid:'#ffe08a', low:'#ff9c1f', guard:'#ffd479'},
+    wD:{len:60, top:'#e6f2ff', mid:'#8fb3d9', low:'#3d5f86', guard:'#5a7ca3'}
+  },
+  // the plate's face and its shadow
+  PLATES: {
+    a0:{skin:'#d9c9a8', dark:'#a08a64'},
+    a1:{skin:'#b98a5e', dark:'#7a5536'},
+    a2:{skin:'#b4bcc6', dark:'#78818d'},
+    a3:{skin:'#c9d3e0', dark:'#8b97a8'},
+    a4:{skin:'#dfe9f7', dark:'#9fb2cc'},
+    a5:{skin:'#bfe3d6', dark:'#6fa894'},
+    a6:{skin:'#d6cdf2', dark:'#958ac2'},
+    a7:{skin:'#e8edf3', dark:'#b0bccb'},
+    a8:{skin:'#f2dc9a', dark:'#c29d3e'},
+    aD:{skin:'#9fb6cf', dark:'#5a7391'}
+  },
+  blade(g){ return this.BLADES[g && g.weapon] || this.BLADES.w2; },
+  plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; }
+};
+
 /* --- knight (the player) --- */
 function drawKnight(x,y,s,lunge,hurt,dead){
   cx.save();
@@ -7329,8 +7367,10 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   // shadow
   contactShadow(0,4,36,0);
 
-  const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
-  const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
+  // what the knight wears shows: the plate's own colour, and the blade's own length and steel
+  const plate = Arms.plate(Game.s), blade = Arms.blade(Game.s);
+  const skin = hurt>0 ? '#ff8b8b' : plate.skin;
+  const dark = hurt>0 ? '#c05c5c' : plate.dark;
   // The colour chosen in the quarters, worn where it shows: cape, tabard, plume.
   const cape = Battle.capeCol || '#7a2f8f';
   const plume = Battle.plumeCol || '#e5484d';
@@ -7385,12 +7425,12 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.translate(36,-58);
   cx.rotate(0.22 + lunge*2.2);   // rests clear of the helm, slashes forward
   setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
-  setFill('#f2c14e'); cx.fillRect(-13,-10,28,7);        // crossguard
-  const g=cx.createLinearGradient(0,-70,0,-8);
-  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,hon.glow?'#fff1c2':'#dfe8f5'); g.addColorStop(1,hon.glow?'#e9c46a':'#93a3ba');
+  setFill(blade.guard); cx.fillRect(-13,-10,28,7);      // crossguard
+  const tip=-10-blade.len, g=cx.createLinearGradient(0,tip+4,0,-8);
+  g.addColorStop(0,blade.top); g.addColorStop(.5,hon.glow?'#fff1c2':blade.mid); g.addColorStop(1,hon.glow?'#e9c46a':blade.low);
   if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }
   setFill(g);
-  cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,tip+10); cx.lineTo(0,tip); cx.lineTo(-4,tip+10); cx.closePath(); cx.fill();
   cx.restore();
 
   cx.restore();
