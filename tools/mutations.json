@@ -1,82 +1,75 @@
 {
-  "change": "A familiar: twenty right answers in a sitting hatch an egg, and the familiar mends a little health on each right answer",
+  "change": "A rival: Sir Corvin waits on the road of each realm's strongest foe and offers a duel for double gold",
   "mutations": [
     {
-      "name": "the egg hatches at ten",
+      "name": "the rival rides a boss's road",
       "file": "index.html",
-      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
-      "replace": "  HATCH: 10, GROWN: 60, MEND: 0.03,",
+      "find": "fs.forEach((f,i)=>{ if(!f.boss && (best<0 || f.hp>fs[best].hp)) best=i; });",
+      "replace": "fs.forEach((f,i)=>{ if(best<0 || f.hp>fs[best].hp) best=i; });",
       "run": "verify"
     },
     {
-      "name": "the familiar never grows",
+      "name": "the rival waits before his foe is beaten",
       "file": "index.html",
-      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
-      "replace": "  HATCH: 20, GROWN: 1e9, MEND: 0.03,",
+      "find": "    return fi>=0 && !!c[B.ri+':'+fi];",
+      "replace": "    return fi>=0;",
       "run": "verify"
     },
     {
-      "name": "the familiar mends nothing",
+      "name": "the rival waits in the arena too",
       "file": "index.html",
-      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
-      "replace": "  HATCH: 20, GROWN: 60, MEND: 0,",
+      "find": "    if(!B || B.mode!=='campaign' || this.on(B) || this.beat[B.ri]) return false;",
+      "replace": "    if(!B || this.on(B) || this.beat[B.ri]) return false;",
       "run": "verify"
     },
     {
-      "name": "a familiar mends past full",
+      "name": "a beaten rival waits again",
       "file": "index.html",
-      "find": "    const was=g.hp; g.hp=Math.min(g.maxHp, g.hp+this.amount(g.maxHp));",
-      "replace": "    const was=g.hp; g.hp=g.hp+this.amount(g.maxHp);",
+      "find": "  won(B){ if(!this.on(B)) return false; this.beat[B.ri]=true; return true; },",
+      "replace": "  won(B){ return this.on(B); },",
+      "run": "play:rival"
+    },
+    {
+      "name": "the rival pays as his foe does",
+      "file": "index.html",
+      "find": "gold:Math.round(f.gold*this.GOLD),",
+      "replace": "gold:f.gold,",
       "run": "verify"
     },
     {
-      "name": "the egg counts arena and daily answers",
+      "name": "the rival hits no harder",
       "file": "index.html",
-      "find": "  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },\n  hatched()",
-      "replace": "  can(B){ return !!B; },\n  hatched()",
-      "run": "verify"
+      "find": "atk:Math.round(f.atk*this.ATK), boss:false, rival:true});",
+      "replace": "atk:f.atk, boss:false, rival:true});",
+      "run": "play:rival"
     },
     {
-      "name": "the egg mends before it hatches",
+      "name": "the card offers no duel",
       "file": "index.html",
-      "find": "    if(!this.hatched()) return 0;\n    if(this.n===this.GROWN)",
-      "replace": "    if(this.n===this.GROWN)",
-      "run": "verify"
-    },
-    {
-      "name": "a familiar mends a fallen knight",
-      "file": "index.html",
-      "find": "    const g=Game.s; if(!g || g.hp<=0) return 0;",
-      "replace": "    const g=Game.s; if(!g) return 0;",
-      "run": "verify"
-    },
-    {
-      "name": "a grown familiar mends no more",
-      "file": "index.html",
-      "find": "Math.round(maxHp*this.MEND*(this.grown()?2:1))",
-      "replace": "Math.round(maxHp*this.MEND)",
-      "run": "verify"
-    },
-    {
-      "name": "right answers are not counted",
-      "file": "index.html",
-      "find": "      Familiar.add(this);   // the egg's count, or the familiar's mending\n",
+      "find": "        ${Rival.offer(this)}\n",
       "replace": "",
-      "run": "play:familiar"
+      "run": "play:rival"
     },
     {
-      "name": "the streak line hides the familiar",
+      "name": "the duel is the plain foe",
       "file": "index.html",
-      "find": "    document.getElementById('comboTxt').textContent += Familiar.tag(this);   // the egg, or the familiar\n",
+      "find": "    if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival\n",
       "replace": "",
-      "run": "play:familiar"
+      "run": "play:rival"
     },
     {
-      "name": "the egg hatches unsaid",
+      "name": "the duel starts unsaid",
       "file": "index.html",
-      "find": "      Celebrate.banner('THE EGG HATCHES', `a ${this.kind.nm} joins you for this sitting`, '#9fe6b8', ()=>Sfx.milestone());\n",
+      "find": "    else if(Rival.on(this)) UI.toast(Rival.intro());\n",
       "replace": "",
-      "run": "play:familiar"
+      "run": "play:rival"
+    },
+    {
+      "name": "a won duel is not told",
+      "file": "index.html",
+      "find": "          ${Rival.line(rival)}\n",
+      "replace": "",
+      "run": "play:rival"
     }
   ]
 }
