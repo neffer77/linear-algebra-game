@@ -9342,7 +9342,8 @@ const Coup = {
    than a trip through the map. While a war path runs it says what that win
    would pay, and a knight walking on below half health is told so, with a
    rest by the fire offered first, as the map does. It reads only which foes
-   are beaten, and nothing is saved. */
+   are beaten, and nothing is saved. Under it, the reckoning the map gives
+   the same fight: the plain blows that fell it and its blows that fell you. */
 const NextFight = {
   // the next fight on the road, unless it is the one just won (fighting it again has its own button)
   of(ri, fi){ const nx=UI.nextFoe(); return nx && !(nx.ri===ri && nx.fi===fi) ? nx : null; },
@@ -9352,6 +9353,7 @@ const NextFight = {
     const path=n>=1 ? \` Win it for <b>+\${WarPath.pct(n+1)}%</b> gold on your war path.\` : '';
     const low=Game.lowFor(f);
     return \`<div class="sub" id="nextFight" style="margin:2px 0 6px">Next on the road: <b>\${f.boss?'👑 ':''}\${f.nm}</b> · ❤️ \${f.hp} · ⚔️ \${f.atk}.\${path}</div>\`
+      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you
       +(low?\`<div class="sub" id="nextLow" style="color:var(--red);margin-bottom:6px">You are at ❤️ \${low.hp} of \${low.max} · a miss costs about \${low.hit}</div>\`
            +(low.afford?\`<button class="btn" id="nextRest" onclick="NextFight.rest(this)">🔥 Rest first · 🪙 \${low.cost}</button>\`:''):'')
       +\`<button class="btn gold" id="nextGo" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight \${f.nm}</button>\`;
