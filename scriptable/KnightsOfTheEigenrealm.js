@@ -135,6 +135,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .mtag{float:right;font-size:11px;font-weight:800;opacity:.85}
 .rev{display:inline-block;padding:1px 7px;border-radius:999px;background:#3a2f5e;
   border:1px solid var(--purple);color:#d9b8ff;font-size:10px;letter-spacing:.5px;margin-left:4px}
+.rev.weak{background:#173a2a;border:1px solid #7ff0a8;color:#7ff0a8}
 .miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
   padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
 .miss b{color:#ffb3b6}
@@ -843,6 +844,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div class="row">
         <button class="btn sm ghost" onclick="UI.go('s-bestiary')" id="btnBest">👹 Bestiary</button>
+        <button class="btn sm ghost" onclick="UI.go('s-saga')" id="btnSaga">📜 Saga</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -856,6 +858,17 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="bestBar" style="background:var(--gold);height:100%"></div></div>
     </div>
     <div id="bestList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ SAGA ============ -->
+  <div class="screen" id="s-saga">
+    <div class="panel"><h2>📜 Saga</h2><div class="sub">The story of the Eigenrealm, a chapter for each realm. Beat a realm’s boss and its chapter is told on the spot, and kept here to read again.</div>
+      <div id="sagaCount" style="margin-top:8px;font-weight:800"></div>
+      <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="sagaBar" style="background:var(--gold);height:100%"></div></div>
+    </div>
+    <div id="sagaList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -8835,6 +8848,42 @@ const Phase = {
    beaten is a shadow with no name. It reads only which foes are cleared,
    so nothing new is saved. Portraits are drawn by the battle's own sprite
    code on the scene canvas, copied off, and the canvas put back. */
+/* Weak points. Every campaign foe has one topic from its own realm that it
+   cannot stand, picked to match its tale: the slime that is the same length
+   whichever way it is pushed cannot stand Vector Length. A right answer on
+   that topic lands half again as hard, and the question says so as it is
+   asked, so the knight learns a foe by fighting it. Once a foe is beaten the
+   Bestiary names its weak point. Only the campaign's own foes have one, and
+   nothing of it is saved: what is beaten is already kept.                 */
+const Weak = {
+  OF: {
+   "Meadow Slime":'mag', "Bramble Goblin":'vecAdd', "Thicket Brute":'vecScale', "The Vector Wyrm":'vecCombo',
+   "Rank-One Skeleton":'transpose', "Row Reducer":'solve2', "Shear Sentinel":'matVec', "The Determinant Golem":'det2',
+   "Asymptote Wisp":'limInf', "Secant Harpy":'limRational', "Slope Stalker":'evalDeriv', "The Tangent Wraith":'tangent',
+   "Riemann Shade":'area', "Abyssal Chimera":'chainRule', "Constant of Dread":'indefPower', "The Lich of Limits":'defPoly',
+   "Basis Knight":'rank', "Nullspace Drake":'det3', "Resonant Champion":'proj', "The Eigen Dragon":'eigen2',
+   "Echo of a Basis":'rankNullity', "Defective Warden":'diagonalisable', "Null Vector Shade":'nullSpace', "The Spectral Sovereign":'charPoly',
+   "Asymptotic Horror":'lhopital', "Divergent Colossus":'improper', "Convergence Wyrm":'arcLength', "The Unbounded":'growth',
+   "Saddle Point Sentinel":'partial', "Steepest Descent":'dirDeriv', "Warden of Both Paths":'chainMulti', "The Gradient Itself":'gradient'
+  },
+  MUL: 1.5,
+  // the topic this fight's foe cannot stand, in the campaign only
+  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },
+  // is the question being asked right now on it?
+  on(B){ const k=this.of(B); return !!(k && B.cur && B.cur.key===k); },
+  bonus(B){ return this.on(B) ? this.MUL : 1; },
+  chip(B){ return this.on(B) ? ' <span class="rev weak">🎯 weak point ×1.5</span>' : ''; },
+  // a right answer on it: said on the scene every time, and told once a fight
+  hit(B){
+    if(!this.on(B)) return false;
+    Anim.float(610, H-330, 'WEAK POINT', '#7ff0a8', true);
+    if(!B.weakHit){ B.weakHit=true; UI.toast(\`🎯 Weak point! \${B.foe.nm} cannot stand \${TOPIC_LABEL[this.of(B)]}.\`); }
+    return true;
+  },
+  // the Bestiary's line for a beaten foe
+  line(f){ const k=this.OF[f.nm]; return k ? \`🎯 Weak point: \${TOPIC_LABEL[k]||k}\` : ''; }
+};
+
 const Bestiary = {
   LORE: {
    "Meadow Slime": "It wobbles the same distance whichever way you push it, which is all a vector ever asked.",
@@ -8910,6 +8959,7 @@ const Bestiary = {
              <div style="font-size:13px;opacity:.85">❤️ \${f.hp} · ⚔️ \${f.atk} · 💰 \${f.gold}</div>
              <div style="font-size:13px;font-style:italic;margin-top:3px">\${this.LORE[f.nm]||''}</div>
              \${f.boss&&Talk.BOSS[f.nm]?\`<div style="font-size:13px;margin-top:3px;color:var(--gold)">“\${Talk.BOSS[f.nm].meet}”</div>\`:''}
+             <div class="bestWeak" style="font-size:13px;margin-top:3px;color:#7ff0a8">\${Weak.line(f)}</div>
              <div style="font-size:12px;opacity:.75;margin-top:3px">Tests: \${this.tests(r).join(', ')}</div>
              <button class="btn sm ghost" style="width:auto;margin-top:6px" onclick="Battle.begin(\${ri},\${fi})" aria-label="Fight \${f.nm} again">⚔️ Fight again</button>\`
           : \`<div style="font-weight:800;opacity:.6">\${f.boss?'👑 ':''}???</div>
@@ -8923,6 +8973,265 @@ const Bestiary = {
       const e=this.all().find(x=>x.ri==c.dataset.ri && x.fi==c.dataset.fi);
       this.shot(c, e.f, e.beaten);
     });
+  }
+};
+
+/* The Saga: the story of the Eigenrealm, a chapter for each realm, read when
+   its boss falls. The opening says why mathematics hurts a dragon; this is
+   what happens next, told at the one moment a player has stopped anyway (the
+   victory after a boss) and never in front of a question. Each chapter is
+   three sentences: what the boss was, in its own mathematics, how the blow
+   that beat it worked, and what waits in the next realm. A chapter is read
+   by beating its boss, so nothing new is saved, and the page off the map
+   keeps every chapter read so far to be read again. */
+const Saga = {
+  CH:[
+   {t:'Head to tail',
+    b:'The Wyrm’s coils pointed every way at once and added up to nowhere. You laid them head to tail, and the arrows of the Vale run straight again. But every road out of the Vale crosses the Marches, and the grids there have begun to shear.'},
+   {t:'Down to zero',
+    b:'The Golem could undo any blow while its determinant held. Yours sent that one number to zero, and a matrix that flattens everything can never be undone. Past the Marches the ground begins to slope, and up on the Cliffs the slopes are coming apart.'},
+   {t:'One point of contact',
+    b:'The Wraith lived on a line that touches a curve at a single point and leans exactly as the curve leans there. You read its slope at that point, and it had nowhere left to stand. Below the Cliffs the areas have stopped adding up, and the Abyss is filling with what they lost.'},
+   {t:'The sum that would not close',
+    b:'The Lich kept the thin strips that make up an area and never let their sum close. You took the limit it refused, and the Abyss has its area back. Its last words named the Eigen Dragon, whose fire runs along its own lines and no others.'},
+   {t:'Along its own lines',
+    b:'The Dragon’s fire could only stretch what lay along its eigenvectors, and a knight who knows where those lines run knows where to stand. With the Dragon fallen the Citadel’s gates swing open. Beyond them the Reach shimmers with every spectrum the Dragon hoarded.'},
+   {t:'A basis shared',
+    b:'The Sovereign ruled by breaking everything it touched into parts only it could name. You named them too, and a secret basis that is shared is only a basis. Past its throne the Expanse runs on without end, and something out there will not stop growing.'},
+   {t:'A limit after all',
+    b:'The Unbounded swore it grew without end. You took its limit anyway, and the answer was a number. Only the Summit is left, where every slope in the realm points the same way: up.'},
+   {t:'Level ground',
+    b:'At the top there was no monster, only the direction in which everything climbs fastest. You followed it to the peak and found the ground level, because at a summit the gradient is zero. The Eigenrealm balances again, and its old foes are already sharpening their twists for a rematch.'}
+  ],
+  // a realm's boss, and whether it has fallen
+  boss(ri){ const fs=REALMS[ri].foes; return fs[fs.length-1]; },
+  read(ri){ const g=Game.s; return !!(g && g.cleared && g.cleared[ri+':'+(REALMS[ri].foes.length-1)]); },
+  count(){ return REALMS.filter((r,ri)=>this.read(ri)).length; },
+  // one chapter as a panel: the boss in its own colours beside the tale
+  card(ri, id){
+    const c=this.CH[ri], r=REALMS[ri], f=this.boss(ri);
+    return \`<div class="panel sagaCh" id="\${id||'sagaNew'}" style="border-color:\${r.col};text-align:left">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:\${r.col}">📜 CHAPTER \${ri+1} OF \${this.CH.length} · \${r.nm.toUpperCase()}</div>
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-top:6px">
+        <canvas width="96" height="96" style="width:64px;height:64px;flex:0 0 64px" aria-hidden="true" data-saga="\${ri}"></canvas>
+        <div style="flex:1;min-width:0">
+          <h2 style="font-size:16px;color:var(--gold);margin:0">\${c.t}</h2>
+          <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">\${c.b}</div>
+          <div class="small" style="margin-top:6px;opacity:.75">The fall of \${f.nm}.</div>
+        </div>
+      </div>
+    </div>\`;
+  },
+  // a chapter not yet read: its number and where to read it, and nothing of the tale
+  locked(ri){
+    const r=REALMS[ri];
+    return \`<div class="panel sagaCh" id="saga-\${ri}" style="text-align:left;opacity:.65">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em">📜 CHAPTER \${ri+1} OF \${this.CH.length} · ???</div>
+      <div class="sub" style="margin-top:6px;font-size:14px">Beat the boss of \${r.nm} to read it.</div>
+    </div>\`;
+  },
+  // the bosses into their canvases, once the html is in place
+  paint(root){
+    (root||document).querySelectorAll('canvas[data-saga]').forEach(c=>Bestiary.shot(c, this.boss(+c.dataset.saga), true));
+  },
+  render(){
+    const list=document.getElementById('sagaList'); if(!list) return;
+    const n=this.count(), N=this.CH.length;
+    document.getElementById('sagaCount').textContent=\`\${n} of \${N} chapters read\`+(n===N?' · the whole saga 🏆':'');
+    document.getElementById('sagaBar').style.width=(n/N*100)+'%';
+    list.innerHTML=\`<div class="panel" id="saga-open" style="text-align:left">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--gold)">📜 THE OPENING</div>
+        <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">\${OPENING.map(o=>o.b).join(' ')}</div>
+      </div>\`+
+      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri)).join('');
+    this.paint(list);
+  }
+};
+
+/* -------------- battle grade --------------
+   A victory is graded on three marks the fight itself holds: no answer
+   missed, a streak of five, and more than half your health left as the foe
+   falls. Three marks is an S, two an A, one a B and none a C. Nothing is
+   saved: the grade is this fight's alone, and the line under it names the
+   first mark still open, so the next try has one plain thing to aim at. */
+const Grade = {
+  LET: ['C','B','A','S'],
+  COL: {S:'var(--gold)', A:'var(--green)', B:'var(--blue)', C:'var(--dim)'},
+  AN: {S:'an S', A:'an A', B:'a B', C:'a C'},
+  marks(missed, best, hp, maxHp){ return [
+    {id:'clean',  ic:'🎯', nm:'No answer missed',           to:'no answer missed',           ok:missed===0},
+    {id:'streak', ic:'🔥', nm:'A streak of five',            to:'a streak of five',           ok:best>=5},
+    {id:'hale',   ic:'❤️', nm:'Over half your health left', to:'over half your health left', ok:hp*2>maxHp}]; },
+  of(m){ return this.LET[m.filter(x=>x.ok).length]; },
+  next(m){
+    const open=m.find(x=>!x.ok);
+    if(!open) return 'All three marks: the top grade.';
+    return \`Win with \${open.to} as well for \${this.AN[this.LET[m.filter(x=>x.ok).length+1]]}.\`;
+  },
+  card(m, had){
+    const g=this.of(m);
+    return \`<div id="gradeCard" style="margin:8px 0 2px">
+      <div class="small" style="color:var(--dim);letter-spacing:1px">BATTLE GRADE</div>
+      <div id="gradeLet" data-grade="\${g}" style="font-size:46px;font-weight:900;line-height:1.1;color:\${this.COL[g]}">\${g}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;font-size:13px;margin:4px 0">\${m.map(x=>
+        \`<div data-mark="\${x.id}" data-ok="\${x.ok?1:0}" style="color:\${x.ok?'var(--green)':'var(--dim)'}">\${x.ok?'✓':'○'} \${x.ic} \${x.nm}</div>\`).join('')}</div>
+      <div class="small" id="gradeNext">\${this.next(m)}</div>\${this.bestLine(had, g)}
+    </div>\`;
+  },
+  /* A foe's best grade is kept where its clear is: the map's cleared[key]
+     holds the letter in place of true, so nothing new is saved. A foe beaten
+     before grades were kept reads as no grade yet, and its next win sets one. */
+  RANK: {C:0, B:1, A:2, S:3},
+  best(v){ return typeof v==='string' && v in this.RANK ? v : null; },
+  keep(had, l){ const b=this.best(had); return b && this.RANK[b]>=this.RANK[l] ? b : l; },
+  bestLine(had, l){
+    const b=this.best(had);
+    if(!b || b===l) return '';
+    const up=this.RANK[l]>this.RANK[b];
+    return \`<div id="gradeBest" class="small" data-up="\${up?1:0}" style="margin-top:4px\${up?';color:var(--gold);font-weight:800':''}">\${up
+      ? \`⬆️ A new best on this foe, up from \${b}.\` : \`Your best on this foe is still \${b}.\`}</div>\`;
+  },
+  tag(v){ const b=this.best(v); return b ? \`<span class="tag" data-best="\${b}" style="color:\${this.COL[b]}">best \${b}</span>\` : ''; },
+  // every foe of a realm beaten at S: the realm wears a crown on the map
+  crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },
+  crown(on){ return on ? \`<span class="crown" title="Every foe beaten at S" style="margin-left:6px;font-size:12px;color:var(--gold);font-weight:800">👑 all S</span>\` : ''; }
+};
+
+/* -------------- war path --------------
+   Campaign victories in a row, this sitting. Each one after the first pays
+   a tenth more gold, up to half again from the sixth on, and a fall or a
+   flight from a live fight ends it. It lives in memory and is never saved,
+   so a fresh sitting starts a fresh path. The victory screen says how long
+   it runs and what the next win pays; a fall says what it cost. Gold buys
+   convenience, never mastery, so this pushes a knight on without making
+   them any better at the questions than their answers do. */
+const WarPath = {
+  n:0, STEP:0.1, CAP:5,
+  bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },
+  won(){ this.n++; return 1+this.bonus(this.n); },
+  broke(){ const n=this.n; this.n=0; return n; },
+  pct(n){ return Math.round(this.bonus(n)*100); },
+  line(){
+    const n=this.n;
+    if(n<2) return '';
+    const next=n-1<this.CAP ? \` Win the next for +\${this.pct(n+1)}%.\` : ' The most it pays.';
+    return \`<div id="warPath" style="color:#ff9c3d;font-weight:800;margin-top:6px">🔥 War path: \${n} victories in a row, +\${this.pct(n)}% gold.\${next}</div>\`;
+  },
+  ended(n){
+    return n>=2 ? \`<div id="warPathEnd" class="sub" style="margin-top:8px;color:#ff9c3d">🔥 Your war path of \${n} victories ends here.</div>\` : '';
+  }
+};
+
+/* Win it back. A miss lets the foe's blow land, and the question after it is
+   one like it, asked while the explanation is still on screen. Land that one
+   and half the blow comes back: the reward is for using what was just shown,
+   and it never pays more than the miss cost, so missing on purpose only loses.
+   It lives for one question in one fight and is never saved. */
+const Recover = {
+  owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },
+  heal(n){ const g=Game.s, was=g.hp; g.hp=Math.min(g.maxHp, g.hp+n); return g.hp-was; },
+  line(n){ return n>0 ? \`<div class="miss again" id="recoverLine">❤️ <b>Land it to win back \${n}</b> of that blow.</div>\` : ''; },
+  back(n){ return n>0 ? \`, and won back <b id="recovered">❤️ \${n}</b> of the blow\` : ''; }
+};
+
+/* Riposte. A foe that winds up says so a turn ahead, and a right answer on
+   that turn already braces the slam. It also turns the foe's opening against
+   it: that strike lands half again as hard. It rewards getting the question
+   that matters most right, it never makes a miss cost more, and it is never
+   saved. */
+const Riposte = {
+  MUL: 1.5,
+  // is the foe winding up on the question being asked right now?
+  on(B){ return !!(B && B.slamNext); },
+  bonus(B){ return this.on(B) ? this.MUL : 1; },
+  tele(nm){ return \`⚡ <b>\${nm}</b> is winding up. Answer correctly to brace the blow and 🤺 <b>riposte</b> for ×1.5!\`; },
+  // a right answer as it winds up: said on the scene every time, and told once a fight
+  hit(B){
+    if(!this.on(B)) return false;
+    Anim.float(610, H-370, 'RIPOSTE', '#9fd3ff', true);
+    if(!B.riposted){ B.riposted=true; UI.toast(\`🤺 Riposte! A right answer as \${B.foe.nm} winds up lands half again as hard.\`); }
+    return true;
+  },
+  line(on){ return on ? \`<div class="miss again" id="riposteLine">🤺 <b>Riposte!</b> You answered right as it wound up, so your strike landed half again as hard.</div>\` : ''; }
+};
+
+/* Coup de grâce. A foe nearly beaten, down to its last 15% of health, is
+   said to be on its last legs as the question is asked, and a right answer to
+   that question finishes it, however small the blow. It spares the knight a
+   tail of chip damage on a foe already beaten in all but name, and it makes
+   the last question of a fight one the knight can see coming. It never makes
+   a miss cost more, a rite is left to its own pace, the daily is left as it is
+   for everyone, and nothing is saved. */
+const Coup = {
+  FRAC: 0.15,
+  // on its last legs as this question is asked?
+  ready(B){ return !!(B && B.mode!=='daily' && !B.rite && B.ehp>0 && B.ehp<=B.emax*this.FRAC); },
+  tele(nm, hp){ return \`💀 <b>\${nm}</b> is down to its last <b>\${hp}</b> health. Answer correctly to finish it!\`; },
+  // what a right answer's blow takes: all it has left, on its last legs
+  through(B, hit){
+    if(!B.coup) return hit;
+    B.lastCoup=true;
+    Anim.float(610, H-410, 'COUP DE GRÂCE', '#ffb3c1', true);
+    return Math.max(hit, B.ehp);
+  }
+};
+
+/* Straight on. A campaign victory's first button is the next fight on the
+   road, named with its health and blow, so one more is a single tap rather
+   than a trip through the map. While a war path runs it says what that win
+   would pay, and a knight walking on below half health is told so, with a
+   rest by the fire offered first, as the map does. It reads only which foes
+   are beaten, and nothing is saved. */
+const NextFight = {
+  // the next fight on the road, unless it is the one just won (fighting it again has its own button)
+  of(ri, fi){ const nx=UI.nextFoe(); return nx && !(nx.ri===ri && nx.fi===fi) ? nx : null; },
+  html(nx){
+    if(!nx) return '';
+    const f=nx.f, n=WarPath.n;
+    const path=n>=1 ? \` Win it for <b>+\${WarPath.pct(n+1)}%</b> gold on your war path.\` : '';
+    const low=Game.lowFor(f);
+    return \`<div class="sub" id="nextFight" style="margin:2px 0 6px">Next on the road: <b>\${f.boss?'👑 ':''}\${f.nm}</b> · ❤️ \${f.hp} · ⚔️ \${f.atk}.\${path}</div>\`
+      +(low?\`<div class="sub" id="nextLow" style="color:var(--red);margin-bottom:6px">You are at ❤️ \${low.hp} of \${low.max} · a miss costs about \${low.hit}</div>\`
+           +(low.afford?\`<button class="btn" id="nextRest" onclick="NextFight.rest(this)">🔥 Rest first · 🪙 \${low.cost}</button>\`:''):'')
+      +\`<button class="btn gold" id="nextGo" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight \${f.nm}</button>\`;
+  },
+  // a night's camp from the victory screen: the warning and the offer go once it is paid
+  rest(btn){
+    if(!Game.rest()) return false;
+    btn.remove(); const l=document.getElementById('nextLow'); if(l) l.remove();
+    return true;
+  }
+};
+
+/* Second wind. Once a campaign fight, a blow that would fell the knight
+   leaves them standing at 1 health instead, and the question after it is a
+   last stand: answer it right and the strike lands twice as hard. The next
+   blow still fells them, so resting and answering well matter as much as
+   ever, but a fight on the edge turns on one question rather than ending on a
+   stray roll. Arena runs, the Deep, rites and the daily keep their own
+   stakes, a turn's second blow is held along with its first, and nothing is
+   saved. */
+const SecondWind = {
+  MUL: 2,
+  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
+  // a blow about to land on a knight at hp: what is left of it
+  hold(B, hp, dmg){
+    if(!this.can(B) || hp<=0 || dmg<hp) return dmg;
+    if(B.winded && !B.windNow) return dmg;            // spent earlier in the fight
+    if(!B.winded){
+      B.winded=true; B.windNow=true; B.standing=true;
+      Anim.float(220, H-330, 'SECOND WIND', '#ffd479', true);
+    }
+    return hp-1;
+  },
+  // as an answer begins: is it a last stand? It is one answer's, right or wrong
+  take(B){ const s=!!B.standing; B.standing=false; B.windNow=false; return s; },
+  bonus(B){ return B && B.lastStand ? this.MUL : 1; },
+  tele(){ return \`🔥 <b>Last stand.</b> You are hanging on at 1 health. Answer correctly to strike twice as hard!\`; },
+  line(B, ok){
+    if(B.windNow) return \`<div class="miss again" id="windLine">🔥 <b>Second wind!</b> That blow would have felled you, but you hang on at 1 health. Answer the next one right to strike twice as hard.</div>\`;
+    if(ok && B.lastStand) return \`<div class="miss again" id="standLine">🔥 <b>Last stand!</b> On 1 health you struck back twice as hard.</div>\`;
+    return '';
   }
 };
 
@@ -8979,10 +9288,15 @@ const Battle = {
     // companion, not a consumable.
     this.beastLeft=Passage.guard();
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
-    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
+    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0; this.runBest=0;
+    this.recover=0; this.recovered=0;   // half a missed blow, owed to the question like it
     this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
+    this.weakHit=false;              // the weak point is told once a fight
+    this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
+    this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
+    this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9228,8 +9542,14 @@ const Battle = {
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
-      tg.innerHTML=\`⚡ <b>\${this.foe.nm}</b> is winding up — answer correctly to brace the blow!\`;
+      tg.innerHTML=Riposte.tele(this.foe.nm);
     } else tg.style.display='none';
+    this.coup=Coup.ready(this);
+    if(this.coup){
+      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);
+      tg.style.display='block';
+    }
+    if(this.standing){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+SecondWind.tele(); tg.style.display='block'; }
     this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
@@ -9289,7 +9609,8 @@ const Battle = {
       Lesson.chip(this.lesson) +
       (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
       (this.cur.redo ? ' <span class="rev again">↺ one like it</span>' : '') +
-      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
+      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '') +
+      Weak.chip(this);
 
     // Codex chip
     const head=document.getElementById('qhead');
@@ -9532,25 +9853,34 @@ const Battle = {
        screen and in mind. Once only — a miss on that second go returns to the
        usual draw, so a struggling knight is never held on one topic. A first
        meeting is the lesson ladder's to pace, so it is left to it. */
+    const owed=this.recover||0; this.recover=0; this.recovered=0;
+    this.lastRiposte=false; this.lastCoup=false;
+    this.lastStand=SecondWind.take(this);
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
+      this.runBest=Math.max(this.runBest||0,this.combo);
+      if(owed && this.cur.redo){
+        this.recovered=Recover.heal(owed);
+        if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
+      }
       const w=this.wStats();
       const speed = this.speedMult(el);
       const crit = R.chance(w.crit + this.combo*0.02);
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * SecondWind.bonus(this);
+      const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
-      const hit=Elite.through(this, dmg), was=this.ehp;
+      const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;
       this.ehp=Math.max(0,this.ehp-hit);
       const rallied=Phase.check(this, was);
       Anim.strike('p',hit,crit,null,this.ehp<=0);
@@ -9560,7 +9890,7 @@ const Battle = {
       else if(rallied) Talk.say('rally', true);
       else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);
       else if(this.combo===5) Talk.say('worry', true);
-      else if(crit) Talk.say('reel');
+      else if(crit || weak || riposte) Talk.say('reel');
       // A bigger blow is a longer blow: a crit throws half again as many
       // sparks, and a killing one drops into slow motion, which stretches the
       // whole thing. revealScroll waits this out before moving the page.
@@ -9627,7 +9957,9 @@ const Battle = {
       let dmg=0;
       for(let i=0;i<blows;i++)
         dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
+      dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
+      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);
       Anim.strike('e',dmg,false);
       // A vampiric elite drinks back the blow it lands.
       if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){
@@ -9662,7 +9994,7 @@ const Battle = {
     if(this.slamNext && this.ehp<=0) this.slamNext=false;
     else if(this.slamNext){
       this.slamNext=false;
-      this.lastSlam=this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));
+      this.lastSlam=SecondWind.hold(this, Game.s.hp, this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok)));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
@@ -9743,9 +10075,11 @@ const Battle = {
       ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+ slipNote +
       (ok && this.nudged && !inRite ? \`<div class="miss nudged">💡 Nudged: half the strike, and half the credit toward \${label}.</div>\` : '')+
-      (!inRite && this.redo && Game.s.hp>0 ? \`<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>\` : '')+
-      (!inRite && ok && this.cur.redo ? \`<div class="miss again">↺ <b>Got it this time.</b> The second go landed.</div>\` : '')+
+      (!inRite && this.redo && Game.s.hp>0 ? \`<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>\`+Recover.line(this.recover) : '')+
+      (!inRite && ok && this.cur.redo ? \`<div class="miss again">↺ <b>Got it this time.</b> The second go landed\${Recover.back(this.recovered)}.</div>\` : '')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
+      Riposte.line(!inRite && this.lastRiposte)+
+      SecondWind.line(this, ok)+
       \`<div>\${st.ex}</div>\`+ rule +
       \`<div id="afig"></div>\`+
       \`<button class="btn gold" style="margin-top:10px" id="contBtn">\${inRite?'Next step ▶':'Continue ▶'}</button>\`;
@@ -9886,16 +10220,25 @@ const Battle = {
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(true);},1100); return; }
     const g=Game.s;
     const key=this.ri+':'+this.fi;
-    const first=!g.cleared[key];
+    const had=g.cleared[key], first=!had;
+    // whether the realm was crowned is read before this win marks its clear
+    const nfoes=this.realm.foes.length, wasCrowned=Grade.crowned(g.cleared, this.ri, nfoes);
     g.cleared[key]=true; g.stats.wins++;
     Bounty.bump('wins',1);
     if(this.missed===0) Bounty.bump('flaw',1);
     // An elite pays like a first clear, and always drops a chest.
     const full=first || !!this.foe.elite;
     // A second phase got through without a miss pays a quarter more gold.
-    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1));
+    // Victories in a row this sitting pay a tenth more each, up to half again.
+    const wp=this.mode==='campaign' ? WarPath.won() : 1;
+    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp);
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
+    // graded on the health left as the foe falls, before a level-up restores it
+    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);
+    // the foe's best grade is kept in its clear, and a realm all at S is crowned
+    g.cleared[key]=Grade.keep(had, Grade.of(marks));
+    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
@@ -9909,12 +10252,14 @@ const Battle = {
 
     setTimeout(()=>{
       UI.go('s-result');
+      const nx=this.mode==='campaign' ? NextFight.of(this.ri, this.fi) : null;
       document.getElementById('resultBody').innerHTML=\`
         <div class="center crest">🏆</div>
         <div class="panel center">
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
+          \${WarPath.line()}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -9925,18 +10270,25 @@ const Battle = {
             \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
           </div>
           <hr>
-          <div class="small">Longest streak this battle: \${g.stats.best}</div>
+          \${Grade.card(marks, had)}
+          <div class="small">Longest streak this battle: \${this.runBest||0}</div>
           \${this.learnedHtml()}
         </div>
-        <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
+        \${this.foe.boss&&first?Saga.card(this.ri):''}
+        \${NextFight.html(nx)}
+        <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
+      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
       for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
+      else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
+      else if(crowned) Celebrate.banner('REALM CROWNED', 'every foe of '+this.realm.nm+' beaten at S', 'var(--gold)', ()=>Sfx.milestone());
+      else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE', 'No miss, a streak of five, health to spare', 'var(--gold)', ()=>Sfx.milestone());
       Titles.check();
       if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
       Anim.stop();
@@ -9950,6 +10302,7 @@ const Battle = {
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
+    const path=WarPath.broke();
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
     Game.save();
@@ -9963,6 +10316,7 @@ const Battle = {
           <hr>
           <div style="font-weight:800">−\${lost} gold lost in the retreat</div>
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+          \${WarPath.ended(path)}
           \${this.learnedHtml()}
         </div>
         \${g.gold>=Game.restCost()
@@ -9981,11 +10335,13 @@ const Battle = {
   restAgain(){ if(Game.rest()) this.begin(this.ri,this.fi); },
 
   flee(){
+    const live=!this.over;
     clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1); Talk.hide();
     if(this.mode==='arena'){ Arena.retire(); return; }
     if(this.mode==='dungeon'){ Dungeon.leave(true); return; }
     UI.go('s-map');
-    UI.toast('🏃 You slip away into the trees.');
+    const path=live && this.mode==='campaign' ? WarPath.broke() : 0;
+    UI.toast(path>=2 ? \`🏃 You slip away into the trees, and your war path of \${path} victories ends.\` : '🏃 You slip away into the trees.');
   }
 };
 
@@ -15055,6 +15411,7 @@ const UI = {
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-bestiary') Bestiary.render();
+    if(id==='s-saga') Saga.render();
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
@@ -15385,7 +15742,7 @@ const UI = {
       realms+=\`<details class="realm" id="realm-\${ri}"\${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
             <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">\${beaten}/\${r.foes.length}</span><span class="schev">▸</span></div>
+            <span class="rcount">\${beaten}/\${r.foes.length}</span>\${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>\`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
@@ -15394,7 +15751,7 @@ const UI = {
         realms+=\`<div class="node \${open?'':'locked'} \${done?'done':''}" onclick="Battle.begin(\${ri},\${fi})">
           <div class="ico" style="font-size:24px">\${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">\${f.nm} \${done?'<span class="tag g">cleared</span>':''}\${f.boss?'<span class="tag r">boss</span>':''}</div>
+            <div class="nm">\${f.nm} \${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}\${f.boss?'<span class="tag r">boss</span>':''}</div>
             <div class="dt">❤️ \${f.hp} · ⚔️ \${f.atk} · 🪙 \${f.gold}</div>
           </div>
           <div style="font-size:20px;color:var(--dim)">\${open?'▶':'🔒'}</div>
@@ -15674,6 +16031,7 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📜 Why a blade of mathematics</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">The tale you were told at the gate, in three cards.</div>
          <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
+         <button class="btn sm ghost" style="width:auto" onclick="UI.go('s-saga')">📜 The saga so far</button>
        </div>\` +
       WorkshopIndex.html() +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15683,7 +16041,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it. Or rank the stretch: four matrices, from the biggest stretch of area to the smallest.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15788,7 +16146,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under. Or match them up: four functions and four polynomials, and which hugs which near 0.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -16771,12 +17129,19 @@ const Workshop = {
   },
   render(){
     const M=this.M, match=this.mode==='match' && this.goal;
-    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape'],['pick','🔢 Which matrix?']]
+    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape'],['pick','🔢 Which matrix?'],['rank','🏅 Rank the stretch']]
       .map(([m,t])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Workshop.setMode('\${m}')">\${t}</button>\`).join('');
     // Which matrix? The shape is drawn and four matrices offered: no steppers.
-    const pick=this.mode==='pick';
-    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : '';
+    const pick=this.mode==='pick', rank=this.mode==='rank';
+    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick||rank?'none':'';
+    document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : rank ? DetRank.html() : '';
+    // Rank the stretch: four matrices drawn in their own panes, so the shared figure and readout step aside.
+    if(rank){
+      document.getElementById('wsTask').style.display='none';
+      for(const id of ['wsFig','wsRead']) document.getElementById(id).innerHTML='';
+      document.getElementById('wsGoalPanel').style.display='none';
+      return;
+    }
     if(pick){
       const task=document.getElementById('wsTask'); task.style.display=''; task.textContent=MatPick.RULE;
       Figure.render(MatPick.fig(), document.getElementById('wsFig'));
@@ -16943,6 +17308,162 @@ const MatPick = {
       lines.push(\`That was it: î lands on \${this.at([A[0][0],A[1][0]])}, the first column, and ĵ on \${this.at([A[0][1],A[1][1]])}, the second. Here is a new shape.\`); }
     lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
     return lines.map(l=>\`<div>\${l}</div>\`).join('');
+  }
+};
+
+/* ---------- Rank the stretch: the matrix workshop's fourth mode ----------
+   Four whole-number 2×2 matrices, each drawn in its own pane as the shape the
+   unit square lands on, and the player ranks them from the biggest stretch of
+   area to the smallest by the size of the determinant, |ad − bc|. The rounds
+   are chosen so the easy guesses mislead: a matrix that flips the square over,
+   its determinant below 0, that still stretches more than one that does not;
+   a matrix with the bigger numbers that stretches less; and a matrix that
+   presses the square flat. A slip works that matrix's determinant. No two
+   stretches in a round tie. Nothing is saved, and there is no clock. */
+const DetRank = {
+  // each matrix its rows run together: [a, b, c, d] for rows (a, b) and (c, d)
+  ROUNDS:[
+    [[3,2,2,3],[2,0,0,-3],[1,1,-1,1],[2,1,1,2]],
+    [[3,3,1,2],[1,-2,2,1],[2,1,0,-2],[1,0,0,1]],
+    [[-1,2,2,-1],[2,3,1,2],[0,2,-2,1],[3,0,1,2]],
+    [[1,3,-2,1],[3,2,3,3],[-2,1,2,1],[2,-1,1,2]],
+    [[2,4,1,2],[1,0,0,-1],[2,-1,1,1],[0,-2,1,0]],
+    [[3,1,1,-3],[2,2,2,3],[1,-1,1,2],[3,3,1,3]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Rank all four matrices right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flip', t:'Rank a matrix that flips the square over above one that does not.', toast:'A flip is still a stretch',
+     ok:K=>K.kinds.has('flip')},
+    {id:'big',  t:'Rank a matrix with the bigger numbers below one with smaller ones.', toast:'Big numbers, small stretch',
+     ok:K=>K.kinds.has('big')},
+    {id:'flat', t:'Rank last a matrix that presses the square flat onto a line.', toast:'Flat has no area',
+     ok:K=>K.kinds.has('flat')},
+    {id:'fix',  t:'Check a ranking with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Rank three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A matrix stretches every area by the same amount, the size of its determinant: |ad − bc|. The dashed unit square lands on the blue shape. A minus sign only flips the shape over; it does not shrink it. Rank the four from 1st, the biggest stretch, to 4th, the smallest.',
+  L:'ABCD',
+  ORD:['1st','2nd','3rd','4th'],
+  R(){ return this.ROUNDS[this.ri]; },
+  mat(i){ const [a,b,c,d]=this.R()[i]; return \`[\${neg(a)} \${neg(b)} ; \${neg(c)} \${neg(d)}]\`; },
+  rows(i){ const [a,b,c,d]=this.R()[i]; return \`rows \${neg(a)}, \${neg(b)} and \${neg(c)}, \${neg(d)}\`; },
+  det(i){ const [a,b,c,d]=this.R()[i]; return a*d-b*c; },
+  area(i){ return Math.abs(this.det(i)); },
+  size(i){ return this.R()[i].reduce((s,v)=>s+Math.abs(v),0); },
+  /* rank 0 for the biggest stretch, 3 for the smallest */
+  truth(i){ const s=this.area(i); return [0,1,2,3].filter(j=>this.area(j)>s).length; },
+  /* what a round holds: a flip ranked above a matrix that keeps its side, bigger numbers ranked below, a square pressed flat */
+  flips(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.det(i)<0 && this.det(j)>0 && this.truth(i)<this.truth(j)) out.push([i,j]); return out; },
+  bigs(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.size(i)>this.size(j) && this.truth(i)>this.truth(j)) out.push([i,j]); return out; },
+  flats(){ return [0,1,2,3].filter(i=>this.det(i)===0); },
+  tags(){ const t=[]; if(this.flips().length) t.push('flip'); if(this.bigs().length) t.push('big'); if(this.flats().length) t.push('flat'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  and(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; },
+  /* ad − bc worked out: (a)·(d) − (b)·(c) = p − q = D */
+  work(i){ const [a,b,c,d]=this.R()[i], p=a*d, q=b*c;
+    return \`\${par(a)}·\${par(d)} − \${par(b)}·\${par(c)} = \${neg(p)} \${q<0?'+':'−'} \${Math.abs(q)} = \${neg(p-q)}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are ranked right.');
+      const fl=this.flips(), bg=this.bigs(), ft=this.flats();
+      if(fl.length){ const [i,j]=fl[0];
+        out.push(\`\${this.L[i]}'s determinant is \${neg(this.det(i))}, below 0, yet it ranks above \${this.L[j]}, whose determinant is \${this.det(j)}: the minus sign only flips the square over, and its area still grows \${this.area(i)} times.\`); }
+      if(bg.length){ const [i,j]=bg[0];
+        out.push(\`\${this.L[i]}'s numbers come to \${this.size(i)} in size against \${this.L[j]}'s \${this.size(j)}, yet \${this.L[i]} ranks below: the stretch is ad − bc, not the size of the numbers, and for \${this.L[i]} that is \${this.work(i)}.\`); }
+      if(ft.length){ const i=ft[0];
+        out.push(\`\${this.L[i]}'s determinant is 0: its two columns lie on one line, so the square is pressed flat and has no area at all.\`); }
+      out.push(\`The stretches: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.area(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const all=[0,1,2,3].map(j=>this.area(j)).sort((a,b)=>b-a);
+        out.push(\`\${this.L[i]}, \${this.mat(i)}: ad − bc = \${this.work(i)}, so it stretches area \${this.area(i)} times. Of the stretches \${this.and(all.map(String))}, that is the \${this.ORD[this.truth(i)]} biggest, so it ranks \${this.ORD[this.truth(i)]}. You had it \${this.ORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 ranked.\`);
+    }
+    out.push(\`\${this.wins} ranked right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each matrix in its own pane, 8 pixels to a unit both ways so areas can be
+     compared by eye: the dashed unit square, and in blue the shape it lands
+     on, with corners at 0, the first column, both columns and the second; a
+     slip rings that pane, and once ranked right each pane gets its rank and
+     its stretch */
+  U:8,
+  svg(){
+    const f=n=>n.toFixed(2), R=this.R(), U=this.U;
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="Four matrices, each with the shape the unit square lands on: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.rows(i)}\`).join('; ')}\${this.solved?', each with its rank and its stretch':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*120, [a,b,c,d]=R[i];
+      const PX=x=>X+90+x*U, PY=y=>Y+60-y*U;
+      const pts=[[0,0],[a,c],[a+b,c+d],[b,d]].map(([x,y])=>\`\${f(PX(x))},\${f(PY(y))}\`).join(' ');
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+10}" y1="\${Y+60}" x2="\${X+170}" y2="\${Y+60}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+90}" y1="\${Y+8}" x2="\${X+90}" y2="\${Y+112}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="unit" x="\${f(PX(0))}" y="\${f(PY(1))}" width="\${U}" height="\${U}" fill="none" stroke="\${FIG_COL.ink}" stroke-width="1" stroke-dasharray="2 2"/>\`;
+      out+=\`<polygon data-k="shape" points="\${pts}" fill="\${FIG_COL.a}" fill-opacity="0.28" stroke="\${FIG_COL.a}" stroke-width="2" stroke-linejoin="round"/>\`;
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved) out+=\`<text data-k="rank" x="\${X+168}" y="\${Y+22}" fill="\${FIG_COL.c}" font-size="13" font-weight="700" text-anchor="end">\${this.ORD[this.truth(i)]} · ×\${this.area(i)}</text>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,k){
+    if(this.solved || this.calls[i]===k) return;
+    this.calls=this.calls.slice(); this.calls[i]=k; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Workshop.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Workshop.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Workshop.render(); },
+  btn(i,k){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-k="\${k}" aria-pressed="\${this.calls[i]===k}" \${this.solved?'disabled ':''}onclick="DetRank.call(\${i},\${k})" aria-label="Matrix \${this.L[i]}, \${this.rows(i)}, ranks \${this.ORD[k]}\${k===0?', the biggest stretch':k===3?', the smallest':''}">\${this.ORD[k]}</button>\`;
+  },
+  html(){
+    const R=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four matrices. Rank them from the biggest stretch of area to the smallest.</div>\`;
+    out+=\`<div id="drkFig">\${this.svg()}<div class="figcap">Each pane shows the dashed unit square and, in blue, the shape one matrix lands it on, drawn to the same scale. Once all four are ranked right, each pane gets its rank and its stretch.</div></div>\`;
+    out+=\`<div id="drkStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+R.map((l,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="drkStop" data-i="\${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 5;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.mat(i)}</span></b>\`+
+        [0,1,2,3].map(k=>this.btn(i,k)).join('')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="drkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="drkNext" onclick="DetRank.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="drkCheck" \${this.ready()?'':'disabled '}onclick="DetRank.check()" aria-label="\${this.ready()?'Check the four ranks':'Rank all four matrices to check them'}">\${this.ready()?'Check my ranking':'Rank all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="drkGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="drkGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('STRETCH JUDGE','every stretch ranked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
@@ -22243,6 +22764,207 @@ const TaylorTurn = {
     return out;
   }
 };
+/* ---------- Match them up: the Taylor workshop's fourth mode ----------
+   Four functions and four quadratics, numbered and in another order, each
+   drawn as its curve near 0. The player matches each function to its
+   polynomial f(0) + f′(0)·x + f″(0)/2·x², the parabola that hugs it at 0.
+   Every round pairs two functions that start at the same height with the
+   same slope, so only the x² term tells them apart. Every coefficient is a
+   whole number or a simple fraction. A slip is worked from the function's
+   own value, slope and bend at 0. Once a round is right, each function is
+   drawn in gold over its polynomial. Nothing is saved. */
+const TaylorMatch = {
+  // each function's name, its values near 0, and its x⁰, x¹ and x² coefficients as [top, bottom]
+  FN:{
+    exp:   {at:'eˣ',        f:x=>Math.exp(x),      c:[[1,1],[1,1],[1,2]]},
+    expm:  {at:'e⁻ˣ',       f:x=>Math.exp(-x),     c:[[1,1],[-1,1],[1,2]]},
+    exp2:  {at:'e²ˣ',       f:x=>Math.exp(2*x),    c:[[1,1],[2,1],[2,1]]},
+    expsq: {at:'e^(x²)',    f:x=>Math.exp(x*x),    c:[[1,1],[0,1],[1,1]]},
+    xexp:  {at:'x·eˣ',      f:x=>x*Math.exp(x),    c:[[0,1],[1,1],[1,1]]},
+    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[-1,2]]},
+    cos2:  {at:'cos 2x',    f:x=>Math.cos(2*x),    c:[[1,1],[0,1],[-2,1]]},
+    cosh:  {at:'cosh x',    f:x=>Math.cosh(x),     c:[[1,1],[0,1],[1,2]]},
+    sin:   {at:'sin x',     f:x=>Math.sin(x),      c:[[0,1],[1,1],[0,1]]},
+    sin2:  {at:'sin 2x',    f:x=>Math.sin(2*x),    c:[[0,1],[2,1],[0,1]]},
+    tan:   {at:'tan x',     f:x=>Math.tan(x),      c:[[0,1],[1,1],[0,1]]},
+    ln1p:  {at:'ln(1 + x)', f:x=>Math.log(1+x),    c:[[0,1],[1,1],[-1,2]]},
+    ln1m:  {at:'ln(1 − x)', f:x=>Math.log(1-x),    c:[[0,1],[-1,1],[-1,2]]},
+    geo:   {at:'1/(1 − x)', f:x=>1/(1-x),          c:[[1,1],[1,1],[1,1]]},
+    geom:  {at:'1/(1 + x)', f:x=>1/(1+x),          c:[[1,1],[-1,1],[1,1]]},
+    geo2:  {at:'1/(1 − 2x)',f:x=>1/(1-2*x),        c:[[1,1],[2,1],[4,1]]},
+    sq:    {at:'(1 + x)²',  f:x=>(1+x)*(1+x),      c:[[1,1],[2,1],[1,1]]},
+    root:  {at:'√(1 + x)',  f:x=>Math.sqrt(1+x),   c:[[1,1],[1,2],[-1,8]]}
+  },
+  // each round: four functions, and which function each of polynomials 1 to 4 belongs to
+  ROUNDS:[
+    {F:['exp','geo','cos','expm'],   order:[1,3,0,2]},
+    {F:['sin','ln1p','xexp','expsq'], order:[2,0,3,1]},
+    {F:['exp2','sq','root','cos2'],  order:[3,1,2,0]},
+    {F:['geom','expm','cosh','cos'], order:[0,2,3,1]},
+    {F:['sin2','ln1m','tan','ln1p'], order:[1,3,0,2]},
+    {F:['geo2','exp2','cosh','expsq'], order:[2,0,3,1]}
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Match all four functions right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'twin',  t:'Match two functions with the same height and slope at 0, told apart by the x² term.', toast:'Told apart by the bend',
+     ok:K=>K.kinds.has('twin')},
+    {id:'flat',  t:'Match a function with no x² term: it does not bend at 0.', toast:'No bend at 0',
+     ok:K=>K.kinds.has('flat')},
+    {id:'down',  t:'Match a function that bends down at 0, with a minus on its x² term.', toast:'Bending down',
+     ok:K=>K.kinds.has('down')},
+    {id:'fix',   t:'Check a matching with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Match three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Near 0 a function is close to f(0) + f′(0)·x + f″(0)/2·x². The number on its own is its height at 0, the x term is its slope there, and the x² term is half its bend. Work out the three for each function and match it to its polynomial.',
+  L:'ABCD',
+  R(){ return this.ROUNDS[this.ri]; },
+  fn(i){ return this.FN[this.R().F[i]]; },
+  owner(n){ return this.R().order[n]; },
+  truth(i){ return this.R().order.indexOf(i); },
+  val(q){ return q[0]/q[1]; },
+  same(p,q){ return p[0]*q[1]===q[0]*p[1]; },
+  frac(q){ const [a,b]=q; return b===1 ? neg(a) : \`\${neg(a)}/\${b}\`; },
+  // f″(0) is twice the x² coefficient
+  bend(i){ const [a,b]=this.fn(i).c[2]; return b===2 ? [a,1] : b%2===0 ? [a,b/2] : [2*a,b]; },
+  // a polynomial written as a person would: 1 + x + x²/2, x − x²/2, 1 − 2x²
+  poly(c){
+    const out=[];
+    c.forEach(([a,b],k)=>{
+      if(a===0) return;
+      const v=['','x','x²'][k], m=Math.abs(a);
+      const body = k===0 ? (b===1?\`\${m}\`:\`\${m}/\${b}\`) : (m===1?'':m)+v+(b===1?'':\`/\${b}\`);
+      out.push(out.length ? \`\${a<0?'−':'+'} \${body}\` : \`\${a<0?'−':''}\${body}\`);
+    });
+    return out.length ? out.join(' ') : '0';
+  },
+  P(n){ return this.poly(this.FN[this.R().F[this.owner(n)]].c); },
+  at(n){ return this.FN[this.R().F[this.owner(n)]].c.map(q=>this.val(q)); },
+  /* what a round holds: two with one height and slope, one with no x² term, one bending down */
+  twins(){ const out=[];
+    for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){ const a=this.fn(i).c, b=this.fn(j).c; if(this.same(a[0],b[0]) && this.same(a[1],b[1])) out.push([i,j]); }
+    return out; },
+  flats(){ return [0,1,2,3].filter(i=>this.fn(i).c[2][0]===0); },
+  downs(){ return [0,1,2,3].filter(i=>this.fn(i).c[2][0]<0); },
+  tags(){ const t=[]; if(this.twins().length) t.push('twin'); if(this.flats().length) t.push('flat'); if(this.downs().length) t.push('down'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are matched.');
+      const tw=this.twins(), fl=this.flats(), dn=this.downs();
+      if(tw.length){ const [i,j]=tw[0], a=this.fn(i).c, b=this.fn(j).c;
+        out.push(\`\${this.L[i]} and \${this.L[j]} both start at \${this.frac(a[0])} with slope \${this.frac(a[1])}, so only the x² term tells them apart: \${this.frac(a[2])} against \${this.frac(b[2])}.\`); }
+      if(fl.length) out.push(\`\${this.list(fl)} \${fl.length>1?'have':'has'} no x² term: f″(0) = 0, so near 0 \${fl.length>1?'they run':'it runs'} straight.\`);
+      if(dn.length) out.push(\`\${this.list(dn)} \${dn.length>1?'bend':'bends'} down at 0: f″(0) is negative, so the x² term has a minus.\`);
+      out.push(\`The matches: \${[0,1,2,3].map(i=>\`\${this.L[i]} is \${this.truth(i)+1}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const F=this.fn(i), c=F.c, k=this.calls[i], o=this.FN[this.R().F[this.owner(k)]].c, X=this.L[i];
+        const off = !this.same(o[0],c[0]) ? \`its number on its own is \${this.frac(o[0])}, not f(0) = \${this.frac(c[0])}\`
+                  : !this.same(o[1],c[1]) ? \`it starts at the right height, but its x term is \${this.frac(o[1])}, not f′(0) = \${this.frac(c[1])}\`
+                  : \`it starts at the right height with the right slope, but its x² term is \${this.frac(o[2])}, not f″(0)/2 = \${this.frac(c[2])}\`;
+        out.push(\`For \${X} = \${F.at}: f(0) = \${this.frac(c[0])}, f′(0) = \${this.frac(c[1])} and f″(0) = \${this.frac(this.bend(i))}, so its x² term is f″(0)/2. You had \${k+1}, \${this.P(k)}: \${off}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 matched.\`);
+    }
+    out.push(\`\${this.wins} matched right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* the four polynomials, each in its own pane for x from −1.5 to 1.5, with
+     a tick at every half; a slip rings the polynomial picked wrongly, and
+     once all four are matched each pane gets its function, dashed in gold,
+     and that function's letter */
+  LO:-1.5, HI:1.5, YLO:-2.5, YHI:4,
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="The four polynomials as curves near 0: \${[0,1,2,3].map(n=>\`\${n+1}, \${this.P(n)}\`).join('; ')}\${this.solved?', each with its function drawn over it':''}">\`;
+    out+=\`<defs>\${[0,1,2,3].map(n=>\`<clipPath id="tymClip\${n}"><rect x="\${(n%2)*180+4}" y="\${Math.floor(n/2)*120+4}" width="172" height="112" rx="8"/></clipPath>\`).join('')}</defs>\`;
+    for(let n=0;n<4;n++){
+      const X=(n%2)*180, Y=Math.floor(n/2)*120, [a,b,c]=this.at(n), F=this.FN[this.R().F[this.owner(n)]];
+      const PX=x=>X+14+(x-this.LO)/(this.HI-this.LO)*152, PY=y=>Y+108-(y-this.YLO)/(this.YHI-this.YLO)*96;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+10}" y1="\${f(PY(0))}" x2="\${X+170}" y2="\${f(PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${f(PX(0))}" y1="\${Y+8}" x2="\${f(PX(0))}" y2="\${Y+112}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(let k=-3;k<=3;k++) if(k) out+=\`<line data-k="tick" x1="\${f(PX(k/2))}" y1="\${f(PY(0)-3)}" x2="\${f(PX(k/2))}" y2="\${f(PY(0)+3)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(let k=1;k<=3;k++) out+=\`<line data-k="ytick" x1="\${f(PX(0)-3)}" y1="\${f(PY(k))}" x2="\${f(PX(0)+3)}" y2="\${f(PY(k))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const pts=[]; for(let k=0;k<=60;k++){ const x=this.LO+(this.HI-this.LO)*k/60; pts.push(\`\${f(PX(x))},\${f(PY(a+b*x+c*x*x))}\`); }
+      out+=\`<polyline data-k="curve" clip-path="url(#tymClip\${n})" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.2" stroke-linejoin="round"/>\`;
+      out+=\`<text data-k="num" x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${n+1}</text>\`;
+      if(this.marks && this.calls.some((c,i)=>c===n && this.marks[i]===false))
+        out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){
+        // the function itself, broken wherever it runs off to infinity or is not defined
+        const runs=[]; let run=[];
+        for(let k=0;k<=120;k++){ const x=this.LO+(this.HI-this.LO)*k/120, y=F.f(x);
+          if(Number.isFinite(y) && Math.abs(y)<12) run.push(\`\${f(PX(x))},\${f(PY(y))}\`); else { if(run.length>1) runs.push(run); run=[]; } }
+        if(run.length>1) runs.push(run);
+        for(const r of runs) out+=\`<polyline data-k="fn" clip-path="url(#tymClip\${n})" points="\${r.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>\`;
+        out+=\`<circle data-k="touch" cx="\${f(PX(0))}" cy="\${f(PY(a))}" r="4" fill="\${FIG_COL.c}"/>\`;
+        out+=\`<text data-k="who" x="\${X+164}" y="\${Y+22}" fill="\${FIG_COL.c}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[this.owner(n)]}</text>\`;
+      }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,n){
+    if(this.solved || this.calls[i]===n) return;
+    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Taylor.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Taylor.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Taylor.render(); },
+  btn(i,n){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-n="\${n}" aria-pressed="\${this.calls[i]===n}" \${this.solved?'disabled ':''}onclick="TaylorMatch.call(\${i},\${n})" aria-label="\${this.fn(i).at} goes with polynomial \${n+1}, \${this.P(n)}">\${n+1}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four functions and four polynomials. Which polynomial hugs each function near 0?</div>\`;
+    out+=\`<div id="tymPolys" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:15px;margin-bottom:4px">\`+
+      [0,1,2,3].map(n=>\`<div><b style="color:var(--gold)">\${n+1}</b>&nbsp; \${this.P(n)}</div>\`).join('')+\`</div>\`;
+    out+=\`<div id="tymFig">\${this.svg()}<div class="figcap">Each polynomial is drawn in blue for x from −1.5 to 1.5, with a tick at every half. Once all four are matched, each function is dashed over its polynomial, touching it at 0.</div></div>\`;
+    out+=\`<div id="tymStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="tymStop" data-i="\${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 5;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} = \${this.fn(i).at}</b>\`+
+        [0,1,2,3].map(n=>this.btn(i,n)).join('')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="tymRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tymNext" onclick="TaylorMatch.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tymCheck" \${this.ready()?'':'disabled '}onclick="TaylorMatch.check()" aria-label="\${this.ready()?'Check the four matches':'Match all four functions to check them'}">\${this.ready()?'Check my matches':'Match all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="tymGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tymGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CURVE HUGGER','every function matched near 0','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Taylor = {
   CURVES:[
     {id:'exp', at:'eˣ', f:{fn:'exp'},
@@ -22334,11 +23056,11 @@ const Taylor = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under']]
+    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under'],['match','🔗 Match them up','See four functions and four polynomials, and match each function to the polynomial that hugs it near 0']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Taylor.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
     const pick=this.tab!=='hand';
     for(const id of ['tyCurves','tyFig','tyStep','tyRead','tyGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : TaylorTurn.html();
+    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : this.tab==='turn' ? TaylorTurn.html() : TaylorMatch.html();
     if(pick) return;
     const C=this.curve(), n=this.n, x=this.x();
     document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>
