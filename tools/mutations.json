@@ -1,96 +1,89 @@
 {
- "change": "The sky: each realm's omen this sitting, a gold moon, a fair wind or a mist",
+ "change": "A ballad: every victory card sings the fight in a line of its own",
  "mutations": [
   {
-   "name": "a gold moon pays nothing more",
+   "name": "the brink is never sung",
    "file": "index.html",
-   "find": "say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1.25 },",
-   "replace": "say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1    },",
+   "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n",
+   "replace": "    if(false) return 'brink';\n",
    "run": "verify"
   },
   {
-   "name": "a fair wind costs the guard",
+   "name": "a miss still sings flawless",
    "file": "index.html",
-   "find": "say:'your blows land a fifth harder',      deal:1.2, take:1,   gold:1    },",
-   "replace": "say:'your blows land a fifth harder',      deal:1.2, take:1.2, gold:1    },",
+   "find": "    if(B.missed===0) return 'flawless';",
+   "replace": "    if((B.missed||0)<=1) return 'flawless';",
    "run": "verify"
   },
   {
-   "name": "a mist lightens the knight too",
+   "name": "overkill comes before a flawless fight",
    "file": "index.html",
-   "find": "say:'foes strike a fifth lighter',        deal:1,   take:0.8, gold:1    }",
-   "replace": "say:'foes strike a fifth lighter',        deal:0.8, take:0.8, gold:1    }",
+   "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(B.missed===0) return 'flawless';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';",
+   "replace": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';\n    if(B.missed===0) return 'flawless';",
    "run": "verify"
   },
   {
-   "name": "the sky changes every look",
+   "name": "a short run is a streak",
    "file": "index.html",
-   "find": "    if(!(ri in this.sky)) this.sky[ri] =",
-   "replace": "    this.sky[ri] =",
+   "find": "  STREAK: 5, GRIT: 3,",
+   "replace": "  STREAK: 3, GRIT: 3,",
    "run": "verify"
   },
   {
-   "name": "an omen with no chance of one",
+   "name": "a guarded stance is not sung",
    "file": "index.html",
-   "find": "    return this.CHANCE>0 && this.KINDS[this.sky[ri]] ? this.sky[ri] : null;",
-   "replace": "    return this.KINDS[this.sky[ri]] ? this.sky[ri] : null;",
+   "find": "    if(st==='bold' || st==='guarded') return st;",
+   "replace": "    if(st==='bold') return st;",
    "run": "verify"
   },
   {
-   "name": "a sky over the arena too",
+   "name": "the omen is forgotten",
    "file": "index.html",
-   "find": "  on(B){ return B && B.mode==='campaign' ? this.KINDS[this.of(B.ri)] || null : null; },",
-   "replace": "  on(B){ return B ? this.KINDS[this.of(B.ri)] || null : null; },",
+   "find": "    if(Sky.on(B)) return 'omen';\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "a mist blow lands as nothing",
+   "name": "the words never turn with the foe",
    "file": "index.html",
-   "find": "return !k || k.take===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*k.take)); },",
-   "replace": "return !k || k.take===1 || dmg<=0 ? dmg : Math.round(dmg*k.take*0.01); },",
+   "find": "    return vs[h%vs.length];",
+   "replace": "    return vs[0];",
    "run": "verify"
   },
   {
-   "name": "the gold ignores the moon",
+   "name": "the streak's length is left out",
    "file": "index.html",
-   "find": "*wp*Sky.gold(this));",
-   "replace": "*wp);",
+   "find": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))",
+   "replace": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, 'many')",
    "run": "verify"
   },
   {
-   "name": "the blow ignores the wind",
+   "name": "the line loses its kind",
    "file": "index.html",
-   "find": "(this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)",
-   "replace": "(this.unassisted?2:1) * (this.finisher||1)",
+   "find": "data-k=\"${song.k}\" class=\"small\"",
+   "replace": "data-k=\"song\" class=\"small\"",
    "run": "verify"
   },
   {
-   "name": "the guard ignores the mist",
+   "name": "the ballad is read after the level-up mends",
    "file": "index.html",
-   "find": "Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));",
-   "replace": "Stance.take(this, (Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));",
+   "find": "    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);",
+   "replace": "    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);\n    const song=Ballad.of(this, over, g.hp, g.maxHp);",
    "run": "verify"
   },
   {
-   "name": "in play, the map shows no sky",
+   "name": "the card does not sing",
    "file": "index.html",
-   "find": "${Treasure.tag(ri)}${Sky.tag(ri)}",
-   "replace": "${Treasure.tag(ri)}",
-   "run": "play:sky"
+   "find": "          ${Ballad.line(song)}\n",
+   "replace": "",
+   "run": "play:ballad"
   },
   {
-   "name": "in play, a fight says nothing of the sky",
+   "name": "a hard win is sung as plain",
    "file": "index.html",
-   "find": "    Sky.greet(this);   // a fight under an omen says so\n",
-   "replace": "\n",
-   "run": "play:sky"
-  },
-  {
-   "name": "in play, the card says nothing of the moon",
-   "file": "index.html",
-   "find": "          ${Sky.line(this)}\n",
-   "replace": "\n",
-   "run": "play:sky"
+   "find": "    if((B.missed||0)>=this.GRIT) return 'grit';\n",
+   "replace": "",
+   "run": "play:ballad"
   }
  ]
 }

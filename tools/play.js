@@ -85,6 +85,7 @@ const SUITES = [
   require('./play/stance'),      // before the first answer, go in bold or guarded
   require('./play/peddler'),     // the third victory of a sitting meets one thing to buy at half price
   require('./play/sky'),         // a realm's omen this sitting: a gold moon, a fair wind or a mist
+  require('./play/ballad'),      // every victory card sings the fight in a line of its own
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

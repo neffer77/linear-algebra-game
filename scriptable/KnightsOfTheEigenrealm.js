@@ -9258,6 +9258,76 @@ const NextFight = {
   }
 };
 
+/* A ballad. Every victory is sung in a line of verse about how it was won,
+   read from the fight itself: a win from the brink of falling, a fight with
+   no miss in it, a killing blow far past what was needed, a long streak, a
+   bold or a guarded stance, an omen overhead, or a win that was hard work.
+   The moment most worth remembering is sung, and the wording turns with the
+   foe, so the same feat reads fresh against the next one. It gives the fight
+   a story to look back on. It is only words: it pays nothing, changes no
+   fight, and nothing is saved. */
+const Ballad = {
+  VERSES: {
+    brink:    ['Bloodied and one blow from the dust, you stood, and {f} did not.',
+               'They will say you were beaten. Then {f} fell, and you were not.',
+               'With nothing left but nerve, you outlasted {f}.'],
+    flawless: ['Not one answer wrong: {f} never laid a finger on your doubt.',
+               'A clean fight, every question met. {f} learns what a scholar knight is.',
+               'Flawless from the first word to the last, and {f} is a story now.'],
+    overkill: ['You did not stop at enough: {f} was struck far past its last breath.',
+               'One blow, more than {f} could ever hold. The bards will exaggerate it, barely.',
+               'The last strike was a lesson in excess, and {f} took all of it.'],
+    streak:   ['{n} right in a row, and {f} could not find a gap in any of them.',
+               'Answer after answer, {n} unbroken, until {f} gave way.',
+               'A run of {n} and the tide never turned back toward {f}.'],
+    bold:     ['You came in bold and hit hard, and {f} paid for every opening.',
+               'All fire and no fear: the bold stance carried you past {f}.',
+               'Bold, and right about it. {f} never saw the patience behind the fury.'],
+    guarded:  ['Shield up, mind sharp: {f} broke itself against your guard.',
+               'Patient and guarded, you let {f} wear itself out.',
+               'You gave {f} nothing to hit and everything to fear.'],
+    omen:     ['{o} watched as {f} fell.',
+               'Under {o}, {f} met its end, and the sky seemed pleased.',
+               '{o} hung over the field, and {f} will not see another.'],
+    grit:     ['It took {m} wrong turns to find the way, and you found it: {f} is beaten.',
+               'Not pretty, but every miss taught you something, and {f} fell to what you learned.',
+               '{m} stumbles and still the win. That is how a knight is made, {f} or no.'],
+    plain:    ['Steel and sense together, and {f} is no more.',
+               'Another foe for the songs: {f}, beaten fair.',
+               'You read {f} like a proof and closed it out.']
+  },
+  STREAK: 5, GRIT: 3, OVER: 0.5, BRINK: 0.25,
+  // the moment of the fight most worth singing, in that order
+  kind(B, over, hp, maxHp){
+    if(!B || !B.foe) return 'plain';
+    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';
+    if(B.missed===0) return 'flawless';
+    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';
+    if((B.runBest||0)>=this.STREAK) return 'streak';
+    const st=Stance.of(B);
+    if(st==='bold' || st==='guarded') return st;
+    if(Sky.on(B)) return 'omen';
+    if((B.missed||0)>=this.GRIT) return 'grit';
+    return 'plain';
+  },
+  // the same feat turns its words with the foe
+  pick(k, nm){
+    const vs=this.VERSES[k]||this.VERSES.plain;
+    let h=0; for(const c of String(nm||'')) h=(h*31+c.charCodeAt(0))%997;
+    return vs[h%vs.length];
+  },
+  of(B, over, hp, maxHp){
+    const k=this.kind(B, over, hp, maxHp), sky=Sky.on(B);
+    const nm=B && B.foe && B.foe.nm || 'the foe';
+    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))
+      .replace(/\\{m\\}/g, String(B && B.missed||0)).replace(/\\{o\\}/g, sky ? sky.nm : 'The sky');
+    return { k, text: text.charAt(0).toUpperCase()+text.slice(1) };
+  },
+  line(song){
+    return song ? \`<div id="ballad" data-k="\${song.k}" class="small" style="font-style:italic;color:#e8d9b0;margin-top:6px">🎶 \${song.text}</div>\` : '';
+  }
+};
+
 /* The sky. Each sitting every realm has its own sky, rolled the first time
    it is looked at and kept for the sitting: most often an omen, now and then
    nothing at all. A gold moon pays a quarter more gold for every victory
@@ -11203,6 +11273,8 @@ const Battle = {
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
+    // the fight sung in a line, read before a level-up restores the knight's health
+    const song=Ballad.of(this, over, g.hp, g.maxHp);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
@@ -11234,6 +11306,7 @@ const Battle = {
         <div class="panel center">
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
+          \${Ballad.line(song)}
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${WarPath.line()}
           \${Grade.sLine(sGold)}
