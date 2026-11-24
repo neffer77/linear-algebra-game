@@ -878,6 +878,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="sagaBar" style="background:var(--gold);height:100%"></div></div>
     </div>
     <div id="sagaList"></div>
+    <div id="letterList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -8996,6 +8997,53 @@ const Bestiary = {
   }
 };
 
+/* Letters from home. Every tenth victory a knight wins, a letter comes from
+   Maren, who taught them their sums in the village of Linden Ford: news from
+   home, a little of what the mathematics has done there, and a Healing Draught
+   tucked inside. There are eight, and the Saga page keeps every one received
+   to be read again and says at which victory the next arrives. They are read
+   from the victories the game already counts, so nothing new is saved. */
+const Letters = {
+  EVERY: 10, FROM: 'Maren',
+  L: [
+   'All of Linden Ford heard you rode out. The miller says a knight who fights with arithmetic has lost the plot, but the miller still counts on his fingers. Keep your blade sharp and your working neat.',
+   'The rains came early and the river rose to the second mark on the bridge post, just where you once worked out it would. The children measure everything twice now. A draught from the herb garden comes with this.',
+   'A tinker came through selling maps of the Eigenrealm with every arrow pointing the wrong way. We turned them round and they were right. I think of you whenever something only needs turning round.',
+   'Your old slate hangs on the schoolroom wall, with the sum you got wrong the first time and right the second. I tell the children the second line is the one that matters.',
+   'The bell tower leans a little, and the mason asked how far. Your cousin laid out a triangle on the green and had the answer before supper. That is your doing, from the summer you would not stop drawing triangles.',
+   'Word came that a great beast fell in a far realm, and the tavern argued all night over whether it was you. I said it does not matter who, so long as the working was sound. It was you, though, was it not?',
+   'The harvest is in, weighed and counted, and for once the tally came out the same three times. The miller has bought himself a slate. Do not let it go to your head.',
+   'This is the last letter before you come home: my hand is tired and you are nearly done. Whatever waits at the end of the road, meet it as you met the rest, one step, checked, then the next.'
+  ],
+  wins(g){ return Math.max(0, (g && g.stats && g.stats.wins)|0); },
+  // the letters a knight has had: one for every tenth victory, up to the last
+  had(g){ return Math.min(this.L.length, Math.floor(this.wins(g)/this.EVERY)); },
+  // the letter this victory brings, numbered from one, or none
+  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 && w/this.EVERY<=this.L.length ? w/this.EVERY : 0; },
+  // and the draught tucked inside it
+  gift(g, n){ if(!n || !g || !g.items) return false; g.items.potion=(g.items.potion||0)+1; return true; },
+  letter(n, id, more){
+    return \`<div class="panel letter" \${id?\`id="\${id}" \`:''}data-n="\${n}" style="text-align:left;border-color:#c9a36b;background:linear-gradient(#2a2216,#1d1810)">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:#e8d9b0">✉️ A LETTER FROM HOME · \${n} OF \${this.L.length}</div>
+      <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0">\${this.L[n-1]}</div>
+      <div class="small" style="margin-top:6px;text-align:right;color:#c9a36b">Maren, Linden Ford</div>\${more||''}
+    </div>\`;
+  },
+  card(n){
+    if(!n || !this.L[n-1]) return '';
+    return this.letter(n, 'letterCard', \`\\n      <div class="small" id="letterGift" style="margin-top:4px;color:var(--green)">Tucked inside: 🧪 a Healing Draught, now in your pack.</div>\`);
+  },
+  // the Saga page: every letter received, newest last, and when the next comes
+  html(g){
+    const n=this.had(g), N=this.L.length;
+    const next=n<N ? \`The next arrives at your \${Sitting.nth((n+1)*this.EVERY)} victory.\` : 'Every letter has come.';
+    return \`<div class="panel" id="lettersHead" style="text-align:left"><h2 style="font-size:16px;margin:0">✉️ Letters from home</h2>
+        <div class="small" style="margin-top:4px">\${n} of \${N} received. \${next}</div></div>\`
+      + Array.from({length:n}, (_, i)=>this.letter(i+1)).join('');
+  },
+  render(){ const el=document.getElementById('letterList'); if(el) el.innerHTML=this.html(Game.s); }
+};
+
 /* The Saga: the story of the Eigenrealm, a chapter for each realm, read when
    its boss falls. The opening says why mathematics hurts a dragon; this is
    what happens next, told at the one moment a player has stopped anyway (the
@@ -11478,6 +11526,8 @@ const Battle = {
     Boon.offer(this, ups);
     Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
     const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds
+    // every tenth victory, a letter from home with a draught tucked inside
+    const letter=Letters.arrived(g); Letters.gift(g, letter);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
@@ -11546,6 +11596,7 @@ const Battle = {
           \${this.learnedHtml()}
         </div>
         \${this.foe.boss&&first?Saga.card(this.ri):''}
+        \${Letters.card(letter)}
         \${Gauntlet.button(gnt)}
         \${NextFight.html(nx)}
         \${Scout.html(nx)}
@@ -16796,7 +16847,7 @@ const UI = {
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-bestiary') Bestiary.render();
-    if(id==='s-saga') Saga.render();
+    if(id==='s-saga'){ Saga.render(); Letters.render(); }
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();

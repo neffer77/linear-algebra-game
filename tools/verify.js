@@ -4414,6 +4414,46 @@ const hearthNotes = (() => {
   return checks;
 })();
 
+/* Letters from home. One for every tenth victory the game already counts,
+   eight in all, each a few plain sentences: when each arrives, the draught
+   tucked inside it, what the victory card and the Saga page say, and the
+   wiring. */
+const letterNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Letters = {'), html.indexOf('/* The Saga: the story of the Eigenrealm'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('letters', key, msg); };
+  const Sitting = { nth(n) { const t = n % 100, e = n % 10; return n + ((t > 10 && t < 14) ? 'th' : e === 1 ? 'st' : e === 2 ? 'nd' : e === 3 ? 'rd' : 'th'); } };
+  const L = new Function('Sitting', 'Game', src + ';return Letters;')(Sitting, { s: null });
+  want(L.EVERY === 10 && L.L.length === 8, 'count', JSON.stringify([L.EVERY, L.L.length]));
+  L.L.forEach((t, i) => {
+    const n = (t.match(/[.?!](\s|$)/g) || []).length;
+    want(typeof t === 'string' && n >= 2 && n <= 4 && t.length < 260 && !/[{}<>$]/.test(t) && !/—|–/.test(t), 'letter ' + (i + 1), t);
+  });
+  want(new Set(L.L).size === 8, 'apart', 'two letters say the same');
+  for (let w = -2; w <= 110; w++) {
+    const g = { stats: { wins: w }, items: { potion: 2 } };
+    const at = w > 0 && w % 10 === 0 && w <= 80, had = Math.max(0, Math.min(8, Math.floor(w / 10)));
+    want(L.arrived(g) === (at ? w / 10 : 0), 'arrives ' + w, L.arrived(g));
+    want(L.had(g) === had, 'had ' + w, L.had(g));
+    const n = L.arrived(g), got = L.gift(g, n);
+    want(got === !!n && g.items.potion === (n ? 3 : 2), 'gift ' + w, JSON.stringify(g.items));
+    const c = L.card(n);
+    want(n ? c.includes('id="letterCard"') && c.includes(`data-n="${n}"`) && c.includes(`${n} OF 8`) && c.includes(L.L[n - 1]) && c.includes('id="letterGift"') && c.includes('Maren, Linden Ford') : c === '', 'card ' + w, c);
+    const h = L.html(g), shown = (h.match(/class="panel letter"/g) || []).length;
+    want(shown === had && h.includes(`${had} of 8 received.`) && !h.includes('id="letterCard"') && !h.includes('letterGift')
+      && (had < 8 ? h.includes(`The next arrives at your ${Sitting.nth((had + 1) * 10)} victory.`) : h.includes('Every letter has come.'))
+      && L.L.every((t, i) => h.includes(t) === (i < had)), 'page ' + w, h.slice(0, 300));
+  }
+  want(L.arrived({}) === 0 && L.had(null) === 0 && L.gift(null, 1) === false && L.gift({ stats: {} }, 1) === false && L.card(9) === '', 'none', 'a letter with no knight');
+  // the wiring
+  want(html.includes("    const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds\n    // every tenth victory, a letter from home with a draught tucked inside\n    const letter=Letters.arrived(g); Letters.gift(g, letter);\n")
+    && html.indexOf('const letter=Letters.arrived(g)') < html.indexOf('    Game.save();\n\n    setTimeout(()=>{\n      UI.go(\'s-result\');'), 'read', 'the letter is not read and given before the victory is saved');
+  want(html.includes("        ${this.foe.boss&&first?Saga.card(this.ri):''}\n        ${Letters.card(letter)}\n"), 'card', 'the victory card does not show the letter');
+  want(html.includes('    <div id="sagaList"></div>\n    <div id="letterList"></div>\n') && html.includes("if(id==='s-saga'){ Saga.render(); Letters.render(); }"), 'page', 'the Saga page does not keep the letters');
+  return checks;
+})();
+
 /* The sky. A realm's sky is rolled once and kept for the sitting, and with
    no chance at all every sky is plain. Every omen on every fight: what it
    does to the knight's blow, the foe's and the gold, and only in the campaign
@@ -28379,6 +28419,7 @@ console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
 console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}  (met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, on the fight's last topic where it can be, paying the purse again on a right answer and losing it on a miss, never past an empty purse, once a meeting)`);
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
+console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
