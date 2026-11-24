@@ -1,89 +1,82 @@
 {
-  "change": "A chest riddle: answer one question on the fight's topic to raise a chest's find a rarity",
+  "change": "A heroic rematch: a beaten foe fought again with the hardest riddles and harder blows, for double gold",
   "mutations": [
     {
-      "name": "a riddle raises the find two rarities",
+      "name": "a heroic purse is no fatter",
       "file": "index.html",
-      "find": "return i>=0 && i<this.ORDER.length-1 ? this.ORDER[i+1] : null; },",
-      "replace": "return i>=0 && i<this.ORDER.length-1 ? this.ORDER[Math.min(i+2, 4)] : null; },",
+      "find": "GOLD: 2, XP: 1.5, ATK: 1.25,",
+      "replace": "GOLD: 1, XP: 1.5, ATK: 1.25,",
       "run": "verify"
     },
     {
-      "name": "a legendary find offers a riddle",
+      "name": "a heroic foe hits no harder",
       "file": "index.html",
-      "find": "GEN[it.ctx.key] && this.next(it.rar)); },",
-      "replace": "GEN[it.ctx.key]); },",
+      "find": "      atk:Math.round(foe.atk*this.ATK), heroic:true});",
+      "replace": "      heroic:true});",
       "run": "verify"
     },
     {
-      "name": "a find with no topic offers a riddle",
+      "name": "a heroic foe changes the realm's own foe",
       "file": "index.html",
-      "find": "return !!(it && it.ctx && it.ctx.key && GEN[it.ctx.key] &&",
-      "replace": "return !!(it && it.ctx &&",
+      "find": "return Object.assign({}, foe, {gold:Math.round(foe.gold*this.GOLD)",
+      "replace": "return Object.assign(foe, {gold:Math.round(foe.gold*this.GOLD)",
       "run": "verify"
     },
     {
-      "name": "a rolled find forgets its context",
+      "name": "an arena fight can be heroic",
       "file": "index.html",
-      "find": "    it.ctx=ctx;      // kept so that a chest riddle can raise the find\n",
+      "find": "on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.heroic); },",
+      "replace": "on(B){ return !!(B && B.foe && B.foe.heroic); },",
+      "run": "verify"
+    },
+    {
+      "name": "a heroic fight's riddles are no harder",
+      "file": "index.html",
+      "find": "const base = (this.mode==='arena' || Heroic.on(this) ? 3",
+      "replace": "const base = (this.mode==='arena' ? 3",
+      "run": "verify"
+    },
+    {
+      "name": "a foe never beaten can be fought heroic",
+      "file": "index.html",
+      "find": "this._start(heroic && beaten ? Heroic.make(",
+      "replace": "this._start(heroic ? Heroic.make(",
+      "run": "play:heroic"
+    },
+    {
+      "name": "the card offers no heroic rematch",
+      "file": "index.html",
+      "find": "        ${Heroic.button(this)}\n",
       "replace": "",
-      "run": "verify"
+      "run": "play:heroic"
     },
     {
-      "name": "a chest offers its riddle again and again",
+      "name": "a heroic rematch is not said as it arrives",
       "file": "index.html",
-      "find": "if(!it || this.done || !this.can(it)) return;\n    this.done=true;\n",
-      "replace": "if(!it || !this.can(it)) return;\n",
-      "run": "verify"
-    },
-    {
-      "name": "a miss raises the find too",
-      "file": "index.html",
-      "find": "    if(ok){\n      find=Loot.make(this.next(it.rar), it.ctx); find.ctx=it.ctx;",
-      "replace": "    if(true){\n      find=Loot.make(this.next(it.rar), it.ctx); find.ctx=it.ctx;",
-      "run": "verify"
-    },
-    {
-      "name": "a campaign chest carries no topic",
-      "file": "index.html",
-      "find": "key:this.mode==='campaign' && this.cur ? this.cur.key : null, diff:this.curDiff||1})",
-      "replace": "key:null, diff:this.curDiff||1})",
-      "run": "play:riddle"
-    },
-    {
-      "name": "the riddle is never shown",
-      "file": "index.html",
-      "find": "    const rb=document.getElementById('criddle'); if(rb) rb.style.display='';\n",
+      "find": "    else if(Heroic.on(this)) UI.toast(Heroic.intro(f));\n",
       "replace": "",
-      "run": "play:riddle"
+      "run": "play:heroic"
     },
     {
-      "name": "the riddle's answer is not counted",
+      "name": "a heroic foe's name is not marked",
       "file": "index.html",
-      "find": "    Game.recordAnswer(q.key, ok, 1);      // the lock teaches either way\n",
+      "find": "(this.foe.heroic?'⚔️ Heroic ':'')+",
       "replace": "",
-      "run": "play:riddle"
+      "run": "play:heroic"
     },
     {
-      "name": "the victory card's loot line keeps the old find",
+      "name": "a heroic victory says nothing on the card",
       "file": "index.html",
-      "find": "      if(l) l.innerHTML=`Looted",
-      "replace": "      if(false) l.innerHTML=`Looted",
-      "run": "play:riddle"
-    },
-    {
-      "name": "no Collect after the riddle",
-      "file": "index.html",
-      "find": "    document.getElementById('cbtn').style.display='';\n  }\n};",
-      "replace": "  }\n};",
-      "run": "play:riddle"
-    },
-    {
-      "name": "the find is not shown again after the riddle",
-      "file": "index.html",
-      "find": "    card.style.display='';\n",
+      "find": "          ${Heroic.line(this)}\n",
       "replace": "",
-      "run": "play:riddle"
+      "run": "play:heroic"
+    },
+    {
+      "name": "every rematch is heroic",
+      "file": "index.html",
+      "find": "this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])",
+      "replace": "this._start(beaten ? Heroic.make(this.realm.foes[fi])",
+      "run": "play:heroic"
     }
   ]
 }
