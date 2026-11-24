@@ -2859,7 +2859,7 @@ const riposteNotes = (() => {
   want(next.includes('tg.innerHTML=Riposte.tele(this.foe.nm);') && next.indexOf('Riposte.tele') > next.indexOf('if(this.slamNext){'), 'warning', 'the wind-up does not warn of the riposte');
   const ans = Bt.slice(Bt.indexOf('\n  answer(btn, choice){'), Bt.indexOf('\n  showExplain('));
   const okAt = ans.indexOf('    if(ok){\n      this.combo++;'), shown = ans.indexOf('} else if(this.shownWork){');
-  const mul = ans.indexOf('* Weak.bonus(this) * Riposte.bonus(this);');
+  const mul = ans.indexOf('* Weak.bonus(this) * Riposte.bonus(this)');
   want(mul > okAt && mul < shown, 'answer', 'the riposte is not folded into a right answer\'s strike');
   const strike = ans.indexOf('const dmg = Combat.strike(', okAt);
   want(mul < strike && ans.indexOf('riposte=this.lastRiposte=Riposte.hit(this);') > mul && ans.indexOf('riposte=this.lastRiposte=Riposte.hit(this);') < strike, 'answer', 'the riposte is not said with the strike');
@@ -2999,6 +2999,65 @@ const nextFightNotes = (() => {
   want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')"), 'win', 'the next fight is not the first button');
   want(win.includes(`<button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>`), 'win', 'the map keeps the gold when there is a next fight');
   want(!/(Game\.s|\bg|this\.s)\.next(Fight|Foe)\b/.test(html), 'save', 'the next fight is saved');
+  return checks;
+})();
+
+/* Second wind: once a campaign fight, a blow that would fell the knight leaves
+   them at 1 health, the turn's second blow held with it, and the answer after
+   is a last stand that strikes twice as hard. Every health, blow and mode. */
+const secondWindNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const SecondWind = {'), html.indexOf('const Battle = {'));
+  const said = [];
+  const Anim = { float: (x, y, text) => said.push(text) };
+  const W = new Function('Anim', 'H', src + ';return SecondWind;')(Anim, 640);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('secondwind', key, msg); };
+  want(W.MUL === 2, 'rule', `a last stand strikes ×${W.MUL}, not ×2`);
+  for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) {
+    for (const rite of [null, { motes: [1] }]) {
+      const can = mode === 'campaign' && !rite;
+      want(W.can({ mode, rite }) === can, `${mode}${rite ? ', in a rite' : ''}`, `is ${can ? 'not ' : ''}given a second wind`);
+      for (let hp = 0; hp <= 60; hp++) {
+        for (let dmg = 0; dmg <= 80; dmg++) {
+          // a fresh fight
+          said.length = 0;
+          const B = { mode, rite };
+          const got = W.hold(B, hp, dmg);
+          const holds = can && hp > 0 && dmg >= hp;
+          if (got !== (holds ? hp - 1 : dmg) || !!B.winded !== holds || !!B.standing !== holds || said.join() !== (holds ? 'SECOND WIND' : ''))
+            want(false, `${mode}, ${dmg} on ${hp}`, `leaves ${hp - got}, winded ${B.winded}, said ${said.join()}`);
+          else checks++;
+          if (!holds) continue;
+          // the same turn's second blow is held too, and said once
+          const again = W.hold(B, 1, dmg + 1);
+          if (again !== 0 || said.length !== 1) want(false, `${mode}, a second blow on ${hp}`, `takes ${again}, said ${said.join()}`);
+          else checks++;
+          // the answer after is a last stand, once; then the wind is spent
+          const st = W.take(B); B.lastStand = st;
+          if (!st || B.standing || B.windNow || W.bonus(B) !== 2) want(false, `${mode}, after ${dmg} on ${hp}`, 'is not a last stand at ×2');
+          else checks++;
+          B.lastStand = W.take(B);
+          const late = W.hold(B, hp, dmg);
+          if (late !== dmg || W.bonus(B) !== 1 || said.length !== 1) want(false, `${mode}, a later ${dmg} on ${hp}`, `is held again, taking ${late}`);
+          else checks++;
+        }
+      }
+    }
+  }
+  want(W.can(null) === false && W.bonus(null) === 1, 'no fight', 'a missing fight has a second wind');
+  const t = W.tele();
+  want(t.includes('1 health') && t.includes('twice as hard'), 'tele', `warns ${t}`);
+  want(W.line({ windNow: true }, false).includes('Second wind!') && W.line({ windNow: true }, false).includes('1 health'), 'line', 'a second wind is not explained');
+  want(W.line({ lastStand: true }, true).includes('Last stand!'), 'line', 'a last stand that lands is not explained');
+  want(W.line({ lastStand: true }, false) === '' && W.line({}, true) === '', 'line', 'a last stand is claimed where none landed');
+  // it is the fight's alone, and hooked where the blows land
+  want(!/Game\.s|localStorage|save\(/.test(src), 'saved', 'a second wind touches the save');
+  const battle = html.slice(html.indexOf('const Battle = {'));
+  want(battle.includes('dmg=SecondWind.hold(this, Game.s.hp, dmg);'), 'miss', 'a miss blow is not held');
+  want(battle.includes('this.lastSlam=SecondWind.hold(this, Game.s.hp, '), 'slam', 'a slam is not held');
+  want(battle.includes('* SecondWind.bonus(this);') && battle.includes('this.lastStand=SecondWind.take(this);'), 'strike', 'a last stand does not strike harder');
+  want(/this\.winded=false; this\.windNow=false; this\.standing=false; this\.lastStand=false;/.test(battle), 'start', 'a second wind carries from one fight to the next');
   return checks;
 })();
 
@@ -26353,6 +26412,7 @@ console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 1
 console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);
 console.log(`  coups de grâce checked     ${pad(coupNotes.toLocaleString(), 10)}  (a foe on its last 15% of health finished by a right answer, judged as it is asked, warned of beside a wind-up, never in a rite or the daily, with nothing saved)`);
 console.log(`  next fights checked        ${pad(nextFightNotes.toLocaleString(), 10)}  (a campaign victory offers the next foe on the road, never the one just won, with its war path pay, a warning and a rest below half health, before the map)`);
+console.log(`  second winds checked       ${pad(secondWindNotes.toLocaleString(), 10)}  (a blow that would fell a knight on a campaign road leaves them at 1 health once a fight, with the turn's second blow held too, and the answer after strikes twice as hard; never in the arena, the Deep, a rite or the daily, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
