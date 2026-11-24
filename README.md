@@ -850,6 +850,10 @@ The game is built so that losing teaches you as much as winning.
   sitting's milestones, a peddler waits on the victory card with one thing at half the shop's price: whichever
   of a draught, an insight or a rune you carry fewest of. One sale to a meeting, if your purse will stand it.
   It sells only what the shop sells, so it helps with a fight and never skips a lesson.
+- **🎲 A dicer.** On the fourth victory of a sitting, and every fifth after it, a dicer at the roadside
+  offers double or nothing on the fight's purse: one question on the topic the fight ended on. Answer it right
+  and he pays the purse again; miss, and he keeps it and you see the answer with its working. It is your
+  choice to throw, once a meeting, and it wagers only gold, so knowing the mathematics is the way to win.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
@@ -3291,6 +3295,7 @@ Inside `index.html` the code is organised as:
 | `Flourish` | offered only in a campaign fight from the eighth right answer in a row, before the answer and while none is held; spending it ends the streak and readies one blow three times as hard, said and shown on the bar; spent by that blow and lost to a miss; worth more than the streak it spends and less than three of its blows; the wiring; session-only |
 | `Stance` | turned only in a campaign fight before anything is answered, round even, bold and guarded, each said; even leaves both blows as ever, bold puts the knight's ahead and the foe's further ahead, guarded the other way about; the foe's blow never under one health; the wiring; session-only |
 | `Peddler` | met at the third victory of a sitting and every fifth after, never on a milestone and never twice at one meeting; offering whichever of draught, insight and rune the pack holds fewest of, the first on a tie, at half the shop's price; one sale a meeting, only with the gold, only of what the shop sells; what the card says; the wiring |
+| `Dicer` | met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, only with a purse to stake and a met topic; the fight's last topic where it can be; the purse paid again on a right answer and lost on a miss, never past an empty purse, the sitting's tally moved the same; one throw a meeting, counted toward its topic; what the card says; the wiring |
 | `Sky` | each realm's sky rolled once and kept for the sitting, plain with no chance of an omen; a gold moon, a fair wind and a mist, each one plain help of its own kind and none a cost; only in the campaign and its own realm; the foe's blow never under one health; a thousand sittings roll every omen and plain skies; what the map, the fight and the card say; the wiring |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
