@@ -9239,6 +9239,42 @@ const NextFight = {
   }
 };
 
+/* A peddler. On the third victory of a sitting, and every fifth after it,
+   midway between the sitting's milestones, a peddler waits on the road with
+   one thing to sell at half its price in the shop: whichever of a draught, an
+   insight or a rune the knight carries fewest of. One sale to a meeting, from
+   the victory card, if the purse will stand it. It is a surprise worth coming
+   back for, and it buys only what the shop already sells, so it is help with
+   a fight and never a short cut past a lesson. The offer is the sitting's;
+   what is bought goes in the pack as any shop purchase does. */
+const Peddler = {
+  AT: 3, EVERY: 5, OFF: 0.5, KINDS: ['potion', 'insight', 'rage'],
+  sold: 0,   // the meeting already sold at, so one meeting is one sale
+  meet(wins){
+    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;
+    const it=(Game.s && Game.s.items) || {};
+    const id=this.KINDS.slice().sort((a,b)=>(it[a]||0)-(it[b]||0))[0];
+    return { id, cost: Math.round(ITEMS[id].cost*this.OFF), at: wins };
+  },
+  html(p){
+    if(!p) return '';
+    const it=ITEMS[p.id], can=Game.s.gold>=p.cost;
+    return `<div class="panel" id="peddler" style="margin-top:8px;border-color:#c9a36b">
+        <div style="font-weight:800">🧳 A peddler on the road</div>
+        <div class="small" id="peddlerSays">“${it.ic} ${it.nm}, half what the shop asks. ${it.ds}”</div>
+        <button class="btn${can?' gold':''}" id="peddlerBuy" ${can?'':'disabled'} onclick="Peddler.buy(this,'${p.id}',${p.cost},${p.at})">${can?`Buy · 🪙 ${p.cost}`:`🪙 ${p.cost}: more than your purse`}</button>
+      </div>`;
+  },
+  buy(btn, id, cost, at){
+    const g=Game.s;
+    if(!ITEMS[id] || this.sold===at || g.gold<cost) return false;
+    g.gold-=cost; g.items[id]=(g.items[id]||0)+1; this.sold=at;
+    Sfx.coin(0); Haptic.tap(); Game.save();
+    if(btn){ btn.disabled=true; btn.classList.remove('gold'); btn.textContent=`Bought: ${ITEMS[id].ic} ×${g.items[id]} in your pack`; }
+    return true;
+  }
+};
+
 /* A stance. Before the first answer of a campaign fight the power bar lets
    the knight choose how to fight it, one tap at a time round three stances:
    even, as ever; bold, every blow landing a third harder but the foe's landing
@@ -11110,6 +11146,7 @@ const Battle = {
     const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
+    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones
     // the first victory of a sitting pays its experience twice
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
@@ -11186,6 +11223,7 @@ const Battle = {
         ${Scout.html(nx)}
         ${Wayfarer.html(way)}
         ${Campfire.html(this)}
+        ${Peddler.html(pd)}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         ${Rival.offer(this)}
