@@ -7339,8 +7339,9 @@ function withOutline(drawAt){
    blade is drawn its own length and in its own steel, from the rusted
    trainer's short brown stub to the long gold of the Gradient Ascendant,
    and each armour has its own plate, from the tunic's plain cloth to the
-   regalia's gold. Buying better gear is seen at once, in every fight.
-   It reads what is worn and writes nothing. */
+   regalia's gold. Buying better gear is seen at once, in every fight,
+   and the Smithy shows each piece as it will be drawn. It reads what is
+   worn and writes nothing. */
 const Arms = {
   // length of the blade above the guard, and its three steels from tip to hilt
   BLADES: {
@@ -7370,7 +7371,26 @@ const Arms = {
     aD:{skin:'#9fb6cf', dark:'#5a7391'}
   },
   blade(g){ return this.BLADES[g && g.weapon] || this.BLADES.w2; },
-  plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; }
+  plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; },
+  /* At the Smithy, each blade and each armour is shown as the fight will draw
+     it: the blade at its own length in its own steels, the plate in its own
+     colours, so what a purchase looks like is seen before it is bought. */
+  len(id){ const b=this.BLADES[id]; return b ? Math.round(b.len*0.4) : 0; },
+  bladeSvg(id){
+    const b=this.BLADES[id]; if(!b) return '';
+    const L=this.len(id), t=32-L;
+    return \`<svg class="armsee" data-len="\${L}" width="24" height="44" viewBox="0 0 24 44" aria-hidden="true">\`
+      +\`<defs><linearGradient id="armsee-\${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="\${b.top}"/>\`
+      +\`<stop offset=".5" stop-color="\${b.mid}"/><stop offset="1" stop-color="\${b.low}"/></linearGradient></defs>\`
+      +\`<polygon points="9.5,32 14.5,32 13.6,\${t+4} 12,\${t} 10.4,\${t+4}" fill="url(#armsee-\${id})"/>\`
+      +\`<rect x="4" y="32" width="16" height="3" rx="1" fill="\${b.guard}"/><rect x="10.5" y="35" width="3" height="8" rx="1" fill="#6b5a3e"/></svg>\`;
+  },
+  plateSvg(id){
+    const p=this.PLATES[id]; if(!p) return '';
+    return \`<svg class="armsee" data-skin="\${p.skin}" width="24" height="34" viewBox="0 0 24 34" aria-hidden="true">\`
+      +\`<path d="M4 7 Q12 2 20 7 L19 26 Q12 33 5 26 Z" fill="\${p.skin}" stroke="\${p.dark}" stroke-width="2"/>\`
+      +\`<path d="M12 6 L12 29" stroke="\${p.dark}" stroke-width="1.5"/></svg>\`;
+  }
 };
 
 /* A blade aflame. A streak shows on the knight: from five right answers in
@@ -17379,7 +17399,7 @@ const UI = {
     WEAPONS.filter(w=>!w.forge).forEach(w=>{
       const owned=!!g.owned[w.id], eq=g.weapon===w.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
-        <div class="ic">\${w.ic}</div>
+        <div class="ic">\${Arms.bladeSvg(w.id)||w.ic}</div>
         <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">\${w.ds}</div>
           <div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div>
         \${eq?'<span class="pill">equipped</span>':
@@ -17391,7 +17411,7 @@ const UI = {
     ARMORS.filter(a=>!a.forge).forEach(a=>{
       const owned=!!g.owned[a.id], eq=g.armor===a.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
-        <div class="ic">\${a.ic}</div>
+        <div class="ic">\${Arms.plateSvg(a.id)||a.ic}</div>
         <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">\${a.ds}</div>
           <div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div>
         \${eq?'<span class="pill">equipped</span>':

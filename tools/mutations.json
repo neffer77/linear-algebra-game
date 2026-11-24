@@ -1,32 +1,39 @@
 {
- "change": "A blade aflame: from a streak of five the knight's blade burns, hotter at six and seven",
+ "change": "Seen before it is bought: the Smithy shows every blade and armour as the fight will draw it",
  "mutations": [
   {
-   "name": "the blade never burns",
+   "name": "the Smithy shows the old icons",
    "file": "index.html",
-   "find": "  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }\n",
-   "replace": "",
+   "find": "        <div class=\"ic\">${Arms.bladeSvg(w.id)||w.ic}</div>",
+   "replace": "        <div class=\"ic\">${w.ic}</div>",
    "run": "verify"
   },
   {
-   "name": "the blade burns from the first right answer",
+   "name": "every blade the same length at the Smithy",
    "file": "index.html",
-   "find": "    if(c<5) return null;",
-   "replace": "    if(c<1) return null;",
+   "find": "  len(id){ const b=this.BLADES[id]; return b ? Math.round(b.len*0.4) : 0; },",
+   "replace": "  len(id){ const b=this.BLADES[id]; return b ? 24 : 0; },",
    "run": "verify"
   },
   {
-   "name": "no hotter at seven",
+   "name": "the blade's steel not shown",
    "file": "index.html",
-   "find": "    return c>=7 ? {col:'#ff5d2d', blur:20}",
-   "replace": "    return c>=7 ? {col:'#ff5d2d', blur:15}",
+   "find": "<stop offset=\".5\" stop-color=\"${b.mid}\"/>",
+   "replace": "<stop offset=\".5\" stop-color=\"#dfe8f5\"/>",
    "run": "verify"
   },
   {
-   "name": "the blade never burns, seen in play",
+   "name": "the plate's shadow not shown",
    "file": "index.html",
-   "find": "  const fire=Flame.of(Battle);   // a streak sets the blade burning\n",
-   "replace": "  const fire=null;\n",
+   "find": "fill=\"${p.skin}\" stroke=\"${p.dark}\" stroke-width=\"2\"/>",
+   "replace": "fill=\"${p.skin}\" stroke=\"#8b97a8\" stroke-width=\"2\"/>",
+   "run": "verify"
+  },
+  {
+   "name": "the Smithy shows the old armour icons, seen in play",
+   "file": "index.html",
+   "find": "        <div class=\"ic\">${Arms.plateSvg(a.id)||a.ic}</div>",
+   "replace": "        <div class=\"ic\">${a.ic}</div>",
    "run": "play:arms"
   }
  ]
