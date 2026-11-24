@@ -1,61 +1,33 @@
 {
-  "change": "Realm topics: a closed realm on the map names its first three topics and counts the rest; opened, it names them all",
+  "change": "Nameplate: a long foe nameplate wraps in its own half of the bars and never pushes the foe's health off a phone's screen",
   "mutations": [
     {
-      "name": "every topic named again",
+      "name": "the health pushed off the screen",
       "file": "index.html",
-      "find": "    return `<div class=\"small rtopics\" style=\"margin:2px 0 4px\">${ls.slice(0,this.SHOW).join(' · ')}`",
-      "replace": "    return `<div class=\"small rtopics\" style=\"margin:2px 0 4px\">${ls.join(' · ')}`",
-      "run": "verify"
-    },
-    {
-      "name": "the count off by one",
-      "file": "index.html",
-      "find": "<span class=\"rless\"> · and ${rest.length} more</span>",
-      "replace": "<span class=\"rless\"> · and ${rest.length+1} more</span>",
-      "run": "verify"
-    },
-    {
-      "name": "the rest never shown",
-      "file": "index.html",
-      "find": "<span class=\"rmore\"> · ${rest.join(' · ')}</span>",
-      "replace": "<span class=\"rmore\"> · ${rest.slice(1).join(' · ')}</span>",
-      "run": "verify"
-    },
-    {
-      "name": "a short list cut",
-      "file": "index.html",
-      "find": "      + (rest.length ? `<span",
-      "replace": "      + (ls.length ? `<span",
-      "run": "verify"
-    },
-    {
-      "name": "the rest shown on a closed realm",
-      "file": "index.html",
-      "find": "details.realm:not([open]) .rmore{display:none}\n",
+      "find": ".bars>.bar{min-width:0}\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "the count on an open realm",
+      "name": "a long name never wraps",
       "file": "index.html",
-      "find": "details.realm[open] .rless{display:none}\n",
+      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "the old line kept",
+      "name": "the health pushed off the screen, seen in play",
       "file": "index.html",
-      "find": "            ${Topics.line(r.pool)}</summary>`;",
-      "replace": "            <div class=\"small\" style=\"margin:2px 0 4px\">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;",
-      "run": "verify"
+      "find": ".bars>.bar{min-width:0}\n.bar .lbl{gap:6px}\n#foeName{min-width:0; overflow-wrap:anywhere}\n#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
+      "replace": "\n",
+      "run": "play:nameplate"
     },
     {
-      "name": "the rest shown on a closed realm, seen in play",
+      "name": "the health text wraps, seen in play",
       "file": "index.html",
-      "find": "details.realm:not([open]) .rmore{display:none}\n",
+      "find": "#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
       "replace": "\n",
-      "run": "play:topics"
+      "run": "play:nameplate"
     }
   ]
 }

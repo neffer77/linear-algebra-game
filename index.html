@@ -512,6 +512,11 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .bars{align-items:flex-end;}
 .bar .lbl{align-items:baseline;}
 #foeName{font-family:var(--serif); font-size:13px;}
+/* a long foe name wraps within its own half of the bars, never pushing its health off the screen */
+.bars>.bar{min-width:0}
+.bar .lbl{gap:6px}
+#foeName{min-width:0; overflow-wrap:anywhere}
+#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}
 #comboTxt{display:inline-flex; align-items:center; padding:2px 9px; border-radius:999px; background:#1d1633;
   border:1px solid var(--edge);}
 #comboTxt.hot{border-color:var(--gold); background:#2c2249;}
