@@ -3220,7 +3220,7 @@ const overkillNotes = (() => {
   for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
   want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
   const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
   want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
@@ -3374,7 +3374,7 @@ const sweepNotes = (() => {
   want(rarer(both) > rarer(boss), 'boss', `a boss swept found ${rarer(both)} rare things to a boss's ${rarer(boss)}`);
   want(sw.legendary > plain.legendary, 'legend', `a sweep found ${sw.legendary} legendaries to a plain win's ${plain.legendary}`);
   want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
-  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, tier:'), 'drop', 'a sweep does not drop a sure chest');
+  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile || vow ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, vow, tier:'), 'drop', 'a sweep does not drop a sure chest');
   want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
   return checks;
 })();
@@ -3421,7 +3421,7 @@ const revengeNotes = (() => {
   want(V.line('Goblin', 12).includes('id="revengeWon"') && V.line('Goblin', 12).includes('12 gold') && V.line('Goblin', 0) === '', 'line', 'the card does not say the revenge');
   want(html.includes("const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;"), 'held', 'a fall in the campaign does not hold the gold lost');
   want(html.includes("const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;"), 'paid', 'a win does not pay the gold back, or not in the campaign only');
-  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold, 900)'), 'counted', 'the card does not count the gold won back');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold, 900)'), 'counted', 'the card does not count the gold won back');
   want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
   want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
   return checks;
@@ -3484,7 +3484,7 @@ const satchelNotes = (() => {
   const plain = tally({});
   want(plain.uncommon > 0 && plain.common > 0, 'plain', 'a plain chest never finds a common or an uncommon');
   want(html.includes('      Parry.earn(this);\n      Satchel.add(this);'), 'added', 'a right answer does not fill the satchel');
-  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes("this.foe.elite || satchel || boon==='find' || march || mile ? 1 :") && html.includes('sweep, satchel, march, mile, tier:'), 'drop', 'a full satchel does not open for a sure chest');
+  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes("this.foe.elite || satchel || boon==='find' || march || mile || vow ? 1 :") && html.includes('sweep, satchel, march, mile, vow, tier:'), 'drop', 'a full satchel does not open for a sure chest');
   want(html.includes("if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a full satchel can find something plain');
   want(html.includes('${Satchel.line(satchel)}') && html.includes('+Parry.tag(this)+Satchel.tag(this);'), 'said', 'the satchel is not shown beside the streak or on the card');
   return checks;
@@ -3535,9 +3535,9 @@ const boonNotes = (() => {
   want(B0.line('purse', 37).includes('+37 gold') && B0.line('find', 0).includes('sure chest') && B0.line(null, 0) === '', 'line', 'the card does not say the boon spent');
   want(html.includes("const boon=Boon.take(this), bGold=Boon.gold(boon, gold);\n    g.gold+=bGold;"), 'paid', 'a fat purse does not pay');
   want(html.includes("const ups=Game.gainXp(xp+fXp);\n    Boon.offer(this, ups);"), 'offered', 'a level-up does not offer a boon');
-  want(html.includes("satchel || boon==='find' || march || mile ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
+  want(html.includes("satchel || boon==='find' || march || mile || vow ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
   want(html.includes('${Boon.line(boon, bGold)}') && html.includes("${this.mode==='campaign'?Boon.card():''}"), 'said', 'the card does not show the boon');
-  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold, 900)'), 'counted', 'the card does not count the purse');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold, 900)'), 'counted', 'the card does not count the purse');
   return checks;
 })();
 
@@ -3597,8 +3597,8 @@ const marchNotes = (() => {
     const c = tally(ctx);
     want(c.common + c.uncommon + c.rare === 0 && c.epic > 0 && c.legendary > 0, `epic ${JSON.stringify(ctx)}`, JSON.stringify(c));
   }
-  want(html.includes("    const march=March.won(this);") && html.includes("|| march || mile ? 1 :") && html.includes('satchel, march, mile, tier:'), 'drop', 'a march does not drop a sure chest');
-  want(html.includes("if(ctx.march && rar!=='legendary') rar='epic';"), 'rarity', 'a march can find less than epic');
+  want(html.includes("    const march=March.won(this);") && html.includes("|| march || mile || vow ? 1 :") && html.includes('satchel, march, mile, vow, tier:'), 'drop', 'a march does not drop a sure chest');
+  want(html.includes("if((ctx.march || ctx.vow) && rar!=='legendary') rar='epic';"), 'rarity', 'a march can find less than epic');
   want(html.includes('const path=WarPath.broke(); March.broke();') && html.includes("if(live && this.mode==='campaign') March.broke();"), 'broke', 'a fall or a flight does not end the march');
   want(html.includes('${March.line(march, this.realm.nm)}') && html.includes('</span>${March.tag(ri, r.foes.length)}'), 'said', 'the march is not shown on the map or the card');
   return checks;
@@ -3643,7 +3643,7 @@ const comebackNotes = (() => {
   want(C.line(25).includes('+25 gold') && C.line(25).includes('id="comebackLine"') && C.line(0) === '', 'line', 'the card does not say the comeback');
   want(html.includes('      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);') && html.includes('      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);'), 'blows', 'a blow does not mark the comeback');
   want(html.includes('this.overkill=0; this.low=false;'), 'fresh', 'a fight starts with a comeback marked');
-  want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
+  want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold+vGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
   return checks;
 })();
 
@@ -3675,7 +3675,7 @@ const sittingNotes = (() => {
     want(h.includes(`<b>${wins}</b> ${wins === 1 ? 'victory' : 'victories'}`) && h.includes(`<b>${gold}</b> gold`) && h.includes(`best streak <b>${best}</b>`), `html ${step}`, h);
   }
   want(S.won(null, 10) === false && S.wins === wins, 'none', 'a win with no fight counts');
-  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold)'), 'fed', 'the tally is not fed the gold the card counts');
+  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold)'), 'fed', 'the tally is not fed the gold the card counts');
   want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)'), 'shown', 'the map does not show the tally');
   return checks;
 })();
@@ -3709,8 +3709,8 @@ const mileNotes = (() => {
     want(on ? l.includes('id="sittingMile"') && l.includes(`Your ${S.nth(w)} victory this sitting`) && l.includes('a sure chest') : l === '', `line ${w}`, l);
   }
   want(seen === Math.floor(S.wins / 5), 'count', `${seen} milestones in ${S.wins} victories`);
-  want(html.includes('const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);\n    // every fifth victory this sitting is a milestone with a sure chest\n    const mile=counted && Sitting.mile();'), 'won', 'the win does not ask for its milestone');
-  want(html.includes("march || mile ? 1 : Sweep.odds(this, .5))") && html.includes('satchel, march, mile, tier:'), 'drop', 'a milestone does not drop a sure chest');
+  want(html.includes('const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);\n    // every fifth victory this sitting is a milestone with a sure chest\n    const mile=counted && Sitting.mile();'), 'won', 'the win does not ask for its milestone');
+  want(html.includes("march || mile || vow ? 1 : Sweep.odds(this, .5))") && html.includes('satchel, march, mile, vow, tier:'), 'drop', 'a milestone does not drop a sure chest');
   want(html.includes("if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a milestone can find something plain');
   want(html.includes('${Comeback.line(cGold)}\n          ${Sitting.line(mile)}'), 'card', 'the card does not say the milestone');
   return checks;
@@ -3794,6 +3794,60 @@ const gildNotes = (() => {
   const ok = html.indexOf('    if(ok){\n      this.combo++;');
   want(ok > 0 && html.indexOf('      Satchel.add(this);\n      Gild.pay(this);') > ok && html.indexOf('      Satchel.add(this);\n      Gild.pay(this);') < html.indexOf('} else if(this.shownWork){', ok), 'paid', 'a right answer does not pay the gilding');
   want(html.includes('${Gild.line(this.gildGold)}'), 'card', 'the card does not say what the gilding paid');
+  return checks;
+})();
+
+/* An oath: sworn before the first answer of a campaign fight, kept by a win
+   with no miss for half again the gold and an epic chest, broken by any miss
+   for a quarter of the gold forfeit. Worked over long runs of fights in every
+   mode: it can be sworn only before anything is answered, once; a miss breaks
+   it once, said once; the gold is half again kept and a quarter off broken,
+   nothing unsworn; and the win and the bar wire it in. */
+const oathNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Oath = {'), html.indexOf('/* A gilded question.'));
+  const floats = [], toasts = [];
+  const O = new Function('UI', 'Anim', 'H', src + ';return Oath;')({ toast: m => toasts.push(m) }, { float: (x, y, t) => floats.push(t) }, 800);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('oath', key, msg); };
+  let seed = 97;   // mulberry32
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  want(O.can(null) === false && O.kept(null) === false && O.gold(null, 100) === 0, 'none', 'an oath with no fight');
+  for (let step = 0; step < 3000; step++) {
+    const B = { mode: modes[rnd(6)], over: false, sworn: false, missed: 0, runBest: 0, combo: 0 };
+    const late = rnd(3) === 0;
+    if (late) { if (rnd(2)) { B.combo = 1 + rnd(4); B.runBest = B.combo; } else B.missed = 1 + rnd(3); }
+    const may = B.mode === 'campaign' && !late;
+    want(O.can(B) === may, `can ${step}`, `a ${B.mode} fight${late ? ' already under way' : ''} could swear: ${O.can(B)}`);
+    want(O.label(B) === '🗡️ Swear an oath', `label ${step}`, O.label(B));
+    const t0 = toasts.length, sworn = O.swear(B);
+    want(sworn === may && B.sworn === may && toasts.length === t0 + (may ? 1 : 0), `swear ${step}`, `sworn ${sworn}`);
+    want(O.swear(B) === false, `twice ${step}`, 'an oath sworn twice');
+    if (!may) { want(O.gold(B, 200) === 0 && O.kept(B) === false && O.check(B) === false, `unsworn ${step}`, 'an unsworn fight pays or costs an oath'); continue; }
+    want(O.label(B) === '🗡️ Oath sworn', `sworn label ${step}`, O.label(B));
+    const answers = rnd(12), f0 = floats.length;
+    let broke = 0;
+    for (let i = 0; i < answers; i++) {
+      if (rnd(4) === 0) B.missed++; else { B.combo++; B.runBest = Math.max(B.runBest, B.combo); }
+      if (O.check(B)) broke++;
+    }
+    want(broke === (B.missed ? 1 : 0) && floats.length === f0 + broke && B.oathBroken === !!B.missed, `broken ${step}`, `${B.missed} misses broke it ${broke} times`);
+    want(O.label(B) === (B.missed ? '🗡️ Oath broken' : '🗡️ Oath sworn'), `after ${step}`, O.label(B));
+    const gold = rnd(500), n = O.gold(B, gold);
+    want(O.kept(B) === !B.missed, `kept ${step}`, `kept ${O.kept(B)} with ${B.missed} misses`);
+    want(n === (B.missed ? -Math.round(gold / 4) : Math.round(gold / 2)), `gold ${step}`, `${gold} gold, ${B.missed} misses: ${n}`);
+    const l = O.line(n);
+    want(n > 0 ? l.includes('id="oathLine"') && l.includes('kept') && l.includes('+' + n) : n < 0 ? l.includes('broken') && l.includes('−' + (-n)) : l === '', `line ${step}`, l);
+  }
+  want(floats.every(f => f === 'OATH BROKEN'), 'float', floats.slice(0, 2).join());
+  want(html.includes("this.sworn=false; this.oathBroken=false;   // nor any oath"), 'reset', 'a fight starts with the last one\'s oath');
+  want(html.includes("if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());"), 'bar', 'the bar offers no oath');
+  want(html.includes("    if(Oath.check(this)) setTimeout(()=>this.renderPowers(), 60);\n    // Crossing a topic"), 'check', 'an answer does not check the oath');
+  want(html.includes('const vow=Oath.kept(this), vGold=Oath.gold(this, gold);\n    g.gold=Math.max(0, g.gold+vGold);'), 'paid', 'the oath is not paid at the victory');
+  want(html.includes('march || mile || vow ? 1 :') && html.includes('satchel, march, mile, vow, tier:'), 'drop', 'a kept oath drops no sure chest');
+  want(html.includes('${Oath.line(vGold)}') && html.includes('+bGold+cGold+vGold, 900)') && html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold)'), 'card', 'the oath is not said or counted');
   return checks;
 })();
 
@@ -27157,6 +27211,7 @@ console.log(`  sitting tallies checked    ${pad(sittingNotes.toLocaleString(), 1
 console.log(`  sitting milestones checked ${pad(mileNotes.toLocaleString(), 10)}  (every fifth campaign victory of a sitting and no other; the next one named on the map; the card's 1st, 2nd, 3rd and 11th; a sure chest, a rare find at the least)`);
 console.log(`  welcome backs checked      ${pad(freshNotes.toLocaleString(), 10)}  (the first campaign victory of a sitting and no other, not an arena, daily or dungeon win before it; double experience, gained, said and counted)`);
 console.log(`  gilded questions checked   ${pad(gildNotes.toLocaleString(), 10)}  (fresh campaign questions only, about one in eight; a fifth of the foe's gold and at least a coin, paid once on a right answer into the purse and the fight's count; told above the question and on the card)`);
+console.log(`  oaths checked              ${pad(oathNotes.toLocaleString(), 10)}  (sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
