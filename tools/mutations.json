@@ -1,82 +1,75 @@
 {
-  "change": "Parry: five right in a row turn away the next miss's blow",
+  "change": "Clean sweep: a win with no miss drops a sure chest with richer odds",
   "mutations": [
     {
-      "name": "a parry at every streak",
+      "name": "a sweep in every mode",
       "file": "index.html",
-      "find": "if(!this.can(B) || B.parry || !B.combo || B.combo%this.AT) return false;",
-      "replace": "if(!this.can(B) || B.parry || !B.combo) return false;",
+      "find": "on(B){ return !!(B && B.mode==='campaign' && B.missed===0); },",
+      "replace": "on(B){ return !!(B && B.missed===0); },",
       "run": "verify"
     },
     {
-      "name": "two parries held at once",
+      "name": "a sweep with a miss in it",
       "file": "index.html",
-      "find": "if(!this.can(B) || B.parry || !B.combo || B.combo%this.AT) return false;",
-      "replace": "if(!this.can(B) || !B.combo || B.combo%this.AT) return false;",
+      "find": "on(B){ return !!(B && B.mode==='campaign' && B.missed===0); },",
+      "replace": "on(B){ return !!(B && B.mode==='campaign' && B.missed<=1); },",
       "run": "verify"
     },
     {
-      "name": "a parry at four",
+      "name": "a sweep's chest only by chance",
       "file": "index.html",
-      "find": "  AT: 5,\n  can(B)",
-      "replace": "  AT: 4,\n  can(B)",
+      "find": "odds(B, base){ return this.on(B) ? 1 : base; },",
+      "replace": "odds(B, base){ return base; },",
       "run": "verify"
     },
     {
-      "name": "a parry in the daily",
+      "name": "a sweep's chest can be a plain one",
       "file": "index.html",
-      "find": "can(B){ return !!(B && B.mode!=='daily' && !B.rite); },",
-      "replace": "can(B){ return !!(B && !B.rite); },",
+      "find": "if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';",
+      "replace": "if(ctx.boss && rar==='common') rar='uncommon';",
       "run": "verify"
     },
     {
-      "name": "a parry is never spent",
+      "name": "a sweep draws with no more luck",
       "file": "index.html",
-      "find": "B.parry=false; B.parried=true;",
-      "replace": "B.parried=true;",
+      "find": "const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);",
+      "replace": "const luck = ctx.boss ? 2.6 : 1;",
       "run": "verify"
     },
     {
-      "name": "a parry turns away nothing",
+      "name": "a sweep's luck is no luck",
       "file": "index.html",
-      "find": "    if(Parry.turn(this)) return 0;\n",
+      "find": "  LUCK: 1.6,",
+      "replace": "  LUCK: 1,",
+      "run": "verify"
+    },
+    {
+      "name": "the card says nothing of a sweep",
+      "file": "index.html",
+      "find": "          ${Sweep.line(sweep)}\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "a right answer earns no parry",
+      "name": "the card says a sweep for nothing",
       "file": "index.html",
-      "find": "      Parry.earn(this);\n",
-      "replace": "",
+      "find": "line(on){ return on ? `<div id=\"sweepLine\"",
+      "replace": "line(on){ return true ? `<div id=\"sweepLine\"",
       "run": "verify"
     },
     {
-      "name": "a fight keeps the last fight's parry",
+      "name": "the fight never passes its sweep to the chest",
       "file": "index.html",
-      "find": "    this.parry=false; this.parryTold=false; this.parried=false;   // a parry lasts the fight\n",
-      "replace": "",
-      "run": "verify"
+      "find": "const sweep=Sweep.on(this);",
+      "replace": "const sweep=false;",
+      "run": "play:sweep"
     },
     {
-      "name": "the explanation does not say the parry",
+      "name": "a win with a miss is told it swept",
       "file": "index.html",
-      "find": "      Parry.line(!inRite && this.parried)+\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the parry is not shown beside the streak",
-      "file": "index.html",
-      "find": "streak ${this.combo}`+Parry.tag(this);",
-      "replace": "streak ${this.combo}`;",
-      "run": "verify"
-    },
-    {
-      "name": "a parried miss still costs health",
-      "file": "index.html",
-      "find": "    if(Parry.turn(this)) return 0;",
-      "replace": "    if(Parry.turn(this)) return raw;",
-      "run": "play:parry"
+      "find": "          ${Sweep.line(sweep)}\n",
+      "replace": "          ${Sweep.line(true)}\n",
+      "run": "play:sweep"
     }
   ]
 }

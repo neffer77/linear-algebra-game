@@ -9273,6 +9273,17 @@ const Parry = {
   line(on){ return on ? `<div class="miss again" id="parryLine">🛡️ <b>Parried!</b> Your streak had earned a parry, so the miss cost no health. The streak starts again from nothing.</div>` : ''; }
 };
 
+/* A clean sweep. A campaign fight won without one miss always drops a chest,
+   and never a plain one: its find is rolled with more luck, the way a boss's
+   is. The victory card says so. Bosses and elites already drop a sure chest,
+   and a sweep still tips their odds. Nothing is saved. */
+const Sweep = {
+  LUCK: 1.6,
+  on(B){ return !!(B && B.mode==='campaign' && B.missed===0); },
+  odds(B, base){ return this.on(B) ? 1 : base; },
+  line(on){ return on ? `<div id="sweepLine" style="color:#ffe08a;font-weight:800;margin-top:6px">✨ Clean sweep: not one miss, so a sure chest with richer odds.</div>` : ''; }
+};
+
 const SecondWind = {
   MUL: 2,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -10316,8 +10327,9 @@ const Battle = {
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
-    const drop = R.chance(this.foe.boss || this.foe.elite ? 1 : .5)
-      ? Loot.roll({boss:this.foe.boss, tier:Math.min(6, this.ri+2)}) : null;
+    const sweep=Sweep.on(this);
+    const drop = R.chance(this.foe.boss || this.foe.elite ? 1 : Sweep.odds(this, .5))
+      ? Loot.roll({boss:this.foe.boss, sweep, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? `<span style="color:${RARITY[drop.rar].col}">${drop.ic} ${drop.nm}</span>` : null;
     // boss unlocks the next realm
     let unlocked=null;
@@ -10337,6 +10349,7 @@ const Battle = {
           ${Grade.sLine(sGold)}
           ${Overkill.line(over, oGold)}
           ${Quarry.line(quarry && !this.foe.elite)}
+          ${Sweep.line(sweep)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11816,9 +11829,9 @@ const Loot = {
     return 'common';
   },
   roll(ctx){
-    const luck = ctx.boss ? 2.6 : 1;
+    const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);
     let rar = this.rollRarity(luck);
-    if(ctx.boss && rar==='common') rar='uncommon';     // a boss always gives something
+    if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';     // a boss, or a clean sweep, always gives something
     const pool = this.gearPool(ctx.tier);
 
     // The high tiers hand over gear whenever any is still unowned.

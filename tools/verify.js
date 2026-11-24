@@ -3335,6 +3335,50 @@ const parryNotes = (() => {
   return checks;
 })();
 
+/* A clean sweep: a campaign fight won without a miss drops a sure chest, and
+   never a plain one. Worked over every mode and miss count, and over the whole
+   spread of the chest's draw: a sweep never finds a common, finds the rarer
+   things more often than a plain win, and tips a boss's odds further. The
+   fight's wiring is checked where the game uses it. */
+const sweepNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Sweep = {'), html.indexOf('const SecondWind = {'));
+  const S = new Function(src + ';return Sweep;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('sweep', key, msg); };
+  for (const mode of ['campaign', 'arena', 'dungeon', 'daily']) for (let missed = 0; missed < 4; missed++) {
+    const B = { mode, missed }, on = mode === 'campaign' && missed === 0;
+    want(S.on(B) === on, `on ${mode} ${missed}`, `${S.on(B)}`);
+    for (const base of [0, 0.5, 1]) want(S.odds(B, base) === (on ? 1 : base), `odds ${mode} ${missed} ${base}`, `${S.odds(B, base)}`);
+  }
+  want(S.on(null) === false && S.on(undefined) === false, 'none', 'a sweep with no fight');
+  want(S.line(true).includes('id="sweepLine"') && S.line(true).includes('Clean sweep') && S.line(false) === '', 'line', 'the card does not say the sweep');
+  // the chest's draw, worked over an even spread of the dice
+  const lsrc = html.slice(html.indexOf('const Loot = {'), html.indexOf('/* The reveal.'));
+  const N = 4000;
+  const tally = (ctx) => {
+    let k = 0;
+    const M = Object.assign(Object.create(Math), { random: () => ((k++ * 0.6180339887) % 1) });
+    const R = { pick: a => a[0], chance: p => M.random() < p };
+    const Game = { s: { owned: {}, items: {} } };
+    const L = new Function('Math', 'R', 'Game', 'WEAPONS', 'ARMORS', 'Sweep', lsrc + ';return Loot;')(M, R, Game, [], [], S);
+    const n = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+    for (let i = 0; i < N; i++) n[L.roll(Object.assign({ tier: 3 }, ctx)).rar]++;
+    return n;
+  };
+  const rarer = n => n.rare + n.epic + n.legendary;
+  const plain = tally({}), sw = tally({ sweep: true }), boss = tally({ boss: true }), both = tally({ boss: true, sweep: true });
+  want(plain.common > 0, 'plain', 'a plain win never finds a common');
+  want(sw.common === 0 && both.common === 0, 'never plain', `a sweep found ${sw.common} commons`);
+  want(rarer(sw) > rarer(plain) * 1.3, 'richer', `a sweep found ${rarer(sw)} rare things to a plain win's ${rarer(plain)}`);
+  want(rarer(both) > rarer(boss), 'boss', `a boss swept found ${rarer(both)} rare things to a boss's ${rarer(boss)}`);
+  want(sw.legendary > plain.legendary, 'legend', `a sweep found ${sw.legendary} legendaries to a plain win's ${plain.legendary}`);
+  want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
+  want(html.includes("R.chance(this.foe.boss || this.foe.elite ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, tier:'), 'drop', 'a sweep does not drop a sure chest');
+  want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26685,6 +26729,7 @@ console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(),
 console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10)}  (the first win at S on a foe pays its gold once more and says so, worked for every grade a clear can hold, never twice, in the campaign only)`);
 console.log(`  today's quarry checked     ${pad(quarryNotes.toLocaleString(), 10)}  (one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win, full gold, said on the card and the map)`);
 console.log(`  parries checked            ${pad(parryNotes.toLocaleString(), 10)}  (a parry at five, ten, fifteen and on, never otherwise, one at a time, never in the daily or a rite; one blow turned away; shown beside the streak and said on the scene and in the explanation; told once a fight)`);
+console.log(`  clean sweeps checked       ${pad(sweepNotes.toLocaleString(), 10)}  (a win with no miss in the campaign only; a sure chest, never a plain one, with rarer finds than a plain win and a boss's odds tipped further)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
