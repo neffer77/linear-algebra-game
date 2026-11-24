@@ -1,74 +1,32 @@
 {
- "change": "Arms on show: the knight in the fight is drawn in the blade and armour they wear",
+ "change": "A blade aflame: from a streak of five the knight's blade burns, hotter at six and seven",
  "mutations": [
   {
-   "name": "every knight drawn in the same plate",
+   "name": "the blade never burns",
    "file": "index.html",
-   "find": "  plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; }",
-   "replace": "  plate(g){ return this.PLATES.a3; }",
-   "run": "verify"
-  },
-  {
-   "name": "every knight drawn with the same blade",
-   "file": "index.html",
-   "find": "  blade(g){ return this.BLADES[g && g.weapon] || this.BLADES.w2; },",
-   "replace": "  blade(g){ return this.BLADES.w2; },",
-   "run": "verify"
-  },
-  {
-   "name": "the best blade drawn short",
-   "file": "index.html",
-   "find": "    w9:{len:82,",
-   "replace": "    w9:{len:52,",
-   "run": "verify"
-  },
-  {
-   "name": "the forged blade drawn longest",
-   "file": "index.html",
-   "find": "    wD:{len:60,",
-   "replace": "    wD:{len:84,",
-   "run": "verify"
-  },
-  {
-   "name": "a weapon with no blade",
-   "file": "index.html",
-   "find": "    w7:{len:74, top:'#ffffff', mid:'#b8fff4', low:'#2bbcae', guard:'#e9c46a'},\n",
+   "find": "  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "two plates alike",
+   "name": "the blade burns from the first right answer",
    "file": "index.html",
-   "find": "    a7:{skin:'#e8edf3', dark:'#b0bccb'},",
-   "replace": "    a7:{skin:'#dfe9f7', dark:'#b0bccb'},",
+   "find": "    if(c<5) return null;",
+   "replace": "    if(c<1) return null;",
    "run": "verify"
   },
   {
-   "name": "the blade's length ignored",
+   "name": "no hotter at seven",
    "file": "index.html",
-   "find": "  const tip=-10-blade.len, g=",
-   "replace": "  const tip=-74, g=",
+   "find": "    return c>=7 ? {col:'#ff5d2d', blur:20}",
+   "replace": "    return c>=7 ? {col:'#ff5d2d', blur:15}",
    "run": "verify"
   },
   {
-   "name": "the plate drawn but not worn",
+   "name": "the blade never burns, seen in play",
    "file": "index.html",
-   "find": "  const skin = hurt>0 ? '#ff8b8b' : plate.skin;",
-   "replace": "  const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';",
-   "run": "verify"
-  },
-  {
-   "name": "the blade drawn but not worn, seen in play",
-   "file": "index.html",
-   "find": "  const plate = Arms.plate(Game.s), blade = Arms.blade(Game.s);",
-   "replace": "  const plate = Arms.plate(Game.s), blade = Arms.BLADES.w0;",
-   "run": "play:arms"
-  },
-  {
-   "name": "the plate drawn but not worn, seen in play",
-   "file": "index.html",
-   "find": "  const skin = hurt>0 ? '#ff8b8b' : plate.skin;",
-   "replace": "  const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';",
+   "find": "  const fire=Flame.of(Battle);   // a streak sets the blade burning\n",
+   "replace": "  const fire=null;\n",
    "run": "play:arms"
   }
  ]
