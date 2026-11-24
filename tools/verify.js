@@ -3904,6 +3904,232 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* A campfire. Only a miss in a campaign fight, never a rite or another
+   mode, is a slip, one to a topic with the latest last and no more than
+   eight; the card offers a camp only to a wounded knight with a slip, on the
+   latest; a right answer mends half the wounds, never past full, and puts
+   that topic's slip behind them, and a miss keeps it. The wiring is checked
+   where it lives: a slip is noted on a miss alone, the camp is offered on
+   the card, and one answer is counted and pays once. */
+const campNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Campfire = {'), html.indexOf('/* A rival. Sir Corvin'));
+  let seed = 37;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const GEN = { a: 1, b: 1, c: 1, d: 1, e: 1, f: 1, g: 1, h: 1, i: 1, j: 1 }, KEYS = [...Object.keys(GEN), 'nosuch'];
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('campfire', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let run = 0; run < 300; run++) {
+    const C = new Function('Game', 'GEN', 'TOPIC_LABEL', src + ';return Campfire;')(Game, GEN, {});
+    let model = [];
+    for (let step = 0; step < 40; step++) {
+      const B = { mode: modes[rnd(6)], rite: !rnd(8) ? {} : null, cur: { key: KEYS[rnd(KEYS.length)] }, curDiff: 1 + rnd(3) };
+      const counts = B.mode === 'campaign' && !B.rite && !!GEN[B.cur.key];
+      want(C.note(B) === counts, `note ${run} ${step}`, JSON.stringify(B));
+      if (counts) { model = model.filter(s => s.key !== B.cur.key); model.push({ key: B.cur.key, diff: B.curDiff }); if (model.length > 8) model.shift(); }
+      want(JSON.stringify(C.slips) === JSON.stringify(model), `slips ${run} ${step}`, `${JSON.stringify(C.slips)} for ${JSON.stringify(model)}`);
+      const maxHp = 50 + rnd(500), hp = rnd(4) ? rnd(maxHp + 1) : maxHp;
+      Game.s = { maxHp, hp };
+      const V = { mode: modes[rnd(6)] }, on = V.mode === 'campaign' && model.length > 0 && hp > 0 && hp < maxHp;
+      const h = C.html(V);
+      const n = Math.max(1, Math.round((maxHp - hp) * 0.5));
+      want(on ? h.includes('id="camp"') && h.includes('id="campGo"') && h.includes('+' + n) && C.cur === C.slips[C.slips.length - 1] : h === '' && C.cur === null,
+        `html ${run} ${step}`, `${V.mode} ${hp}/${maxHp} ${model.length}: ${h.slice(0, 80)}`);
+      want(!on || (hp + n <= maxHp && n >= 1), `mend ${run} ${step}`, `${hp}/${maxHp} mends ${n}`);
+    }
+  }
+  // the wiring
+  want(html.includes("      ? {key:this.cur.key, diff:this.curDiff} : null;\n    if(!ok) Campfire.note(this);") && html.split('Campfire.note(').length === 2, 'noted', 'a slip is not noted on a miss alone');
+  want(html.includes('${Campfire.html(this)}'), 'card', 'the card does not offer the camp');
+  const ans = src.slice(src.indexOf('  answer('));
+  want(ans.includes('this.cur=null;     // one question, one rest') && ans.includes('Game.recordAnswer(q.key, ok, 1);')
+    && /if\(ok\)\{\s*const n=this\.mend\(\); g\.hp=Math\.min\(g\.maxHp, g\.hp\+n\);\s*this\.slips=this\.slips\.filter\(x=>x\.key!==s\.key\);/.test(ans)
+    && ans.split('this.slips=').length === 2, 'answer', 'a camp pays twice, pays a miss, keeps a slip gone over, or is not counted');
+  want(src.slice(src.indexOf('  ask('), src.indexOf('  answer(')).includes('buildQuestion(s.key, s.diff)'), 'asked', 'a camp asks another topic or difficulty than the slip');
+  return checks;
+})();
+
+/* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
+   never a boss, and waits after a campaign victory there only once that foe
+   is beaten, so a duel never clears a foe unfought; he is that foe a tenth
+   harder, with twice its gold and half again its experience, and never a
+   boss. A duel won leaves the realm be for the sitting, and nothing else
+   does. The wiring is checked where it lives: a duel is fought only when
+   asked for, it is said as it starts, and the card offers it and tells it. */
+const rivalNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Rival = {'), html.indexOf('/* A familiar. Twenty'));
+  let seed = 31;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('rival', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let step = 0; step < 6000; step++) {
+    const REALMS = [...Array(1 + rnd(4))].map(() => ({ foes: [...Array(1 + rnd(7))].map((_, i) =>
+      ({ nm: 'f' + i, art: 'slime', hp: 10 + rnd(500), atk: 5 + rnd(100), gold: 10 + rnd(300), xp: 5 + rnd(200), col: '#fff', boss: !rnd(4) })) }));
+    const V = new Function('R', 'Game', 'REALMS', src + ';return Rival;')({ pick: a => a[rnd(a.length)] }, Game, REALMS);
+    const ri = rnd(REALMS.length), fs = REALMS[ri].foes;
+    const plain = fs.map((f, i) => i).filter(i => !fs[i].boss);
+    const best = plain.reduce((b, i) => b < 0 || fs[i].hp > fs[b].hp ? i : b, -1);
+    const k = `step ${step}`;
+    want(V.fi(ri) === best, 'fi ' + k, `rode ${V.fi(ri)}, wanted ${best} of ${JSON.stringify(fs.map(f => [f.hp, f.boss]))}`);
+    const cleared = {};
+    fs.forEach((f, i) => { if (rnd(2)) cleared[ri + ':' + i] = 'S'; });
+    Game.s = { cleared };
+    if (rnd(3) === 0) V.beat[ri] = true;
+    const B = { mode: modes[rnd(6)], ri, foe: rnd(5) ? fs[0] : { rival: true } };
+    const w = B.mode === 'campaign' && !B.foe.rival && !V.beat[ri] && best >= 0 && !!cleared[ri + ':' + best];
+    want(V.waits(B) === w, 'waits ' + k, `${JSON.stringify([B.mode, !!B.foe.rival, !!V.beat[ri], best, cleared])} waited ${V.waits(B)}`);
+    const o = V.offer(B);
+    want(w ? o.includes('id="rivalGo"') && o.includes(`Battle.begin(${ri},${best},false,true)`) && o.includes('Sir Corvin') : o === '', 'offer ' + k, o);
+    if (best >= 0) {
+      const f = fs[best], r = V.make(ri);
+      want(r.rival === true && r.boss === false && r.nm === 'Sir Corvin' && r.hp === f.hp && r.atk === Math.round(f.atk * 1.1)
+        && r.gold === f.gold * 2 && r.xp === Math.round(f.xp * 1.5) && f.rival === undefined, 'make ' + k, JSON.stringify([f, r]));
+    }
+    const beat = JSON.stringify(V.beat), on = B.mode === 'campaign' && !!B.foe.rival;
+    want(V.won(B) === on && (on ? V.beat[ri] === true : JSON.stringify(V.beat) === beat), 'won ' + k, `${B.mode} ${!!B.foe.rival}: ${JSON.stringify(V.beat)}`);
+    want(V.line(on) === '' ? !on : V.line(on).includes('id="rivalWon"') && V.line(on).includes('yields'), 'line ' + k, V.line(on));
+  }
+  // the wiring
+  want(html.includes("  begin(ri, fi, heroic, rival){") && html.includes("    if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival\n    this._start(heroic && beaten"), 'begin', 'a duel is not fought only when asked for');
+  want(html.split(',false,true)').length === 2 && html.includes('onclick="Battle.begin(${B.ri},${this.fi(B.ri)},false,true)"'), 'asked', 'a duel is started from somewhere other than the offer');
+  want(html.includes("else if(Rival.on(this)) UI.toast(Rival.intro());") && html.includes("+(this.foe.rival?'🛡️ ':'')"), 'said', 'a duel is not said as it starts');
+  want(html.includes("    const rival=Rival.won(this);") && html.includes('${Rival.line(rival)}') && html.includes('${Rival.offer(this)}'), 'card', 'the card does not offer or tell the duel');
+  return checks;
+})();
+
+/* A familiar. The egg counts right answers in campaign fights only, never a
+   rite, an arena, the daily or the Deep, and hatches at exactly the
+   twentieth, into one of its four kinds; before that nothing is mended. After
+   it each right answer mends three in a hundred of full health, at least 1,
+   six once grown at sixty, never past full and never a fallen knight; the
+   streak line shows the count or the familiar. The wiring is checked where
+   it lives: it is counted on a right answer only, and it never touches the
+   foe. */
+const familiarNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Familiar = {'), html.indexOf('/* Wayfarers. Now and then'));
+  let seed = 29;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const said = [];
+  const mk = () => new Function('R', 'Game', 'Celebrate', 'Anim', 'Sfx', 'H', src + ';return Familiar;')(
+    { pick: a => a[rnd(a.length)] }, Game, { banner: (t, sub) => said.push(t + ' ' + sub) }, { float: (x, y, t) => said.push(t) }, { milestone() {} }, 800);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('familiar', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  const kinds = new Set();
+  for (let run = 0; run < 200; run++) {
+    const F = mk(); said.length = 0;
+    let right = 0;
+    for (let step = 0; step < 200; step++) {
+      const maxHp = 50 + rnd(400);
+      Game.s = { maxHp, hp: rnd(5) ? rnd(maxHp + 1) : maxHp };
+      const B = { mode: modes[rnd(6)], rite: !rnd(8) };
+      const counts = B.mode === 'campaign' && !B.rite;
+      const before = Game.s.hp, was = right;
+      const got = F.add(B);
+      if (counts) right++;
+      const k = `run ${run} step ${step}`;
+      want(F.n === right, 'count ' + k, `${F.n} counted after ${right} right campaign answers (${B.mode}${B.rite ? ', rite' : ''})`);
+      want(F.hatched() === (right >= 20) && F.grown() === (right >= 60), 'hatch ' + k, `${right} right: hatched ${F.hatched()}, grown ${F.grown()}`);
+      if (right === 20 && was === 19) {
+        want(said.some(t => t.startsWith('THE EGG HATCHES') && t.includes(F.kind.nm)) && got === 0 && Game.s.hp === before, 'hatching ' + k, said.join('|'));
+        kinds.add(F.kind.nm);
+      }
+      const mends = counts && was >= 20 && before > 0;
+      const each = Math.max(1, Math.round(maxHp * 0.03 * (right >= 60 ? 2 : 1)));
+      const exp = mends ? Math.min(maxHp, before + each) : before;
+      want(Game.s.hp === exp && got === exp - before, 'mend ' + k, `${right} right, ${before}/${maxHp}: mended to ${Game.s.hp} (${got}), wanted ${exp}`);
+      const tag = F.tag(B);
+      want(counts ? (right >= 20 ? tag.includes(F.kind.ic) && tag.includes(right >= 60 ? 'grown' : 'mending') : tag.includes(`🥚 ${right}/20`)) : tag === '', 'tag ' + k, tag);
+    }
+  }
+  want(kinds.size === 4, 'kinds', `${kinds.size} kinds hatched`);
+  want(!/ehp|emax|\.foe/.test(src), 'foe', 'the familiar touches the foe');
+  const ok = html.indexOf('    if(ok){\n      this.combo++;'), add = html.indexOf('      Familiar.add(this);');
+  want(ok > 0 && add > ok && add < html.indexOf('} else if(this.shownWork){', ok) && html.split('Familiar.add(').length === 2, 'wired', 'the familiar is not counted on a right answer alone');
+  want(html.includes("document.getElementById('comboTxt').textContent += Familiar.tag(this);"), 'line', 'the streak line does not show the familiar');
+  return checks;
+})();
+
+/* Wayfarers. About one campaign victory in six meets one, never another
+   kind of fight; only a topic of the realm already met is asked, and a
+   knight who has met none meets no one; every kind says what it gives and
+   gives just that, the smith's purse growing with the realm. The wiring is
+   checked where it lives: a meeting is rolled at the victory, one answer
+   wins one prize, a miss gives nothing, and the answer counts toward the
+   topic. */
+const wayNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Wayfarer = {'), html.indexOf('/* Scouting. The victory card'));
+  let seed = 23;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const GEN = { a: 1, b: 1, c: 1, d: 1 };
+  const W = new Function('R', 'Game', 'GEN', src + ';return Wayfarer;')({ chance: p => rand() < p, pick: a => a[rnd(a.length)] }, Game, GEN);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('wayfarer', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  let wins = 0, met = 0;
+  const kinds = new Set();
+  for (let step = 0; step < 30000; step++) {
+    const pool = ['a', 'b', 'c', 'd', 'nosuch'].filter(() => rnd(3) > 0);
+    const stats = {};
+    pool.forEach(k => { if (rnd(2)) stats[k] = { seen: rnd(4) }; });
+    Game.s = { topicStats: stats };
+    const B = { mode: modes[rnd(6)], ri: rnd(8), realm: { pool } };
+    const may = pool.filter(k => GEN[k] && stats[k] && stats[k].seen > 0);
+    const w = W.roll(B);
+    if (B.mode === 'campaign' && may.length) wins++;
+    if (w) {
+      met++; kinds.add(w.kind.id);
+      want(B.mode === 'campaign' && may.includes(w.key) && w.ri === B.ri && W.KINDS.includes(w.kind), `meet ${step}`, `a ${B.mode} victory met ${JSON.stringify([w.kind.id, w.key])} with ${JSON.stringify(may)} met`);
+    }
+  }
+  want(met > wins * 0.14 && met < wins * 0.19, 'odds', `${met} meetings in ${wins} campaign victories with a topic met`);
+  want(kinds.size === 4 && W.KINDS.length === 4, 'kinds', `${kinds.size} kinds met`);
+  want(W.roll(null) === null && W.html(null) === '', 'none', 'no fight met a wayfarer');
+  const give = { scholar: ['potion', 1], hermit: ['insight', 1], bard: ['rage', 1] };
+  for (const kind of W.KINDS) {
+    for (let ri = 0; ri < 8; ri++) {
+      Game.s = { gold: 100, items: { potion: 1, insight: 1, rage: 1 } };
+      const w = { kind, ri, key: 'a' };
+      const before = JSON.stringify(Game.s), p = kind.prize(w);
+      kind.give(w);
+      if (kind.id === 'smith') {
+        want(Game.s.gold === 100 + 30 + 15 * ri && p === `${30 + 15 * ri} gold`, `smith ${ri}`, `${p}: ${JSON.stringify(Game.s)}`);
+        want(JSON.stringify(Game.s.items) === JSON.stringify({ potion: 1, insight: 1, rage: 1 }), `smith items ${ri}`, 'the smith gave an item');
+      } else {
+        const [item, n] = give[kind.id];
+        const g = JSON.parse(before); g.items[item] += n;
+        want(JSON.stringify(Game.s) === JSON.stringify(g), `${kind.id} ${ri}`, `${p}: ${before} became ${JSON.stringify(Game.s)}`);
+      }
+      const h = W.html(w);
+      want(h.includes('id="wayfarer"') && h.includes('id="wayGo"') && h.includes('Answer for ' + p) && h.includes(kind.say), `html ${kind.id} ${ri}`, h);
+    }
+  }
+  // the wiring
+  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('${Wayfarer.html(way)}'), 'wired', 'a victory does not roll or show a wayfarer');
+  const ans = src.slice(src.indexOf('  answer('));
+  want(ans.includes('this.cur=null;     // one question, one prize') && ans.includes('Game.recordAnswer(q.key, ok, 1);') && ans.includes('if(ok){ w.kind.give(w);') && !/else[^;]*give/.test(ans), 'answer', 'a meeting pays twice, is not counted, or pays a miss');
+  const ask = src.slice(src.indexOf('  ask('), src.indexOf('  answer('));
+  want(ask.includes('if(!w || !el || this.q) return;'), 'once', 'a meeting asks more than one question');
+  return checks;
+})();
+
 /* Scouting. Every campaign foe with a weak point the game can ask can be
    scouted, and the card offers it by name, or says the knight is prepared
    once they are; only the scouted foe's next campaign fight is prepared, and
@@ -27433,6 +27659,10 @@ console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10
 console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10)}  (each rarity rises one step and the legendary offers none; only a campaign find with a topic offers one; a find made at a rarity is of it, and a rolled find keeps its context; offered once, counted toward the topic, a miss keeps the find)`);
 console.log(`  heroic rematches checked   ${pad(heroicNotes.toLocaleString(), 10)}  (twice the gold, half again the experience, a quarter harder blows and all else kept; only a campaign fight, only a beaten foe asked for, never elite or greedy as well; the hardest riddles)`);
 console.log(`  scouting checked           ${pad(scoutNotes.toLocaleString(), 10)}  (every foe with a weak point offered by name; only its next campaign fight prepared, and spent by it; prepared, its weak point lands ×2 and says so; the rule shown before the question; a miss prepares nothing)`);
+console.log(`  wayfarers checked          ${pad(wayNotes.toLocaleString(), 10)}  (about one campaign victory in six, on a topic of the realm already met; four kinds, each giving just the prize it names; one answer, one prize, a miss nothing, counted toward the topic)`);
+console.log(`  familiars checked          ${pad(familiarNotes.toLocaleString(), 10)}  (twenty right campaign answers of a sitting hatch one of four kinds; then each right answer mends 3% of full health, 6% once grown at sixty, never past full; shown on the streak line; never touches the foe)`);
+console.log(`  rivals checked             ${pad(rivalNotes.toLocaleString(), 10)}  (Sir Corvin rides each realm's strongest plain foe, waits only once it is beaten, a tenth harder for twice the gold; a duel won leaves the realm be for the sitting; asked for, said, offered and told)`);
+console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}  (a campaign miss is a slip, one to a topic, eight at most; a wounded knight with a slip is offered a camp on the latest; a right answer mends half the wounds and puts the slip behind; one answer, counted, paid once)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

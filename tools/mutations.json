@@ -1,82 +1,89 @@
 {
-  "change": "Scouting: study the next foe's weak point on the victory card, and strikes on it land twice as hard",
+  "change": "A campfire: a wounded knight goes over a slip from earlier by the fire, and a right answer mends half the wounds",
   "mutations": [
     {
-      "name": "a prepared strike lands no harder",
+      "name": "a slip from the arena is kept",
       "file": "index.html",
-      "find": "  MUL: 1.5, PREP: 2,",
-      "replace": "  MUL: 1.5, PREP: 1.5,",
+      "find": "    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;",
+      "replace": "    if(!B || !B.cur || !GEN[B.cur.key]) return false;",
       "run": "verify"
     },
     {
-      "name": "the chip says half again when prepared",
+      "name": "a topic is kept twice",
       "file": "index.html",
-      "find": "🎯 weak point ×${B.prepared ? this.PREP : this.MUL}",
-      "replace": "🎯 weak point ×${this.MUL}",
+      "find": "    this.slips=this.slips.filter(s=>s.key!==k);\n    this.slips.push",
+      "replace": "    this.slips.push",
       "run": "verify"
     },
     {
-      "name": "a scouting is never spent",
+      "name": "slips are kept without end",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n    this.at=null;\n",
-      "replace": "    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;\n",
-      "run": "verify"
-    },
-    {
-      "name": "an arena fight is fought prepared",
-      "file": "index.html",
-      "find": "if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;",
-      "replace": "if(!B || !this.ready(B.ri, B.fi)) return false;",
-      "run": "verify"
-    },
-    {
-      "name": "a scouting prepares for every foe of the realm",
-      "file": "index.html",
-      "find": "return !!(this.at && this.at.ri===ri && this.at.fi===fi); },",
-      "replace": "return !!(this.at && this.at.ri===ri); },",
-      "run": "verify"
-    },
-    {
-      "name": "a miss prepares the knight",
-      "file": "index.html",
-      "find": "    if(ok){\n      this.at={ri:this.ri, fi:this.fi};",
-      "replace": "    if(true){\n      this.at={ri:this.ri, fi:this.fi};",
-      "run": "verify"
-    },
-    {
-      "name": "the card offers no scouting",
-      "file": "index.html",
-      "find": "        ${Scout.html(nx)}\n",
+      "find": "    if(this.slips.length>this.MAX) this.slips.shift();\n",
       "replace": "",
-      "run": "play:scout"
+      "run": "verify"
     },
     {
-      "name": "the scouted fight is not prepared",
+      "name": "a whole knight is offered a camp",
       "file": "index.html",
-      "find": "this.prepared=Scout.spend(this);",
-      "replace": "this.prepared=false;",
-      "run": "play:scout"
+      "find": "return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },",
+      "replace": "return this.slips.length>0 && !!g && g.hp>0; },",
+      "run": "verify"
     },
     {
-      "name": "the prepared fight says nothing as it starts",
+      "name": "a camp mends all the wounds",
       "file": "index.html",
-      "find": "    else if(this.prepared) UI.toast(Scout.intro(f));\n",
+      "find": "  MEND: 0.5, MAX: 8,",
+      "replace": "  MEND: 1, MAX: 8,",
+      "run": "verify"
+    },
+    {
+      "name": "the camp goes over the oldest slip",
+      "file": "index.html",
+      "find": "const s=this.cur=this.slips[this.slips.length-1],",
+      "replace": "const s=this.cur=this.slips[0],",
+      "run": "verify"
+    },
+    {
+      "name": "a camp asks at the easiest",
+      "file": "index.html",
+      "find": "    const q=this.q=buildQuestion(s.key, s.diff);",
+      "replace": "    const q=this.q=buildQuestion(s.key, 1);",
+      "run": "verify"
+    },
+    {
+      "name": "a miss by the fire mends too",
+      "file": "index.html",
+      "find": "    if(ok){\n      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);\n      this.slips=",
+      "replace": "    { const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n); }\n    if(ok){\n      this.slips=",
+      "run": "verify"
+    },
+    {
+      "name": "a slip gone over is kept",
+      "file": "index.html",
+      "find": "      this.slips=this.slips.filter(x=>x.key!==s.key);\n      Sfx.good();",
+      "replace": "      Sfx.good();",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is never a slip",
+      "file": "index.html",
+      "find": "    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n",
       "replace": "",
-      "run": "play:scout"
+      "run": "play:campfire"
     },
     {
-      "name": "scouting answers are not counted",
+      "name": "the card offers no camp",
       "file": "index.html",
-      "find": "    Game.recordAnswer(q.key, ok, 1);      // studying counts toward the topic\n",
+      "find": "        ${Campfire.html(this)}\n",
       "replace": "",
-      "run": "play:scout"
+      "run": "play:campfire"
     },
     {
-      "name": "a miss offers no other question",
+      "name": "a miss by the fire shows no answer",
       "file": "index.html",
-      "find": "\n        <button class=\"btn\" id=\"scoutAgain\" onclick=\"Scout.ask()\">🔍 Try another question</button>",
-      "replace": "",
-      "run": "play:scout"
+      "find": "said=`🔥 Not yet. The answer was <b>${q.a}</b>. ",
+      "replace": "said=`🔥 Not yet. ",
+      "run": "play:campfire"
     }
   ]
 }

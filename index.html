@@ -9229,6 +9229,244 @@ const NextFight = {
   }
 };
 
+/* A campfire. A campaign miss is a slip to go over later. When the knight
+   is wounded and has a slip waiting, the victory card offers to make camp and
+   go over the latest one by the fire: one fresh question on that topic at the
+   difficulty it was missed at. A right answer mends half the knight's wounds
+   and puts the slip behind them; a miss shows the answer and keeps the slip
+   for the next camp. It turns the rest between fights into spaced review of
+   exactly what went wrong, and it never costs gold. Answers count toward the
+   topic. Nothing is saved: the slips are the sitting's. */
+const Campfire = {
+  MEND: 0.5, MAX: 8,
+  slips:[], cur:null, q:null,
+  // a miss in a campaign fight: the slip, latest last, one to a topic
+  note(B){
+    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;
+    const k=B.cur.key;
+    this.slips=this.slips.filter(s=>s.key!==k);
+    this.slips.push({key:k, diff:B.curDiff||1});
+    if(this.slips.length>this.MAX) this.slips.shift();
+    return true;
+  },
+  ready(){ const g=Game.s; return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },
+  mend(){ const g=Game.s; return Math.max(1, Math.round((g.maxHp-g.hp)*this.MEND)); },
+  html(B){
+    this.cur=null; this.q=null;
+    if(!B || B.mode!=='campaign' || !this.ready()) return '';
+    const s=this.cur=this.slips[this.slips.length-1], nm=TOPIC_LABEL[s.key]||s.key;
+    return `<div class="panel" id="camp" style="text-align:left;margin:6px 0">
+        <div class="small">🔥 Make camp and go over a slip from earlier, <b>${nm}</b>. Answer it right and the rest mends half your wounds, ❤️ +${this.mend()}.</div>
+        <button class="btn" id="campGo" style="margin-top:6px" onclick="Campfire.ask()">🔥 Go over ${nm} by the fire</button>
+        <div id="campAsk"></div>
+      </div>`;
+  },
+  ask(){
+    const s=this.cur, el=document.getElementById('campAsk'); if(!s || !el || this.q) return;
+    const go=document.getElementById('campGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(s.key, s.diff);
+    el.innerHTML=`<div id="campQ" style="font-size:16px;text-align:center;line-height:1.5;margin-top:6px">${q.q}</div>
+      <div id="campFig"></div><div id="campChoices" style="margin-top:8px"></div><div id="campOut"></div>`;
+    Figure.render(q.fig, document.getElementById('campFig'));
+    const cb=document.getElementById('campChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  answer(btn, c){
+    const q=this.q, s=this.cur; if(!q || !s) return;
+    this.cur=null;     // one question, one rest
+    const ok=(c===q.a), g=Game.s;
+    document.querySelectorAll('#campChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way
+    let said;
+    if(ok){
+      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);
+      this.slips=this.slips.filter(x=>x.key!==s.key);
+      Sfx.good(); Haptic.hit();
+      said=`<span style="color:#ffb36b;font-weight:800">🔥 Well gone over! The rest mends ❤️ +${n}, and that slip is behind you.</span>`;
+    } else {
+      Sfx.bad();
+      said=`🔥 Not yet. The answer was <b>${q.a}</b>. ${q.ex||''}${q.why[c] ? `<div style="margin-top:4px">${q.why[c]}</div>` : ''}<div style="margin-top:4px">It stays for your next camp.</div>`;
+    }
+    Game.save();
+    document.getElementById('campOut').innerHTML=`<div id="campDone" class="small" style="margin-top:6px">${said}</div>`;
+  }
+};
+
+/* A rival. Sir Corvin, a knight of the same order, rides the same roads and
+   means to prove himself the better scholar. Once the strongest plain foe of
+   a realm is beaten, every campaign victory there finds him waiting, and the
+   victory card offers the duel; it is asked for, never forced. He fights like
+   that foe, a tenth harder, and pays twice its gold and half again its
+   experience, as a rematch of it would. Beaten, he yields with a word and
+   leaves that realm be for the rest of the sitting; lost to, he waits to be
+   asked again. His riddles are the realm's own. Nothing is saved. */
+const Rival = {
+  NM:'Sir Corvin', GOLD:2, XP:1.5, ATK:1.1,
+  beat:{},
+  WAIT:['“So you got this far. Lucky guesses, I expect. Prove me wrong.”',
+    '“They say you know your working. I say you copy it. Duel me and see.”',
+    '“A knight who wins on luck loses to a knight who knows. Shall we find out which you are?”'],
+  YIELD:['“Hmph. You do know it. Next realm, then.”', '“Well struck. I shall study harder.”',
+    '“You earned that. I will not make it so easy next time.”'],
+  // the strongest plain foe of the realm, whose road he rides
+  fi(ri){
+    const fs=(REALMS[ri] && REALMS[ri].foes) || []; let best=-1;
+    fs.forEach((f,i)=>{ if(!f.boss && (best<0 || f.hp>fs[best].hp)) best=i; });
+    return best;
+  },
+  make(ri){
+    const f=REALMS[ri].foes[this.fi(ri)];
+    return Object.assign({}, f, {nm:this.NM, art:'knightfoe', col:'#b48cff', gold:Math.round(f.gold*this.GOLD),
+      xp:Math.round(f.xp*this.XP), atk:Math.round(f.atk*this.ATK), boss:false, rival:true});
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.rival); },
+  // he waits once the foe whose road he rides is beaten, so a duel never clears a foe unfought
+  waits(B){
+    if(!B || B.mode!=='campaign' || this.on(B) || this.beat[B.ri]) return false;
+    const fi=this.fi(B.ri), c=(Game.s && Game.s.cleared) || {};
+    return fi>=0 && !!c[B.ri+':'+fi];
+  },
+  // at a victory: a duel won leaves the realm be for the sitting
+  won(B){ if(!this.on(B)) return false; this.beat[B.ri]=true; return true; },
+  intro(){ return `🛡️ ${this.NM} lowers his visor: “Let us see what you have learned.”`; },
+  offer(B){
+    if(!this.waits(B)) return '';
+    return `<div class="panel" id="rival" style="text-align:left;margin:6px 0">
+        <div class="small">🛡️ <b>${this.NM}</b>, your rival, waits on the road: ${R.pick(this.WAIT)}</div>
+        <button class="btn" id="rivalGo" style="margin-top:6px" onclick="Battle.begin(${B.ri},${this.fi(B.ri)},false,true)">🛡️ Duel ${this.NM}: double gold</button>
+      </div>`;
+  },
+  line(on){ return on ? `<div id="rivalWon" style="color:#b48cff;font-weight:800;margin-top:6px">🛡️ ${this.NM} yields: ${R.pick(this.YIELD)} Double gold and half again the experience.</div>` : ''; }
+};
+
+/* A familiar. Twenty right answers in campaign fights in one sitting hatch an
+   egg, and a familiar joins the knight for the rest of the sitting: an owl, a
+   fox kit, a drakeling or a wisp. From then on each right answer in a campaign
+   fight mends a little of the knight's health, never past full, and at sixty
+   right answers it is grown and mends twice as much. It never strikes the
+   foe, so a fight lasts as long as ever and every question is still asked:
+   it pays for practice with staying power. The streak line shows the egg's
+   count or the familiar. Nothing is saved: a new sitting finds a new egg. */
+const Familiar = {
+  HATCH: 20, GROWN: 60, MEND: 0.03,
+  KINDS: [{ic:'🦉', nm:'owl'}, {ic:'🦊', nm:'fox kit'}, {ic:'🐉', nm:'drakeling'}, {ic:'✨', nm:'wisp'}],
+  n:0, kind:null,
+  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
+  hatched(){ return this.n>=this.HATCH && !!this.kind; },
+  grown(){ return this.hatched() && this.n>=this.GROWN; },
+  // a right answer in a campaign fight: counted, the egg hatched at twenty,
+  // and after that a little mended. It returns the health mended.
+  add(B){
+    if(!this.can(B)) return 0;
+    this.n++;
+    if(this.n===this.HATCH){
+      this.kind=R.pick(this.KINDS);
+      Celebrate.banner('THE EGG HATCHES', `a ${this.kind.nm} joins you for this sitting`, '#9fe6b8', ()=>Sfx.milestone());
+      return 0;
+    }
+    if(!this.hatched()) return 0;
+    if(this.n===this.GROWN) Anim.float(220, H-410, this.kind.ic+' GROWN', '#9fe6b8', true);
+    return this.mend();
+  },
+  amount(maxHp){ return Math.max(1, Math.round(maxHp*this.MEND*(this.grown()?2:1))); },
+  mend(){
+    const g=Game.s; if(!g || g.hp<=0) return 0;
+    const was=g.hp; g.hp=Math.min(g.maxHp, g.hp+this.amount(g.maxHp));
+    const got=g.hp-was;
+    if(got) Anim.float(220, H-290, `${this.kind.ic} +${got}`, '#9fe6b8', true);
+    return got;
+  },
+  tag(B){
+    if(!this.can(B)) return '';
+    return this.hatched() ? `  ·  ${this.kind.ic} ${this.grown()?'grown':'mending'}` : `  ·  🥚 ${this.n}/${this.HATCH}`;
+  }
+};
+
+/* Wayfarers. Now and then, about one campaign victory in six, someone on the
+   road stops the knight with a question on a topic of the realm already met:
+   a scholar, a hermit, a smith or a bard, each with a small prize, a draught,
+   an insight, a purse or a rune. The card tells the meeting; answering is
+   the knight's choice, a right answer wins the prize, and a miss is shown the
+   answer and costs nothing. Answers count toward the topic. Only topics
+   already met are asked, never new material. Nothing new is saved. */
+const Wayfarer = {
+  CHANCE: 1/6,
+  KINDS: [
+    {id:'scholar', ic:'📜', say:'A wandering scholar blocks the road, chalk in hand. “Solve this,” she says, “and my spare draught is yours.”',
+      prize:()=>'a Healing Draught', give(){ Game.s.items.potion++; }},
+    {id:'hermit', ic:'🕯️', say:'A hermit by a roadside shrine asks one question of every passing knight. Answer well and he presses an insight into your hand.',
+      prize:()=>"a Sage's Insight", give(){ Game.s.items.insight++; }},
+    {id:'smith', ic:'⚒️', say:'A travelling smith is stuck on the working for an order. Help her with it and she pays you in coin.',
+      prize:w=>`${Wayfarer.gold(w)} gold`, give(w){ Game.s.gold+=Wayfarer.gold(w); }},
+    {id:'bard', ic:'🎻', say:'A bard is making a ballad of your victory and needs one line that is also true. Give him the answer and he gives you a rune.',
+      prize:()=>'a Berserker Rune', give(){ Game.s.items.rage++; }}
+  ],
+  cur:null, q:null,
+  gold(w){ return 30 + 15*((w && w.ri)||0); },
+  // the topics of the realm the knight has already met, and can be asked
+  topics(B){
+    const g=Game.s, pool=(B && B.realm && B.realm.pool) || [];
+    return pool.filter(k=>GEN[k] && g && g.topicStats[k] && g.topicStats[k].seen>0);
+  },
+  roll(B){
+    if(!B || B.mode!=='campaign' || !R.chance(this.CHANCE)) return null;
+    const ks=this.topics(B); if(!ks.length) return null;
+    return {kind:R.pick(this.KINDS), key:R.pick(ks), ri:B.ri};
+  },
+  html(w){
+    this.cur=w||null; this.q=null;
+    if(!w) return '';
+    return `<div class="panel" id="wayfarer" style="text-align:left;margin:6px 0">
+        <div class="small">${w.kind.ic} ${w.kind.say}</div>
+        <button class="btn" id="wayGo" style="margin-top:6px" onclick="Wayfarer.ask()">${w.kind.ic} Answer for ${w.kind.prize(w)}</button>
+        <div id="wayAsk"></div>
+      </div>`;
+  },
+  ask(){
+    const w=this.cur, el=document.getElementById('wayAsk'); if(!w || !el || this.q) return;
+    const go=document.getElementById('wayGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(w.key, Lesson.diff(w.key, Mastery.adjustDiff(w.key, 2)));
+    el.innerHTML=`<div class="crar" style="margin-top:6px">${q.topic}</div>
+      <div id="wayQ" style="font-size:16px;text-align:center;line-height:1.5">${q.q}</div>
+      <div id="wayFig"></div><div id="wayChoices" style="margin-top:8px"></div><div id="wayOut"></div>`;
+    Figure.render(q.fig, document.getElementById('wayFig'));
+    const cb=document.getElementById('wayChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  answer(btn, c){
+    const q=this.q, w=this.cur; if(!q || !w) return;
+    this.cur=null;     // one question, one prize
+    const ok=(c===q.a);
+    document.querySelectorAll('#wayChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // the road teaches either way
+    if(ok){ w.kind.give(w); Sfx.good(); Haptic.hit(); } else Sfx.bad();
+    Game.save();
+    const say = ok ? `<span style="color:#7ff0a8;font-weight:800">${w.kind.ic} Well answered! You are given ${w.kind.prize(w)}.</span>`
+      : `${w.kind.ic} Not this time, and it costs you nothing. The answer was <b>${q.a}</b>. ${q.ex||''}${q.why[c] ? `<div style="margin-top:4px">${q.why[c]}</div>` : ''}`;
+    document.getElementById('wayOut').innerHTML=`<div id="wayDone" class="small" style="margin-top:6px">${say}</div>`;
+  }
+};
+
 /* Scouting. The victory card's next foe can be scouted first: the card shows
    the rule of the topic it cannot stand, then asks one question on it. A
    right answer prepares the knight, and in the next fight against that foe
@@ -9619,13 +9857,14 @@ const Battle = {
   ehp:0, emax:0, combo:0, over:null,
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
-  begin(ri, fi, heroic){
+  begin(ri, fi, heroic, rival){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     // A foe already beaten here may come back as an elite with one twist.
     // ...or, not an elite, as a greedy foe with a fat purse that flees.
     // ...or, asked for, as a heroic rematch: the hardest riddles for double gold.
     const beaten=!!(Game.s && Game.s.cleared[ri+':'+fi]);
+    if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival
     this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])
       : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
   },
@@ -9699,6 +9938,7 @@ const Battle = {
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
+    else if(Rival.on(this)) UI.toast(Rival.intro());
     else if(this.prepared) UI.toast(Scout.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
@@ -9726,12 +9966,13 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
       (this.mode==='daily' ? `🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}  ·  ${Daily.score} pts  ·  ` : '') +
       `Combo ×${Combat.comboMul(this.combo).toFixed(2)}  ·  streak ${this.combo}`+Parry.tag(this)+Satchel.tag(this);
+    document.getElementById('comboTxt').textContent += Familiar.tag(this);   // the egg, or the familiar
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
@@ -10258,6 +10499,7 @@ const Battle = {
     this.lastStand=SecondWind.take(this);
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
+    if(!ok) Campfire.note(this);   // a slip to go over at the next camp
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -10265,6 +10507,7 @@ const Battle = {
       Parry.earn(this);
       Satchel.add(this);
       Gild.pay(this);
+      Familiar.add(this);   // the egg's count, or the familiar's mending
       if(owed && this.cur.redo){
         this.recovered=Recover.heal(owed);
         if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
@@ -10678,6 +10921,9 @@ const Battle = {
     const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile || vow ? 1 : Sweep.odds(this, .5))
       ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, vow, tier:Math.min(6, this.ri+2), key:this.mode==='campaign' && this.cur ? this.cur.key : null, diff:this.curDiff||1}) : null;
     const loot = drop ? `<span style="color:${RARITY[drop.rar].col}">${drop.ic} ${drop.nm}</span>` : null;
+    // now and then someone on the road asks a question for a small prize
+    const way=Wayfarer.roll(this);
+    const rival=Rival.won(this);
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -10708,6 +10954,7 @@ const Battle = {
           ${Oath.line(vGold)}
           ${Greedy.line(this)}
           ${Heroic.line(this)}
+          ${Rival.line(rival)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10726,8 +10973,11 @@ const Battle = {
         ${this.foe.boss&&first?Saga.card(this.ri):''}
         ${NextFight.html(nx)}
         ${Scout.html(nx)}
+        ${Wayfarer.html(way)}
+        ${Campfire.html(this)}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
+        ${Rival.offer(this)}
         ${Heroic.button(this)}
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
