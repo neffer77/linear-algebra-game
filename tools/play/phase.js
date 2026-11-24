@@ -92,11 +92,11 @@ module.exports = {
     a = await answer(t, true, 1);
     t.eq('and only that one', a.bonus, 1);
 
-    /* What the win pays, counted as it pays it, with any bounty kept out of the sum. */
+    /* What the win pays, counted as it pays it, its overkill aside, with any bounty kept out of the sum. */
     const finish = async () => {
       await t.ev(() => {
         const w = Battle.win, bump = Bounty.bump;
-        Battle.win = function () { const g0 = Game.s.gold; Bounty.bump = () => {}; w.call(this); Bounty.bump = bump; Battle.paid = Game.s.gold - g0; Battle.win = w; };
+        Battle.win = function () { const g0 = Game.s.gold, cap = Overkill.CAP; Bounty.bump = () => {}; Overkill.CAP = 0; w.call(this); Bounty.bump = bump; Overkill.CAP = cap; Battle.paid = Game.s.gold - g0; Battle.win = w; };
         Battle.paid = null; Battle.ehp = 1;
       });
       await answer(t, true, 5);

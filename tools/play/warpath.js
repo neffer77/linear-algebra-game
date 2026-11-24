@@ -30,7 +30,8 @@ const win = async t => {
     window.__banners = [];
     const cb = Celebrate.banner; Celebrate.banner = function (txt) { window.__banners.push(txt); return cb.apply(this, arguments); };
     window.__restore = () => { Celebrate.banner = cb; };
-    const cs = Combat.strike; Combat.strike = () => 5;
+    // a blow of just the health left, so no overkill pays beside the war path
+    const cs = Combat.strike; Combat.strike = () => 1;
     Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1;
     Battle.answer(null, Battle.cur.a);
     Combat.strike = cs;

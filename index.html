@@ -9196,6 +9196,16 @@ const NextFight = {
    stray roll. Arena runs, the Deep, rites and the daily keep their own
    stakes, a turn's second blow is held along with its first, and nothing is
    saved. */
+/* Overkill. The part of the killing blow past the foe's last health pays
+   gold: its share of the foe's whole health, of up to half the foe's gold.
+   A big finisher on a nearly dead foe is worth landing big. */
+const Overkill = {
+  CAP: 0.5,
+  of(hit, was){ return Math.max(0, Math.round(hit-was)); },
+  gold(over, emax, gold){ return emax>0 ? Math.round(gold*this.CAP*Math.min(1, over/emax)) : 0; },
+  line(over, n){ return n ? `<div id="overLine" style="color:#ff8a80;font-weight:800;margin-top:6px">💥 Overkill: ${over} past its last health, +${n} gold.</div>` : ''; }
+};
+
 const SecondWind = {
   MUL: 2,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -9282,6 +9292,7 @@ const Battle = {
     this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
     this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
+    this.overkill=0;
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9868,6 +9879,7 @@ const Battle = {
       const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;
       this.ehp=Math.max(0,this.ehp-hit);
       const rallied=Phase.check(this, was);
+      if(this.ehp<=0){ this.overkill=Overkill.of(hit, was); if(this.overkill && this.mode==='campaign') Anim.float(610, H-370, 'OVERKILL +'+this.overkill, '#ff8a80', true); }
       Anim.strike('p',hit,crit,null,this.ehp<=0);
       // The foe answers the blow: nearly beaten (once), rattled by a streak of
       // five, or stung by a crit; and the killing blow draws its last words.
@@ -10225,6 +10237,8 @@ const Battle = {
     g.cleared[key]=Grade.keep(had, Grade.of(marks));
     const sGold=this.mode==='campaign' ? Grade.sBonus(had, Grade.of(marks), this.foe) : 0;
     g.gold+=sGold;
+    const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);
+    g.gold+=oGold;
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
 
@@ -10248,6 +10262,7 @@ const Battle = {
           ${Phase.flawless(this)?`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>`:''}
           ${WarPath.line()}
           ${Grade.sLine(sGold)}
+          ${Overkill.line(over, oGold)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10269,9 +10284,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
