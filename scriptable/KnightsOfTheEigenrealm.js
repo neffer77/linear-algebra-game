@@ -9286,6 +9286,24 @@ const Greedy = {
   line(B){ return this.on(B) ? \`<div id="greedyWon" style="color:#ffd36b;font-weight:800;margin-top:6px">💰 You caught the greedy \${B.foe.nm} before it fled: its fat purse is yours.</div>\` : ''; }
 };
 
+/* A heroic rematch. Any campaign foe already beaten can be fought again as
+   a heroic rematch, from its victory card: its riddles are asked at the
+   hardest the knight is ready for, its blows land a quarter harder, and it
+   pays twice the gold and half again the experience. It is asked for, never
+   forced, and the plain rematch is still offered beside it. Never an elite
+   or greedy foe as well. Nothing is saved: a heroic fight is the fight's. */
+const Heroic = {
+  GOLD: 2, XP: 1.5, ATK: 1.25,
+  make(foe){
+    return Object.assign({}, foe, {gold:Math.round(foe.gold*this.GOLD), xp:Math.round(foe.xp*this.XP),
+      atk:Math.round(foe.atk*this.ATK), heroic:true});
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.heroic); },
+  intro(f){ return \`⚔️ A heroic rematch with \${f.nm}: the hardest riddles, harder blows, and double the gold.\`; },
+  button(B){ return B && B.mode==='campaign' ? \`<button class="btn" id="heroicGo" onclick="Battle.begin(\${B.ri},\${B.fi},true)">⚔️ Heroic rematch: hardest riddles, double gold</button>\` : ''; },
+  line(B){ return this.on(B) ? \`<div id="heroicWon" style="color:#ff9f6b;font-weight:800;margin-top:6px">⚔️ A heroic victory over \${B.foe.nm}: double gold and half again the experience.</div>\` : ''; }
+};
+
 /* An oath. Before the first answer of a campaign fight the knight may swear
    to win it with no miss. Kept, the victory pays half again the gold and a
    sure chest, an epic find at the least. Broken by any miss, the oath costs
@@ -9540,13 +9558,15 @@ const Battle = {
   ehp:0, emax:0, combo:0, over:null,
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
-  begin(ri, fi){
+  begin(ri, fi, heroic){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     // A foe already beaten here may come back as an elite with one twist.
     // ...or, not an elite, as a greedy foe with a fat purse that flees.
+    // ...or, asked for, as a heroic rematch: the hardest riddles for double gold.
     const beaten=!!(Game.s && Game.s.cleared[ri+':'+fi]);
-    this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
+    this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])
+      : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
   },
   beginDaily(){
     this.mode='daily';
@@ -9616,6 +9636,7 @@ const Battle = {
     Talk.say('meet');
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
+    else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
@@ -9642,7 +9663,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
       (this.mode==='dungeon' ? \`⛏️ Depth \${Dungeon.run.depth}  ·  \` : '') +
@@ -9825,7 +9846,7 @@ const Battle = {
                    : (settingTopics(setNow) ||
                       (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null));
       key=Mastery.pick(pool, prefer);
-      const base = (this.mode==='arena' ? 3
+      const base = (this.mode==='arena' || Heroic.on(this) ? 3
                  : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3))
                  // The Library's stacks reach into fights too — it would be a
                  // strange shelf where only the chests got older.
@@ -10623,6 +10644,7 @@ const Battle = {
           \${Gild.line(this.gildGold)}
           \${Oath.line(vGold)}
           \${Greedy.line(this)}
+          \${Heroic.line(this)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10642,6 +10664,7 @@ const Battle = {
         \${NextFight.html(nx)}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
+        \${Heroic.button(this)}
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);

@@ -794,6 +794,11 @@ The game is built so that losing teaches you as much as winning.
   purse or a new blade), on the chest and on the victory card; miss and the find stays as it was, with the right
   answer and its working shown. It is offered once a chest, a legendary find offers none, the answer counts toward
   the topic like any other, and Collect is always there to take the find as it is. Nothing new is saved.
+- **⚔️ A heroic rematch.** Every campaign victory card offers a heroic rematch beside the plain one. The same
+  foe comes back with its riddles asked at the hardest you are ready for and its blows a quarter harder, and it
+  pays twice the gold and half again the experience of a plain rematch. The scene says so as it arrives, its name
+  carries a ⚔️, and the card says what the heroic victory paid. Only a foe already beaten can be fought heroic, never
+  as an elite or greedy foe as well, and nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3358,6 +3363,7 @@ Inside `index.html` the code is organised as:
 | `Oath` | sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken, nothing unsworn; wired into the bar, the answer, the win and the card |
 | `Greedy` | a beaten plain foe, about one in ten, comes back with triple gold and flees after six questions in the campaign; the escape costs nothing; session-only |
 | `ChestRiddle` | one riddle a campaign chest on the topic just fought, at the fight's difficulty; a right answer raises the find one rarity through `Loot.make`, a miss keeps it and shows the answer; counted toward the topic; none for a legendary find or a chest from the arena; session-only |
+| `Heroic` | a beaten campaign foe asked for as heroic: twice the gold, half again the experience, blows a quarter harder, riddles at the hardest; offered on every campaign victory card; never elite or greedy as well; session-only |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3487,6 +3493,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `oath` | the bar offers an oath before the first answer and shows it sworn, on a phone; kept, the card says so with a sure epic chest; no oath once an answer is given; a miss breaks it, said on the scene, the bar and the card, with the gold counted as paid; no oath says nothing; nothing is saved |
 | `greedy` | a never-beaten foe is never greedy; a beaten one is said greedy as it arrives, named so, its purse tripled, and each question counted above it on a phone; after the sixth it flees to the map taking nothing; felled in time, the card says its purse is yours; a plain foe is not counted and never flees; nothing is saved |
 | `riddle` | a campaign chest offers a riddle beside Collect, on a phone; the riddle names what it wagers and hides the find until answered; right, the find rises a rarity on the chest and the card's loot line, counted toward the topic, and is collected; a miss keeps the find, shows the answer and counts too; a legendary find offers none; collecting without it takes the find as it was; nothing is saved |
+| `heroic` | a foe never beaten cannot be fought heroic; a campaign victory card offers a heroic rematch, on a phone; the plain rematch stays plain; the heroic one says so as it arrives, is named so, has its purse doubled and its blows a quarter harder; its victory says so on the card and pays about twice a plain rematch; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
