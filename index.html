@@ -9254,6 +9254,36 @@ const Bestiary = {
   }
 };
 
+/* ---------- Folio: a foe's first fall writes its page in the Bestiary ----------
+   The first time a campaign foe is beaten, the victory card opens its Bestiary
+   page there and then: the line of lore, where its weak point lies, and how
+   many of the realms' foes the book now holds. Read from the clears, so it
+   needs nothing saved of its own. */
+const Folio = {
+  of(B, first){
+    if(!B || B.mode!=='campaign' || !first || !B.foe) return null;
+    const lore=Bestiary.LORE[B.foe.nm]; if(!lore) return null;
+    const c=Bestiary.count();
+    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total};
+  },
+  line(p){
+    if(!p) return '';
+    return `<div id="folioWon" style="margin-top:8px;padding:8px 10px;border:1px solid var(--edge);border-radius:10px;text-align:left;display:flex;gap:10px;align-items:center">
+      <canvas id="folioPic" width="96" height="96" style="width:64px;height:64px;flex:0 0 64px" aria-hidden="true"></canvas>
+      <div style="flex:1;min-width:0">
+      <div style="color:var(--gold);font-weight:800">📖 A new page in the Bestiary · ${p.n} of ${p.of}</div>
+      <div style="font-size:13px;font-style:italic;margin-top:3px">${p.lore}</div>
+      ${p.weak?`<div style="font-size:13px;margin-top:3px;color:#7ff0a8">${p.weak}</div>`:''}
+      </div>
+    </div>`;
+  },
+  // the foe's likeness on its new page, drawn as the Bestiary draws it
+  paint(p){
+    const el=p && document.getElementById('folioPic'); if(!el) return false;
+    Bestiary.shot(el, p.f, true); return true;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -11807,6 +11837,7 @@ const Battle = {
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
+    const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page
     Game.save();
 
     setTimeout(()=>{
@@ -11818,6 +11849,7 @@ const Battle = {
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           ${Ballad.line(song)}
+          ${Folio.line(folio)}
           ${Phase.flawless(this)?`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>`:''}
           ${WarPath.line()}
           ${Grade.sLine(sGold)}
@@ -11871,6 +11903,7 @@ const Battle = {
         ${Heroic.button(this)}
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
+      Folio.paint(folio);   // and the new page's likeness
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
