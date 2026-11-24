@@ -1,61 +1,61 @@
 {
-  "change": "Add a Saga: a chapter of the story told as each realm's boss falls",
+  "change": "Grade every victory S to C on three marks the fight holds",
   "mutations": [
     {
-      "name": "a chapter is given away before its boss falls",
+      "name": "a streak of four counts as five",
       "file": "index.html",
-      "find": "REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri))",
-      "replace": "REALMS.map((r,ri)=>this.card(ri,'saga-'+ri))",
+      "find": "ok:best>=5}",
+      "replace": "ok:best>=4}",
       "run": "verify"
     },
     {
-      "name": "a rematch tells the chapter again",
+      "name": "half health counts as over half",
       "file": "index.html",
-      "find": "${this.foe.boss&&first?Saga.card(this.ri):''}",
-      "replace": "${this.foe.boss?Saga.card(this.ri):''}",
+      "find": "ok:hp*2>maxHp}",
+      "replace": "ok:hp*2>=maxHp}",
       "run": "verify"
     },
     {
-      "name": "a realm's first foe reads its chapter",
+      "name": "the health is read after a level-up restores it",
       "file": "index.html",
-      "find": "g.cleared[ri+':'+(REALMS[ri].foes.length-1)]); },\n  count()",
-      "replace": "g.cleared[ri+':0']); },\n  count()",
+      "find": "    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);\n    const ups=Game.gainXp(xp);\n",
+      "replace": "    const ups=Game.gainXp(xp);\n    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);\n",
       "run": "verify"
     },
     {
-      "name": "the count runs one ahead",
+      "name": "the streak line shows the save's best again",
       "file": "index.html",
-      "find": "return REALMS.filter((r,ri)=>this.read(ri)).length; }",
-      "replace": "return REALMS.filter((r,ri)=>this.read(ri)).length+1; }",
+      "find": "Longest streak this battle: ${this.runBest||0}",
+      "replace": "Longest streak this battle: ${g.stats.best}",
       "run": "verify"
     },
     {
-      "name": "the boss is drawn as a shadow",
+      "name": "the line names the last open mark",
       "file": "index.html",
-      "find": "Bestiary.shot(c, this.boss(+c.dataset.saga), true)",
-      "replace": "Bestiary.shot(c, this.boss(+c.dataset.saga), false)",
+      "find": "const open=m.find(x=>!x.ok);",
+      "replace": "const open=[...m].reverse().find(x=>!x.ok);",
       "run": "verify"
     },
     {
-      "name": "the victory never draws the boss",
+      "name": "one mark is a C",
       "file": "index.html",
-      "find": "      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));\n",
-      "replace": "",
+      "find": "LET: ['C','B','A','S'],",
+      "replace": "LET: ['C','C','A','S'],",
       "run": "verify"
     },
     {
-      "name": "the opening is left off the page",
+      "name": "a fight keeps the last fight's streak",
       "file": "index.html",
-      "find": "${OPENING.map(o=>o.b).join(' ')}",
-      "replace": "",
+      "find": "this.missed=0; this.runBest=0;",
+      "replace": "this.missed=0;",
       "run": "verify"
     },
     {
-      "name": "the map has no way to the Saga",
+      "name": "the battle's streak is never raised",
       "file": "index.html",
-      "find": "        <button class=\"btn sm ghost\" onclick=\"UI.go('s-saga')\" id=\"btnSaga\">📜 Saga</button>",
-      "replace": "",
-      "run": "play:saga"
+      "find": "this.runBest=Math.max(this.runBest||0,this.combo);",
+      "replace": "this.runBest=this.runBest||0;",
+      "run": "play:grade"
     }
   ]
 }

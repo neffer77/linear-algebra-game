@@ -2658,6 +2658,57 @@ const sagaNotes = (() => {
   want(!/Game\.s\.(saga|chapter)/i.test(html), 'save', 'the saga writes to the save');
   return { checks, chapters: Saga.CH.length };
 })();
+/* Battle grade: S to C from three marks the fight holds, worked here for
+   every way the marks can fall, and its place in a victory read off the
+   battle's own source. */
+const gradeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Grade = {'), html.indexOf('const Battle = {'));
+  const Grade = new Function(src + ';return Grade;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('grade', key, msg); };
+  // the letter for each number of marks, and how each is written after "for", written here and not read from the game
+  const LET = ['C', 'B', 'A', 'S'], AN = { S: 'an S', A: 'an A', B: 'a B' };
+  const NM = ['No answer missed', 'A streak of five', 'Over half your health left'];
+  const TO = ['no answer missed', 'a streak of five', 'over half your health left'];
+  const COL = { S: 'var(--gold)', A: 'var(--green)', B: 'var(--blue)', C: 'var(--dim)' };
+  let seen = new Set();
+  for (const missed of [0, 1, 3]) for (const best of [0, 4, 5, 9]) for (const [hp, mx] of [[1000, 1000], [501, 1000], [500, 1000], [1, 1000], [51, 100]]) {
+    const key = `missed ${missed}, streak ${best}, ${hp} of ${mx}`;
+    const ok = [missed === 0, best >= 5, hp * 2 > mx];
+    const m = Grade.marks(missed, best, hp, mx);
+    want(m.length === 3 && m.map(x => x.id).join() === 'clean,streak,hale', key, `the marks are ${m.map(x => x.id).join()}`);
+    want(m.every((x, i) => x.ok === ok[i] && x.nm === NM[i] && x.to === TO[i]), key, `the marks read ${JSON.stringify(m.map(x => [x.nm, x.ok]))}`);
+    const n = ok.filter(Boolean).length, g = Grade.of(m);
+    want(g === LET[n], key, `is graded ${g}, not ${LET[n]}`);
+    seen.add(g);
+    const first = ok.indexOf(false);
+    const line = first < 0 ? 'All three marks: the top grade.' : `Win with ${TO[first]} as well for ${AN[LET[n + 1]]}.`;
+    want(Grade.next(m) === line, key, `says "${Grade.next(m)}", not "${line}"`);
+    const c = Grade.card(m);
+    want(c.includes(`id="gradeLet" data-grade="${g}"`) && c.includes(`color:${COL[g]}">${g}</div>`), key, 'the card does not show its letter in its colour');
+    const rows = [...c.matchAll(/data-mark="(\w+)" data-ok="(\d)" style="color:([^"]+)">(.)/g)];
+    want(rows.length === 3 && rows.every((r, i) => r[1] === m[i].id && r[2] === (ok[i] ? '1' : '0') && r[3] === (ok[i] ? 'var(--green)' : 'var(--dim)') && r[4] === (ok[i] ? '✓' : '○')), key, 'the card does not tick the marks it holds, in order');
+    want(c.includes(`<div class="small" id="gradeNext">${line}</div>`) && c.includes('BATTLE GRADE'), key, 'the card does not name the next mark');
+  }
+  want(seen.size === 4, 'letters', `only ${[...seen]} turned up`);
+
+  // its place in a victory
+  const B = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const win = B.slice(B.indexOf('\n  win(){'), B.indexOf('\n  lose(){'));
+  want(/this\.missed=0; this\.runBest=0;/.test(B.slice(B.indexOf('begin('), B.indexOf('begin(') + 9000)), 'begin', 'a fight does not start its streak count at 0');
+  want(/this\.combo\+\+;\n\s*Game\.s\.stats\.best=Math\.max\(Game\.s\.stats\.best,this\.combo\);\n\s*this\.runBest=Math\.max\(this\.runBest\|\|0,this\.combo\);/.test(B), 'streak', 'a right answer does not raise the battle\'s streak count');
+  const mk = win.indexOf('const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);');
+  want(mk > 0 && mk < win.indexOf('Game.gainXp(xp)'), 'win', 'the grade is not taken from the health left as the foe falls, before a level-up');
+  want(win.indexOf('Grade.marks(') > win.indexOf("if(this.mode==='dungeon')"), 'win', 'the arena or a dungeon room is graded');
+  want(win.includes('${Grade.card(marks)}\n          <div class="small">Longest streak this battle: ${this.runBest||0}</div>'), 'win', 'the victory panel does not show the grade above the battle\'s own streak');
+  want(!win.includes('${g.stats.best}'), 'win', 'the streak line still shows the save\'s best');
+  want(win.includes("else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE'"), 'win', 'an S has no banner, or one on top of a level-up');
+  want(!/(Game\.s|g|this\.s)\.(grade|grades|runBest)\b/.test(html), 'save', 'a grade is saved');
+  want((html.match(/Grade\.card\(/g) || []).length === 1, 'win', 'the grade is shown somewhere else too');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26003,6 +26054,7 @@ console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFi
 console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
+console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
