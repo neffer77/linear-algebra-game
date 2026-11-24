@@ -1,75 +1,82 @@
 {
-  "change": "Today's quarry: one beaten foe a day pays its full gold again",
+  "change": "Parry: five right in a row turn away the next miss's blow",
   "mutations": [
     {
-      "name": "a boss can be the quarry",
+      "name": "a parry at every streak",
       "file": "index.html",
-      "find": "if(f.boss || !cleared[key]) return;",
-      "replace": "if(!cleared[key]) return;",
+      "find": "if(!this.can(B) || B.parry || !B.combo || B.combo%this.AT) return false;",
+      "replace": "if(!this.can(B) || B.parry || !B.combo) return false;",
       "run": "verify"
     },
     {
-      "name": "an unbeaten foe can be the quarry",
+      "name": "two parries held at once",
       "file": "index.html",
-      "find": "if(f.boss || !cleared[key]) return;",
-      "replace": "if(f.boss) return;",
+      "find": "if(!this.can(B) || B.parry || !B.combo || B.combo%this.AT) return false;",
+      "replace": "if(!this.can(B) || !B.combo || B.combo%this.AT) return false;",
       "run": "verify"
     },
     {
-      "name": "the first beaten foe is the quarry",
+      "name": "a parry at four",
       "file": "index.html",
-      "find": "if(d<low){ low=d; best=key; }",
-      "replace": "if(best===null){ low=d; best=key; }",
+      "find": "  AT: 5,\n  can(B)",
+      "replace": "  AT: 4,\n  can(B)",
       "run": "verify"
     },
     {
-      "name": "the quarry ignores the day",
+      "name": "a parry in the daily",
       "file": "index.html",
-      "find": "for(const c of 'quarry '+day+' '+key)",
-      "replace": "for(const c of 'quarry '+key)",
+      "find": "can(B){ return !!(B && B.mode!=='daily' && !B.rite); },",
+      "replace": "can(B){ return !!(B && !B.rite); },",
       "run": "verify"
     },
     {
-      "name": "the quarry is read after the win",
+      "name": "a parry is never spent",
       "file": "index.html",
-      "find": "const quarry=this.mode==='campaign' && !first && Quarry.of(g.cleared, dayKey(new Date()))===key;",
-      "replace": "const quarry=this.mode==='campaign' && Quarry.of(g.cleared, dayKey(new Date()))===key;",
+      "find": "B.parry=false; B.parried=true;",
+      "replace": "B.parried=true;",
       "run": "verify"
     },
     {
-      "name": "the quarry pays no more",
+      "name": "a parry turns away nothing",
       "file": "index.html",
-      "find": "const full=first || !!this.foe.elite || quarry;",
-      "replace": "const full=first || !!this.foe.elite;",
-      "run": "verify"
-    },
-    {
-      "name": "the card does not say the quarry",
-      "file": "index.html",
-      "find": "${Quarry.line(quarry && !this.foe.elite)}",
+      "find": "    if(Parry.turn(this)) return 0;\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the map does not mark the quarry's place",
+      "name": "a right answer earns no parry",
       "file": "index.html",
-      "find": "${Quarry.tag(quarry===ri+':'+fi)}",
+      "find": "      Parry.earn(this);\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the map's top does not name the quarry",
+      "name": "a fight keeps the last fight's parry",
       "file": "index.html",
-      "find": "      ${Quarry.node(Quarry.today())}\n",
+      "find": "    this.parry=false; this.parryTold=false; this.parried=false;   // a parry lasts the fight\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "every beaten foe's place is marked",
+      "name": "the explanation does not say the parry",
       "file": "index.html",
-      "find": "${Quarry.tag(quarry===ri+':'+fi)}",
-      "replace": "${Quarry.tag(done && !f.boss)}",
-      "run": "play:quarry"
+      "find": "      Parry.line(!inRite && this.parried)+\n",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the parry is not shown beside the streak",
+      "file": "index.html",
+      "find": "streak ${this.combo}`+Parry.tag(this);",
+      "replace": "streak ${this.combo}`;",
+      "run": "verify"
+    },
+    {
+      "name": "a parried miss still costs health",
+      "file": "index.html",
+      "find": "    if(Parry.turn(this)) return 0;",
+      "replace": "    if(Parry.turn(this)) return raw;",
+      "run": "play:parry"
     }
   ]
 }
