@@ -9330,6 +9330,7 @@ const Revenge = {
    a victory to count, so a session always shows what it has added up to.
    Every fifth victory of a sitting is a milestone that drops a sure chest,
    a rare find at the least, and the tally says where the next one falls.
+   The first victory of a sitting pays its experience twice, a welcome back.
    Nothing is saved: a new sitting starts the tally again. */
 const Sitting = {
   wins: 0, gold: 0, best: 0, EVERY: 5,
@@ -9340,6 +9341,9 @@ const Sitting = {
   },
   // every fifth victory of a sitting is a milestone, paid with a sure chest
   mile(){ return this.wins>0 && this.wins%this.EVERY===0; },
+  // the first victory of a sitting pays double experience
+  fresh(){ return this.wins===1; },
+  freshLine(n){ return n>0 ? \`<div id="sittingFresh" style="color:#9fd0ff;font-weight:800;margin-top:6px">🌅 Your first victory this sitting: double experience, +\${n}.</div>\` : ''; },
   next(){ return (Math.floor(this.wins/this.EVERY)+1)*this.EVERY; },
   nth(n){ const t=n%100, e=n%10; return n+((t>10&&t<14)?'th':e===1?'st':e===2?'nd':e===3?'rd':'th'); },
   line(on){ return on ? \`<div id="sittingMile" style="color:#ffd36b;font-weight:800;margin-top:6px">🎖️ Your \${this.nth(this.wins)} victory this sitting: a sure chest, a rare find at the least.</div>\` : ''; },
@@ -10482,12 +10486,15 @@ const Battle = {
     g.gold+=bGold;
     const cGold=Comeback.gold(this, gold);
     g.gold+=cGold;
+    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);
     // every fifth victory this sitting is a milestone with a sure chest
-    const mile=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold) && Sitting.mile();
+    const mile=counted && Sitting.mile();
+    // the first victory of a sitting pays its experience twice
+    const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
-    const ups=Game.gainXp(xp);
+    const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
@@ -10520,6 +10527,7 @@ const Battle = {
           \${March.line(march, this.realm.nm)}
           \${Comeback.line(cGold)}
           \${Sitting.line(mile)}
+          \${Sitting.freshLine(fXp)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10543,7 +10551,7 @@ const Battle = {
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold, 900);
-      countUp(document.getElementById('rXp'),   xp,   900);
+      countUp(document.getElementById('rXp'),   xp+fXp,   900);
       for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());

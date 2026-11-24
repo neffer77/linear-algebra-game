@@ -1,75 +1,61 @@
 {
-  "change": "A sitting's milestones: every fifth victory of a sitting drops a sure chest",
+  "change": "Welcome back: the first victory of a sitting pays double experience",
   "mutations": [
     {
-      "name": "every fourth victory is a milestone",
+      "name": "every victory is a welcome back",
       "file": "index.html",
-      "find": "wins: 0, gold: 0, best: 0, EVERY: 5,",
-      "replace": "wins: 0, gold: 0, best: 0, EVERY: 4,",
+      "find": "fresh(){ return this.wins===1; },",
+      "replace": "fresh(){ return this.wins>=1; },",
       "run": "verify"
     },
     {
-      "name": "a sitting with no victory is a milestone",
+      "name": "the welcome back says no experience",
       "file": "index.html",
-      "find": "mile(){ return this.wins>0 && this.wins%this.EVERY===0; },",
-      "replace": "mile(){ return this.wins%this.EVERY===0; },",
+      "find": "double experience, +${n}.</div>` : ''; },",
+      "replace": "double experience.</div>` : ''; },",
       "run": "verify"
     },
     {
-      "name": "the map names this milestone, not the next",
+      "name": "an arena win can be a welcome back",
       "file": "index.html",
-      "find": "next(){ return (Math.floor(this.wins/this.EVERY)+1)*this.EVERY; },",
-      "replace": "next(){ return Math.ceil(this.wins/this.EVERY)*this.EVERY; },",
+      "find": "const fXp=counted && Sitting.fresh() ? xp : 0;",
+      "replace": "const fXp=Sitting.fresh() ? xp : 0;",
       "run": "verify"
     },
     {
-      "name": "the 12th is said as the 12nd",
+      "name": "the card says no welcome back",
       "file": "index.html",
-      "find": "((t>10&&t<14)?'th'",
-      "replace": "((t>10&&t<12)?'th'",
-      "run": "verify"
-    },
-    {
-      "name": "the card says no milestone",
-      "file": "index.html",
-      "find": "          ${Sitting.line(mile)}\n",
+      "find": "          ${Sitting.freshLine(fXp)}\n",
       "replace": "",
-      "run": "play:milestone"
+      "run": "play:fresh"
     },
     {
-      "name": "a milestone drops no sure chest",
+      "name": "the welcome back is not gained",
       "file": "index.html",
-      "find": "satchel || boon==='find' || march || mile ? 1",
-      "replace": "satchel || boon==='find' || march ? 1",
-      "run": "play:milestone"
+      "find": "const ups=Game.gainXp(xp+fXp);",
+      "replace": "const ups=Game.gainXp(xp);",
+      "run": "play:fresh"
     },
     {
-      "name": "a milestone's chest can be plain",
+      "name": "the card leaves the welcome back out of its count",
       "file": "index.html",
-      "find": "if((ctx.satchel || ctx.mile) && (rar==='common'",
-      "replace": "if((ctx.satchel) && (rar==='common'",
-      "run": "play:milestone"
+      "find": "countUp(document.getElementById('rXp'),   xp+fXp,   900);",
+      "replace": "countUp(document.getElementById('rXp'),   xp,   900);",
+      "run": "play:fresh"
     },
     {
-      "name": "the roll is not told of the milestone",
+      "name": "the welcome back pays a third more",
       "file": "index.html",
-      "find": "sweep, satchel, march, mile, tier:",
-      "replace": "sweep, satchel, march, tier:",
-      "run": "play:milestone"
+      "find": "const fXp=counted && Sitting.fresh() ? xp : 0;",
+      "replace": "const fXp=counted && Sitting.fresh() ? Math.round(xp/3) : 0;",
+      "run": "play:fresh"
     },
     {
-      "name": "the win asks for no milestone",
+      "name": "the second victory is the welcome back",
       "file": "index.html",
-      "find": "cGold) && Sitting.mile();",
-      "replace": "cGold) && false;",
-      "run": "play:milestone"
-    },
-    {
-      "name": "the map does not name the next milestone",
-      "file": "index.html",
-      "find": " · 🎖️ a sure chest at <b>${this.next()}</b></div>`;",
-      "replace": "</div>`;",
-      "run": "play:milestone"
+      "find": "fresh(){ return this.wins===1; },",
+      "replace": "fresh(){ return this.wins===2; },",
+      "run": "play:fresh"
     }
   ]
 }

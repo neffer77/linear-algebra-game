@@ -772,6 +772,9 @@ The game is built so that losing teaches you as much as winning.
   drops a sure chest, a rare find at the least, and the victory card says which it was ("🎖️ Your
   10th victory this sitting: a sure chest"). The map's tally names the next one ("a sure chest at
   15"). Nothing is saved: a new sitting counts from the start.
+- **🌅 Welcome back.** The first campaign victory of a sitting pays its experience twice, said on the
+  victory card ("🌅 Your first victory this sitting: double experience, +40.") and counted into the
+  experience it shows. A short sitting still moves the knight on. Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3331,6 +3334,7 @@ Inside `index.html` the code is organised as:
 | `Comeback` | marked when a blow leaves health above 0 and at a quarter or under, never cleared within the fight; paid in the campaign only, a quarter more gold; every blow that lands calls it; a new fight starts without it |
 | `Sitting` | the campaign's victories only; their gold with every bonus, added up exactly; the best streak of any fight, never falling; nothing on the map before the first victory, and one victory said as one |
 | `Sitting` milestones | a milestone on every fifth campaign victory and no other, over hundreds of wins; the next one named on the map; 1st, 2nd, 3rd, 11th, 12th, 13th, 21st, 22nd and 111th said right; a sure chest of a rare find at the least, wired into the win |
+| `Sitting` welcome back | only the first campaign victory of a sitting, not an arena, daily or dungeon win before it; said with the experience it adds, and nothing for the rest; gained and counted by the win |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3455,6 +3459,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `comeback` | a miss to a quarter of health or less, then health back, still makes the win a comeback, said with its gold and counted in; the card fits a phone; the next fight starts without it; a miss that leaves more than a quarter is none; nothing is saved |
 | `sitting` | no tally on the map before a victory; a first victory shows with the gold it paid and its streak, on a phone; a second adds its gold, bonuses and all, and the best streak stays the best; nothing is saved |
 | `milestone` | a first, 4th, 6th and 21st victory drop nothing; the 5th and 25th say so on the card, on a phone, for a sure chest of a rare find at the least; the map names the next one; nothing is saved |
+| `fresh` | the first victory of a sitting says so on the card, on a phone, pays its experience twice and counts it; the next pays as usual and says nothing; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
