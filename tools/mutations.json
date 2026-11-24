@@ -2,88 +2,74 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "a page on every win",
+      "name": "a bar by another measure",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !first || !B.foe) return null;",
-      "replace": "    if(!B || B.mode!=='campaign' || !B.foe) return null;",
+      "find": "  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+(g.lvl-1)*45} : null; },",
+      "replace": "  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+g.lvl*45} : null; },",
       "run": "verify"
     },
     {
-      "name": "a page outside the campaign",
+      "name": "a level gained starts from the old bar",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !first || !B.foe) return null;",
-      "replace": "    if(!B || !first || !B.foe) return null;",
+      "find": "    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);",
+      "replace": "    const from = this.pct(a.xp, a.need);",
       "run": "verify"
     },
     {
-      "name": "the count a page short",
+      "name": "the bar starts full",
       "file": "index.html",
-      "find": "    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total};",
-      "replace": "    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten-1, of:c.total};",
+      "find": "    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);",
+      "replace": "    const from = b.lvl>a.lvl ? 0 : this.pct(b.xp, b.need);",
       "run": "verify"
     },
     {
-      "name": "no weak point",
+      "name": "the wrong amount left",
       "file": "index.html",
-      "find": "      ${p.weak?`<div style=\"font-size:13px;margin-top:3px;color:#7ff0a8\">${p.weak}</div>`:''}\n",
-      "replace": "",
+      "find": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};",
+      "replace": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:b.need};",
       "run": "verify"
     },
     {
-      "name": "no lore",
+      "name": "the bar jumps",
       "file": "index.html",
-      "find": "      <div style=\"font-size:13px;font-style:italic;margin-top:3px\">${p.lore}</div>\n      ${p.weak?",
-      "replace": "      ${p.weak?",
+      "find": "    setTimeout(()=>{ el.style.width=p.to+'%'; }, 150);",
+      "replace": "    el.style.width=p.to+'%';",
       "run": "verify"
     },
     {
-      "name": "read before the clear",
+      "name": "read after the gain",
       "file": "index.html",
-      "find": "    const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page\n    Game.save();\n",
-      "replace": "    Game.save();\n",
+      "find": "    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n    const ups=Game.gainXp(xp+fXp);\n",
+      "replace": "    const ups=Game.gainXp(xp+fXp);\n    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n",
       "run": "verify"
     },
     {
       "name": "never on the card",
       "file": "index.html",
-      "find": "          ${Folio.line(folio)}\n",
+      "find": "          ${LevelBar.html(lvl)}\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "never on the card, seen in play",
+      "name": "never fills",
       "file": "index.html",
-      "find": "          ${Folio.line(folio)}\n",
-      "replace": "",
-      "run": "play:folio"
-    },
-    {
-      "name": "a page on every win, seen in play",
-      "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !first || !B.foe) return null;",
-      "replace": "    if(!B || B.mode!=='campaign' || !B.foe) return null;",
-      "run": "play:folio"
-    },
-    {
-      "name": "no likeness",
-      "file": "index.html",
-      "find": "      Folio.paint(folio);   // and the new page's likeness\n",
+      "find": "      LevelBar.fill(lvl);   // and the way to the next level fills\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "no likeness, seen in play",
+      "name": "never fills, seen in play",
       "file": "index.html",
-      "find": "      Folio.paint(folio);   // and the new page's likeness\n",
+      "find": "      LevelBar.fill(lvl);   // and the way to the next level fills\n",
       "replace": "",
       "run": "play:folio"
     },
     {
-      "name": "the wrong canvas",
+      "name": "the wrong amount left, seen in play",
       "file": "index.html",
-      "find": "    const el=p && document.getElementById('folioPic'); if(!el) return false;",
-      "replace": "    const el=p && document.getElementById('folioWon'); if(!el) return false;",
-      "run": "verify"
+      "find": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};",
+      "replace": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:b.need};",
+      "run": "play:folio"
     }
   ]
 }

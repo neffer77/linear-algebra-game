@@ -9281,6 +9281,35 @@ const Folio = {
   }
 };
 
+/* ---------- The level bar: experience filling on the victory card ----------
+   Under the gold and experience a win pays, a bar shows the way to the next
+   level: it starts where the knight stood before the fight and fills to where
+   they stand now, with how much more it takes. A level gained starts the new
+   level's bar from empty. Read from the save before and after; nothing new
+   is kept. */
+const LevelBar = {
+  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+(g.lvl-1)*45} : null; },
+  pct(x, n){ return n>0 ? Math.max(0, Math.min(100, Math.round(x/n*100))) : 0; },
+  of(a, b){
+    if(!a || !b) return null;
+    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);
+    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};
+  },
+  html(p){
+    if(!p) return '';
+    return `<div id="lvlBar" style="margin-top:4px">
+      <div class="xptrack" style="height:9px;border-radius:6px"><div id="lvlFill" style="width:${p.from}%;transition:width 1s ease-out"></div></div>
+      <div class="small" style="margin-top:4px">🛡️ Level ${p.lvl} · ${p.left} more experience to level ${p.lvl+1}</div>
+    </div>`;
+  },
+  // the bar fills once the card is up, so the gain is seen
+  fill(p){
+    const el=p && document.getElementById('lvlFill'); if(!el) return false;
+    setTimeout(()=>{ el.style.width=p.to+'%'; }, 150);
+    return true;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -11810,6 +11839,7 @@ const Battle = {
     // the fight sung in a line, read before a level-up restores the knight's health
     const song=Ballad.of(this, over, g.hp, g.maxHp);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
+    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
     Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
@@ -11834,6 +11864,7 @@ const Battle = {
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
+    const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now
     const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page
     Game.save();
 
@@ -11879,6 +11910,7 @@ const Battle = {
             ${ups?`<div style="color:var(--gold)">⬆️ Level ${g.lvl}! Health restored to ${g.maxHp}.</div>`:''}
             ${unlocked?`<div style="color:var(--green)">🗺️ ${unlocked} now lies open.</div>`:''}
           </div>
+          ${LevelBar.html(lvl)}
           ${this.mode==='campaign'?Boon.card():''}
           <hr>
           ${Grade.card(marks, had)}
@@ -11901,6 +11933,7 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
+      LevelBar.fill(lvl);   // and the way to the next level fills
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
