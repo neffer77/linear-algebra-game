@@ -1,61 +1,82 @@
 {
-  "change": "Welcome back: the first victory of a sitting pays double experience",
+  "change": "Gilded questions: now and then a question pays gold when answered right",
   "mutations": [
     {
-      "name": "every victory is a welcome back",
+      "name": "half the questions are gilded",
       "file": "index.html",
-      "find": "fresh(){ return this.wins===1; },",
-      "replace": "fresh(){ return this.wins>=1; },",
+      "find": "CHANCE: 0.125, MUL: 0.2,",
+      "replace": "CHANCE: 0.5, MUL: 0.2,",
       "run": "verify"
     },
     {
-      "name": "the welcome back says no experience",
+      "name": "a question is gilded in every mode",
       "file": "index.html",
-      "find": "double experience, +${n}.</div>` : ''; },",
-      "replace": "double experience.</div>` : ''; },",
+      "find": "roll(B){ return !!(B && B.mode==='campaign' && B.cur && !B.cur.redo && R.chance(this.CHANCE)); },",
+      "replace": "roll(B){ return !!(B && B.cur && !B.cur.redo && R.chance(this.CHANCE)); },",
       "run": "verify"
     },
     {
-      "name": "an arena win can be a welcome back",
+      "name": "a question asked again can be gilded",
       "file": "index.html",
-      "find": "const fXp=counted && Sitting.fresh() ? xp : 0;",
-      "replace": "const fXp=Sitting.fresh() ? xp : 0;",
+      "find": "roll(B){ return !!(B && B.mode==='campaign' && B.cur && !B.cur.redo && R.chance(this.CHANCE)); },",
+      "replace": "roll(B){ return !!(B && B.mode==='campaign' && B.cur && R.chance(this.CHANCE)); },",
       "run": "verify"
     },
     {
-      "name": "the card says no welcome back",
+      "name": "a poor foe's gilding is worth nothing",
       "file": "index.html",
-      "find": "          ${Sitting.freshLine(fXp)}\n",
+      "find": "worth(foe){ return Math.max(1, Math.round(((foe && foe.gold)||0)*this.MUL)); },",
+      "replace": "worth(foe){ return Math.round(((foe && foe.gold)||0)*this.MUL); },",
+      "run": "verify"
+    },
+    {
+      "name": "a gilded question keeps its gilding",
+      "file": "index.html",
+      "find": "    B.gilded=false; B.gildGold=(B.gildGold||0)+n; Game.s.gold+=n;",
+      "replace": "    B.gildGold=(B.gildGold||0)+n; Game.s.gold+=n;",
+      "run": "verify"
+    },
+    {
+      "name": "the gilding pays nothing into the purse",
+      "file": "index.html",
+      "find": "B.gildGold=(B.gildGold||0)+n; Game.s.gold+=n;",
+      "replace": "B.gildGold=(B.gildGold||0)+n;",
+      "run": "play:gild"
+    },
+    {
+      "name": "a right answer does not pay the gilding",
+      "file": "index.html",
+      "find": "      Satchel.add(this);\n      Gild.pay(this);",
+      "replace": "      Satchel.add(this);",
+      "run": "play:gild"
+    },
+    {
+      "name": "no question is gilded",
+      "file": "index.html",
+      "find": "    this.gilded=Gild.roll(this);\n",
+      "replace": "    this.gilded=false;\n",
+      "run": "play:gild"
+    },
+    {
+      "name": "the gilding is not told above the question",
+      "file": "index.html",
+      "find": "    if(this.gilded){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+Gild.tele(Gild.worth(this.foe)); tg.style.display='block'; }\n",
       "replace": "",
-      "run": "play:fresh"
+      "run": "play:gild"
     },
     {
-      "name": "the welcome back is not gained",
+      "name": "the card does not say what the gilding paid",
       "file": "index.html",
-      "find": "const ups=Game.gainXp(xp+fXp);",
-      "replace": "const ups=Game.gainXp(xp);",
-      "run": "play:fresh"
+      "find": "          ${Gild.line(this.gildGold)}\n",
+      "replace": "",
+      "run": "play:gild"
     },
     {
-      "name": "the card leaves the welcome back out of its count",
+      "name": "a fight starts with the last one's gilded gold",
       "file": "index.html",
-      "find": "countUp(document.getElementById('rXp'),   xp+fXp,   900);",
-      "replace": "countUp(document.getElementById('rXp'),   xp,   900);",
-      "run": "play:fresh"
-    },
-    {
-      "name": "the welcome back pays a third more",
-      "file": "index.html",
-      "find": "const fXp=counted && Sitting.fresh() ? xp : 0;",
-      "replace": "const fXp=counted && Sitting.fresh() ? Math.round(xp/3) : 0;",
-      "run": "play:fresh"
-    },
-    {
-      "name": "the second victory is the welcome back",
-      "file": "index.html",
-      "find": "fresh(){ return this.wins===1; },",
-      "replace": "fresh(){ return this.wins===2; },",
-      "run": "play:fresh"
+      "find": "this.gilded=false; this.gildGold=0;   // nor any gilded question",
+      "replace": "this.gilded=false;   // nor any gilded question",
+      "run": "play:gild"
     }
   ]
 }
