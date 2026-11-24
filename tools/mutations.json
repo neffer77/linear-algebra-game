@@ -1,82 +1,89 @@
 {
- "change": "Hearth: a day streak pays the first victory of each sitting a tenth more gold a day, up to seven",
+ "change": "Letters from home: every tenth victory a letter from Linden Ford, with a draught inside",
  "mutations": [
   {
-   "name": "a later victory of the sitting pays the hearth",
+   "name": "a letter at every fifth victory",
    "file": "index.html",
-   "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
-   "replace": "    if(!B || B.mode!=='campaign') return 0;",
+   "find": "  EVERY: 10, FROM: 'Maren',",
+   "replace": "  EVERY: 5, FROM: 'Maren',",
    "run": "verify"
   },
   {
-   "name": "every mode pays the hearth",
+   "name": "a ninth letter that is not there",
    "file": "index.html",
-   "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
-   "replace": "    if(!B || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+   "find": "  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 && w/this.EVERY<=this.L.length ? w/this.EVERY : 0; },",
+   "replace": "  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 ? w/this.EVERY : 0; },",
    "run": "verify"
   },
   {
-   "name": "the streak pays past a week",
+   "name": "no draught in the letter",
    "file": "index.html",
-   "find": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, Math.min(this.CAP, d)); },",
-   "replace": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, d); },",
+   "find": "g.items.potion=(g.items.potion||0)+1; return true; },",
+   "replace": "return true; },",
    "run": "verify"
   },
   {
-   "name": "a fifth more a day",
+   "name": "a draught with no letter",
    "file": "index.html",
-   "find": "  STEP: 0.1, CAP: 7,\n  days(g)",
-   "replace": "  STEP: 0.2, CAP: 7,\n  days(g)",
+   "find": "  gift(g, n){ if(!n || !g || !g.items) return false;",
+   "replace": "  gift(g, n){ if(!g || !g.items) return false;",
    "run": "verify"
   },
   {
-   "name": "the hearth is not paid",
+   "name": "the page shows a letter not yet come",
    "file": "index.html",
-   "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
-   "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
+   "find": "      + Array.from({length:n}, (_, i)=>this.letter(i+1)).join('');",
+   "replace": "      + Array.from({length:Math.min(N, n+1)}, (_, i)=>this.letter(i+1)).join('');",
    "run": "verify"
   },
   {
-   "name": "the card does not count the hearth in",
+   "name": "the page counts past the last letter",
    "file": "index.html",
-   "find": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);",
-   "replace": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);",
+   "find": "  had(g){ return Math.min(this.L.length, Math.floor(this.wins(g)/this.EVERY)); },",
+   "replace": "  had(g){ return Math.floor(this.wins(g)/this.EVERY); },",
    "run": "verify"
   },
   {
-   "name": "the card does not say the hearth",
+   "name": "the card reads the wrong letter",
    "file": "index.html",
-   "find": "          ${Hearth.line(eGold, g)}\n",
+   "find": "      <div class=\"sub\" style=\"margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0\">${this.L[n-1]}</div>",
+   "replace": "      <div class=\"sub\" style=\"margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0\">${this.L[n%this.L.length]}</div>",
+   "run": "verify"
+  },
+  {
+   "name": "the victory gives no letter",
+   "file": "index.html",
+   "find": "    const letter=Letters.arrived(g); Letters.gift(g, letter);\n",
+   "replace": "    const letter=0;\n",
+   "run": "verify"
+  },
+  {
+   "name": "the card does not show the letter",
+   "file": "index.html",
+   "find": "        ${Letters.card(letter)}\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "the title promises more forever",
+   "name": "the Saga page keeps no letters",
    "file": "index.html",
-   "find": "    return `Your first victory each sitting pays +${now}% gold. ${next>now ?",
-   "replace": "    return `Your first victory each sitting pays +${now}% gold. ${true ?",
+   "find": "    if(id==='s-saga'){ Saga.render(); Letters.render(); }",
+   "replace": "    if(id==='s-saga'){ Saga.render(); }",
    "run": "verify"
   },
   {
-   "name": "the line says the capped days, not the streak",
+   "name": "no draught in the letter [play]",
    "file": "index.html",
-   "find": "🔥 Day ${g.streak.days} in a row",
-   "replace": "🔥 Day ${this.days(g)} in a row",
-   "run": "verify"
+   "find": "g.items.potion=(g.items.potion||0)+1; return true; },",
+   "replace": "return true; },",
+   "run": "play:letters"
   },
   {
-   "name": "the hearth is not paid [play]",
+   "name": "the Saga page keeps no letters [play]",
    "file": "index.html",
-   "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
-   "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
-   "run": "play:hearth"
-  },
-  {
-   "name": "every victory pays the hearth [play]",
-   "file": "index.html",
-   "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
-   "replace": "    if(!B || B.mode!=='campaign') return 0;",
-   "run": "play:hearth"
+   "find": "    if(id==='s-saga'){ Saga.render(); Letters.render(); }",
+   "replace": "    if(id==='s-saga'){ Saga.render(); }",
+   "run": "play:letters"
   }
  ]
 }
