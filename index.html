@@ -8850,13 +8850,13 @@ const Weak = {
    "Asymptotic Horror":'lhopital', "Divergent Colossus":'improper', "Convergence Wyrm":'arcLength', "The Unbounded":'growth',
    "Saddle Point Sentinel":'partial', "Steepest Descent":'dirDeriv', "Warden of Both Paths":'chainMulti', "The Gradient Itself":'gradient'
   },
-  MUL: 1.5,
+  MUL: 1.5, PREP: 2,   // half again as hard, or twice as hard once scouted
   // the topic this fight's foe cannot stand, in the campaign only
   of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },
   // is the question being asked right now on it?
   on(B){ const k=this.of(B); return !!(k && B.cur && B.cur.key===k); },
-  bonus(B){ return this.on(B) ? this.MUL : 1; },
-  chip(B){ return this.on(B) ? ' <span class="rev weak">🎯 weak point ×1.5</span>' : ''; },
+  bonus(B){ return this.on(B) ? (B.prepared ? this.PREP : this.MUL) : 1; },
+  chip(B){ return this.on(B) ? ` <span class="rev weak">🎯 weak point ×${B.prepared ? this.PREP : this.MUL}</span>` : ''; },
   // a right answer on it: said on the scene every time, and told once a fight
   hit(B){
     if(!this.on(B)) return false;
@@ -9229,6 +9229,86 @@ const NextFight = {
   }
 };
 
+/* Scouting. The victory card's next foe can be scouted first: the card shows
+   the rule of the topic it cannot stand, then asks one question on it. A
+   right answer prepares the knight, and in the next fight against that foe
+   every right answer on its weak point lands twice as hard, not half again.
+   A miss shows the answer and offers another question, as many as wanted.
+   It is studying before the fight, so it costs nothing and is never forced.
+   Answers count toward the topic. Nothing is saved: the scouting is spent by
+   the next fight against that foe, or lost when the page is closed. */
+const Scout = {
+  at:null, q:null, ri:0, fi:0,
+  key(f){ const k=f && Weak.OF[f.nm]; return k && GEN[k] ? k : null; },
+  ready(ri, fi){ return !!(this.at && this.at.ri===ri && this.at.fi===fi); },
+  // the card's offer, or its word that the knight is ready
+  html(nx){
+    const k=nx && this.key(nx.f); if(!k) return '';
+    return `<div id="scoutBox">${this.ready(nx.ri, nx.fi) ? this.readyLine(nx.f)
+      : `<button class="btn" id="scoutGo" onclick="Scout.open(${nx.ri},${nx.fi})">🔍 Scout ${nx.f.nm}: study its weak point first</button>`}</div>`;
+  },
+  readyLine(f){ return `<div id="scoutReady" class="sub" style="color:#7ff0a8;font-weight:800;margin:2px 0 6px">🔍 Prepared for ${f.nm}: your strikes on its weak point land ×${Weak.PREP} next fight.</div>`; },
+  open(ri, fi){
+    const f=REALMS[ri] && REALMS[ri].foes[fi], k=this.key(f), box=document.getElementById('scoutBox');
+    if(!k || !box) return;
+    this.ri=ri; this.fi=fi;
+    const c=RULES[k]||{};
+    box.innerHTML=`<div class="panel" id="scoutCard" style="text-align:left">
+        <div class="crar" style="color:#7ff0a8">🔍 Scouting ${f.nm}</div>
+        <div class="small" style="margin:4px 0 6px">🎯 It cannot stand <b>${TOPIC_LABEL[k]||k}</b>. Study the rule, then answer one question on it: get it right and your strikes on its weak point land ×${Weak.PREP} next fight.</div>
+        ${c.rule?`<div class="cxrule">${c.rule}</div>`:''}
+        ${c.eg?`<div class="cxeg">${c.eg}</div>`:''}
+        <div id="scoutAsk"></div>
+      </div>`;
+    this.ask();
+  },
+  ask(){
+    const f=REALMS[this.ri].foes[this.fi], k=this.key(f), el=document.getElementById('scoutAsk');
+    if(!k || !el) return;
+    const q=this.q=buildQuestion(k, Lesson.diff(k, Mastery.adjustDiff(k, 2)));
+    el.innerHTML=`<hr><div id="scoutQ" style="font-size:16px;text-align:center;line-height:1.5">${q.q}</div>
+      <div id="scoutFig"></div><div id="scoutChoices" style="margin-top:8px"></div><div id="scoutOut"></div>`;
+    Figure.render(q.fig, document.getElementById('scoutFig'));
+    const cb=document.getElementById('scoutChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  answer(btn, c){
+    const q=this.q; if(!q) return;
+    this.q=null;
+    const ok=(c===q.a);
+    document.querySelectorAll('#scoutChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // studying counts toward the topic
+    Game.save();
+    const out=document.getElementById('scoutOut'), f=REALMS[this.ri].foes[this.fi];
+    if(ok){
+      this.at={ri:this.ri, fi:this.fi};
+      Sfx.good(); Haptic.hit();
+      out.innerHTML=this.readyLine(f);
+    } else {
+      Sfx.bad();
+      out.innerHTML=`<div class="small" style="margin-top:6px">Not quite. The answer was <b>${q.a}</b>. ${q.ex||''}${q.why[c] ? `<div style="margin-top:4px">${q.why[c]}</div>` : ''}</div>
+        <button class="btn" id="scoutAgain" onclick="Scout.ask()">🔍 Try another question</button>`;
+    }
+  },
+  // the fight against the scouted foe is fought prepared, and spends it
+  spend(B){
+    if(!B || B.mode!=='campaign' || !this.ready(B.ri, B.fi)) return false;
+    this.at=null;
+    return true;
+  },
+  intro(f){ return `🔍 Prepared: you scouted ${f.nm}. Your strikes on its weak point land ×${Weak.PREP}.`; }
+};
+
 /* Second wind. Once a campaign fight, a blow that would fell the knight
    leaves them standing at 1 health instead, and the question after it is a
    last stand: answer it right and the strike lands twice as hard. The next
@@ -9597,6 +9677,7 @@ const Battle = {
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
     this.weakHit=false;              // the weak point is told once a fight
+    this.prepared=Scout.spend(this); // a foe scouted first is fought prepared
     this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
     this.parry=false; this.parryTold=false; this.parried=false;   // a parry lasts the fight
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
@@ -9618,6 +9699,7 @@ const Battle = {
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
+    else if(this.prepared) UI.toast(Scout.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
@@ -10643,6 +10725,7 @@ const Battle = {
         </div>
         ${this.foe.boss&&first?Saga.card(this.ri):''}
         ${NextFight.html(nx)}
+        ${Scout.html(nx)}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         ${Heroic.button(this)}
