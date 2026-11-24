@@ -3190,8 +3190,42 @@ const firstSNotes = (() => {
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const sGold=this.mode==='campaign' ? Grade.sBonus(had, Grade.of(marks), this.foe) : 0;\n    g.gold+=sGold;"), 'campaign', 'the bonus is not paid from the clear before this win, in the campaign only');
   want(win.indexOf('const sGold') > win.indexOf('const had=g.cleared[key]'), 'order', 'the bonus is reckoned before the clear it reads is known');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold, 900);"), 'count', 'the gold counted up on the card leaves the bonus out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold"), 'count', 'the gold counted up on the card leaves the bonus out');
   want(win.includes('${WarPath.line()}\n          ${Grade.sLine(sGold)}'), 'card', 'the victory card does not say the bonus under the war path');
+  return checks;
+})();
+
+/* Overkill. The part of the killing blow past the foe's last health pays
+   gold: that part's share of the foe's whole health, of up to half the
+   foe's gold. Worked for blows and foes of every size; a blow that only just
+   fells a foe, or a foe that rallies into a second phase, pays nothing; it is
+   said on the victory card and counted into its gold, in the campaign only,
+   and every fight starts with none. */
+const overkillNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Overkill = {'), html.indexOf('const SecondWind = {'));
+  const O = new Function(src + ';return Overkill;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('overkill', key, msg); };
+  for (const emax of [60, 120, 270, 900]) for (const gold of [20, 52, 190, 400]) for (let was = 1; was <= emax; was += 7) for (const hit of [0, 1, was - 1, was, was + 1, was + 13, was * 2, was + emax, was + emax * 3]) {
+    if (hit < 0) continue;
+    const over = O.of(hit, was), want_over = Math.max(0, Math.round(hit - was));
+    want(over === want_over, `of ${hit} at ${was}`, `${over}, not ${want_over}`);
+    const n = O.gold(over, emax, gold), want_n = over > 0 ? Math.round(gold * 0.5 * Math.min(1, over / emax)) : 0;
+    want(n === want_n, `gold ${over} of ${emax} at ${gold}`, `${n}, not ${want_n}`);
+    want(n <= Math.round(gold / 2), `cap ${over} of ${emax} at ${gold}`, `${n} is more than half of ${gold}`);
+    const line = O.line(over, n);
+    want(n ? line.includes('id="overLine"') && line.includes(`${over} past its last health, +${n} gold`) : line === '', `line ${over} ${n}`, line);
+  }
+  for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
+  const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
+  want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
+  const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
+  want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
+  const start = html.slice(html.indexOf('this.winded=false; this.windNow=false;'), html.indexOf('this.winded=false; this.windNow=false;') + 200);
+  want(start.includes('this.overkill=0;'), 'start', 'a fight starts with the last fight\'s overkill');
   return checks;
 })();
 
@@ -26543,6 +26577,7 @@ console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
 console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10)}  (the first win at S on a foe pays its gold once more and says so, worked for every grade a clear can hold, never twice, in the campaign only)`);
+console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
