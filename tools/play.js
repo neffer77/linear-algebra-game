@@ -57,6 +57,7 @@ const SUITES = [
   require('./play/bestgrade'),   // each foe keeps its best grade on the map, and an all-S realm is crowned
   require('./play/gradetitles'), // Exemplar, Crowned and Paragon, from the best grades on the map
   require('./play/firsts'),      // the first S on a foe pays its gold once more
+  require('./play/overkill'),    // a killing blow past the foe's last health pays gold
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
