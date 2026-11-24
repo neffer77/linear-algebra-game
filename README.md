@@ -750,6 +750,11 @@ The game is built so that losing teaches you as much as winning.
   it is full, SATCHEL FULL shows on the scene, and the next victory opens it: a sure chest with a
   rare find at the least, said on the victory card. Then it starts again from nothing. Steady
   practice always pays off, even across fights that go badly. It lasts the sitting: nothing is saved.
+- **✨ Boon.** A campaign win that lifts the knight a level offers a choice on the victory card:
+  a fat purse, which pays half again the next campaign win's gold, or a lucky find, which drops a
+  sure chest on it. The pick shows as held, the next campaign win spends it and says so, and an
+  offer not yet taken waits on the next card. It pays only gold or a chest and never touches a
+  question. It lasts the sitting: nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3304,6 +3309,7 @@ Inside `index.html` the code is organised as:
 | `Sweep` | a win with no miss in the campaign only; a sure chest, never a plain one; rarer finds than a plain win over the whole spread of the draw, and a boss's odds tipped further; the card's line |
 | `Revenge` | each foe holds the gold lost to it and no other's, falls adding up; a win over it pays exactly that once and clears it; a fall that lost nothing holds nothing; said on the defeat, the map and the victory card, and counted in |
 | `Satchel` | filled by the campaign's right answers only, never a rite's, never past twenty-five; spent only when full and then empty; shown beside the streak in the campaign only; a full one opens a sure chest that never finds a common or an uncommon |
+| `Boon` | offered only by a campaign level-up with none held; picked only from an open offer, and only one of its two; spent once, on the next campaign win and no other kind; a fat purse pays half again the gold, a lucky find drops a sure chest; the card shows the offer, the held boon and the boon spent |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3423,6 +3429,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `sweep` | three wins with no miss each say so on the card and drop a chest drawn with a sweep's luck, none of them a plain one; the card fits a phone; a win with a miss says nothing and draws as ever; the next fight starts with no miss; nothing is saved |
 | `revenge` | a fall says the foe holds the gold lost, and a second fall adds to it; the map marks that foe only; a win over another foe pays none of it; beating the foe pays it back on top, said on the card and counted in; the mark goes; a second win pays nothing more; nothing is saved |
 | `satchel` | an empty satchel shows beside the streak; each right answer adds one and a miss none; the count goes on across fights; full at twenty-five, said on the scene, and no more; the next victory opens a sure chest with a rare find, said on the card; then it starts again; nothing is saved |
+| `boon` | a win with no level-up offers nothing; a level-up offers two boons and fits a phone; a pick holds it; the next win spends a purse, said and counted in, then it is gone; an offer not taken waits on the next card; a find drops a sure chest; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |

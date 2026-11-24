@@ -1,75 +1,75 @@
 {
-  "change": "Satchel: twenty-five right answers open a chest with a rare find",
+  "change": "Boon: a level-up offers a fat purse or a lucky find for the next win",
   "mutations": [
     {
-      "name": "the satchel fills in every mode",
+      "name": "a boon is offered in every mode",
       "file": "index.html",
-      "find": "can(B){ return !!(B && B.mode==='campaign' && !B.rite); },\n  add(B){",
-      "replace": "can(B){ return !!(B && !B.rite); },\n  add(B){",
+      "find": "offer(B, ups){ if(ups && B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
+      "replace": "offer(B, ups){ if(ups && B && !this.held) this.open=true; return this.open; },",
       "run": "verify"
     },
     {
-      "name": "the satchel holds more than twenty-five",
+      "name": "a win with no level-up offers a boon",
       "file": "index.html",
-      "find": "if(!this.can(B) || this.n>=this.AT) return false;",
-      "replace": "if(!this.can(B)) return false;",
+      "find": "offer(B, ups){ if(ups && B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
+      "replace": "offer(B, ups){ if(B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },",
       "run": "verify"
     },
     {
-      "name": "the satchel opens before it is full",
+      "name": "a boon can be picked with no offer open",
       "file": "index.html",
-      "find": "spend(){ if(!this.full()) return false; this.n=0; return true; },",
-      "replace": "spend(){ if(this.n<1) return false; this.n=0; return true; },",
+      "find": "if(!this.open || !(k in this.NAMES)) return false;",
+      "replace": "if(!(k in this.NAMES)) return false;",
       "run": "verify"
     },
     {
-      "name": "an opened satchel is not emptied",
+      "name": "the offer stays open after a pick",
       "file": "index.html",
-      "find": "spend(){ if(!this.full()) return false; this.n=0; return true; },",
-      "replace": "spend(){ if(!this.full()) return false; return true; },",
+      "find": "this.held=k; this.open=false;",
+      "replace": "this.held=k;",
       "run": "verify"
     },
     {
-      "name": "a full satchel finds an uncommon",
+      "name": "a boon is spent in any mode",
       "file": "index.html",
-      "find": "if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';",
-      "replace": "if(ctx.satchel && rar==='common') rar='uncommon';",
+      "find": "take(B){ if(!B || B.mode!=='campaign' || !this.held) return null;",
+      "replace": "take(B){ if(!B || !this.held) return null;",
       "run": "verify"
     },
     {
-      "name": "the scene never says the satchel is full",
+      "name": "a boon is never used up",
       "file": "index.html",
-      "find": "if(this.n===this.AT) Anim.float(220, H-370, 'SATCHEL FULL', '#e6c27a', true);",
-      "replace": "",
+      "find": "const k=this.held; this.held=null; return k; },",
+      "replace": "const k=this.held; return k; },",
       "run": "verify"
     },
     {
-      "name": "the streak does not show the satchel",
+      "name": "a fat purse pays the whole gold again",
       "file": "index.html",
-      "find": "+Parry.tag(this)+Satchel.tag(this);",
-      "replace": "+Parry.tag(this);",
+      "find": "gold(k, gold){ return k==='purse' ? Math.round(gold*this.PURSE) : 0; },",
+      "replace": "gold(k, gold){ return k==='purse' ? gold : 0; },",
       "run": "verify"
     },
     {
-      "name": "a right answer adds nothing to the satchel",
+      "name": "a level-up offers no boon",
       "file": "index.html",
-      "find": "      Parry.earn(this);\n      Satchel.add(this);\n",
-      "replace": "      Parry.earn(this);\n",
-      "run": "play:satchel"
+      "find": "    const ups=Game.gainXp(xp);\n    Boon.offer(this, ups);",
+      "replace": "    const ups=Game.gainXp(xp);",
+      "run": "play:boon"
     },
     {
-      "name": "a full satchel opens no chest",
+      "name": "a lucky find drops no sure chest",
       "file": "index.html",
-      "find": "this.foe.elite || satchel ? 1 :",
-      "replace": "this.foe.elite ? 1 :",
-      "run": "play:satchel"
+      "find": "satchel || boon==='find' ? 1 :",
+      "replace": "satchel ? 1 :",
+      "run": "play:boon"
     },
     {
-      "name": "the card says nothing of the satchel",
+      "name": "the card leaves the purse out of the gold it counts",
       "file": "index.html",
-      "find": "          ${Satchel.line(satchel)}\n",
-      "replace": "",
-      "run": "play:satchel"
+      "find": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);",
+      "replace": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);",
+      "run": "play:boon"
     }
   ]
 }
