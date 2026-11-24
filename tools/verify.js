@@ -2959,10 +2959,11 @@ const nextFightNotes = (() => {
   let next = null, low = null, rested = false;
   const UI = { nextFoe: () => next };
   const WarPath = { n: 0, STEP: 0.1, CAP: 5, pct(n) { return Math.round(this.STEP * Math.min(this.CAP, Math.max(0, n - 1)) * 100); } };
-  const Game = { lowFor: () => low, rest: () => rested };
+  const Game = { lowFor: () => low, rest: () => rested, s: { hp: 80 } };
+  const Reckon = { line: (f, g) => `<div data-r="${f.nm}:${g.hp}"></div>` };
   const removed = [];
   const document = { getElementById: id => id === 'nextLow' ? { remove: () => removed.push(id) } : null };
-  const N = new Function('UI', 'WarPath', 'Game', 'document', src + ';return NextFight;')(UI, WarPath, Game, document);
+  const N = new Function('UI', 'WarPath', 'Game', 'document', 'Reckon', src + ';return NextFight;')(UI, WarPath, Game, document, Reckon);
   let checks = 0;
   const want = (ok, key, msg) => { checks++; if (!ok) fail('nextfight', key, msg); };
   const slime = { nm: 'Meadow Slime', hp: 52, atk: 9 }, wyrm = { nm: 'The Vector Wyrm', hp: 165, atk: 20, boss: true };
@@ -2984,6 +2985,7 @@ const nextFightNotes = (() => {
       const pct = Math.round(10 * Math.min(5, n));
       want(n >= 1 ? h.includes(`Win it for <b>+${pct}%</b> gold on your war path.`) : !h.includes('war path'), `${f.nm}, path ${n}`, `says ${h.match(/Win it[^<]*<b>[^<]*<\/b>[^.]*\./) || 'nothing'} of the war path, not +${pct}%`);
       want(!h.includes('nextLow') && !h.includes('nextRest'), `${f.nm}, path ${n}`, 'warns a knight above half health');
+      want(h.includes(`data-r="${f.nm}:80"`) && h.indexOf('data-r=') > h.indexOf('id="nextFight"') && h.indexOf('data-r=') < h.indexOf('id="nextGo"'), `${f.nm}, path ${n}`, 'the next fight is not reckoned under its name');
     }
   }
   // below half health: warned, and a rest offered when it can be paid for
