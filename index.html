@@ -8753,6 +8753,34 @@ const Talk = {
   }
 };
 
+/* A herald. A realm's boss is announced as it arrives: its name across the
+   screen in its own colour, and under it what it is in its own mathematics,
+   the same trick the Saga tells once it has fallen, so the fight that ends a
+   realm opens like one and the line is a hint of how to beat it. Campaign
+   bosses only, a rematch and a gauntlet's included, never the daily's straw
+   knight or a dungeon's; said once as the fight opens, touching nothing in
+   it. Nothing is saved. */
+const Herald = {
+  SAY: {
+    'The Vector Wyrm':        'its coils point every way and add up to nowhere',
+    'The Determinant Golem':  'it undoes every blow while its determinant holds',
+    'The Tangent Wraith':     'it lives on a line that touches its curve at one point',
+    'The Lich of Limits':     'it keeps the strips of an area and never lets their sum close',
+    'The Eigen Dragon':       'its fire runs along its own lines and no others',
+    'The Spectral Sovereign': 'it breaks all it touches into parts only it can name',
+    'The Unbounded':          'it swears it grows without end',
+    'The Gradient Itself':    'the way up, from wherever you stand'
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },
+  text(f){ return '👑 '+f.nm.toUpperCase(); },
+  announce(B){
+    if(!this.on(B)) return false;
+    const f=B.foe;
+    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col, ()=>{ Sfx.slam(); Haptic.hit(); });
+    return true;
+  }
+};
+
 /* ---------- Elite rematches ----------
    A campaign foe you have already beaten comes back, one fight in four, as
    an elite with one twist. Each twist leans on something worth practising.
@@ -10510,6 +10538,7 @@ const Battle = {
     this.updateBars();
     this.nextQuestion();
     Talk.say('meet');
+    Herald.announce(this);   // a realm's boss arrives announced
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
