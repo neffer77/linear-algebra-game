@@ -22,6 +22,8 @@ const fight = t => t.ev(() => {
   Elite.CHANCE = odds;
   Game.s.maxHp = Game.s.hp = 1000; Game.s.lvl = 40; Game.s.xp = 0;
   Battle.beastLeft = 0; Battle.wardUp = false; Battle.ehp = 1e6;
+  // a full satchel's chest may hold armour, which sets the knight's health anew mid-check
+  Satchel.n = 0;
   window.__banners = [];
   return Battle.foe.nm;
 });
