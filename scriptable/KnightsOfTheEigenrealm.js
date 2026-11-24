@@ -9245,6 +9245,53 @@ const NextFight = {
   }
 };
 
+/* A rival. Sir Corvin, a knight of the same order, rides the same roads and
+   means to prove himself the better scholar. Once the strongest plain foe of
+   a realm is beaten, every campaign victory there finds him waiting, and the
+   victory card offers the duel; it is asked for, never forced. He fights like
+   that foe, a tenth harder, and pays twice its gold and half again its
+   experience, as a rematch of it would. Beaten, he yields with a word and
+   leaves that realm be for the rest of the sitting; lost to, he waits to be
+   asked again. His riddles are the realm's own. Nothing is saved. */
+const Rival = {
+  NM:'Sir Corvin', GOLD:2, XP:1.5, ATK:1.1,
+  beat:{},
+  WAIT:['“So you got this far. Lucky guesses, I expect. Prove me wrong.”',
+    '“They say you know your working. I say you copy it. Duel me and see.”',
+    '“A knight who wins on luck loses to a knight who knows. Shall we find out which you are?”'],
+  YIELD:['“Hmph. You do know it. Next realm, then.”', '“Well struck. I shall study harder.”',
+    '“You earned that. I will not make it so easy next time.”'],
+  // the strongest plain foe of the realm, whose road he rides
+  fi(ri){
+    const fs=(REALMS[ri] && REALMS[ri].foes) || []; let best=-1;
+    fs.forEach((f,i)=>{ if(!f.boss && (best<0 || f.hp>fs[best].hp)) best=i; });
+    return best;
+  },
+  make(ri){
+    const f=REALMS[ri].foes[this.fi(ri)];
+    return Object.assign({}, f, {nm:this.NM, art:'knightfoe', col:'#b48cff', gold:Math.round(f.gold*this.GOLD),
+      xp:Math.round(f.xp*this.XP), atk:Math.round(f.atk*this.ATK), boss:false, rival:true});
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.rival); },
+  // he waits once the foe whose road he rides is beaten, so a duel never clears a foe unfought
+  waits(B){
+    if(!B || B.mode!=='campaign' || this.on(B) || this.beat[B.ri]) return false;
+    const fi=this.fi(B.ri), c=(Game.s && Game.s.cleared) || {};
+    return fi>=0 && !!c[B.ri+':'+fi];
+  },
+  // at a victory: a duel won leaves the realm be for the sitting
+  won(B){ if(!this.on(B)) return false; this.beat[B.ri]=true; return true; },
+  intro(){ return \`🛡️ \${this.NM} lowers his visor: “Let us see what you have learned.”\`; },
+  offer(B){
+    if(!this.waits(B)) return '';
+    return \`<div class="panel" id="rival" style="text-align:left;margin:6px 0">
+        <div class="small">🛡️ <b>\${this.NM}</b>, your rival, waits on the road: \${R.pick(this.WAIT)}</div>
+        <button class="btn" id="rivalGo" style="margin-top:6px" onclick="Battle.begin(\${B.ri},\${this.fi(B.ri)},false,true)">🛡️ Duel \${this.NM}: double gold</button>
+      </div>\`;
+  },
+  line(on){ return on ? \`<div id="rivalWon" style="color:#b48cff;font-weight:800;margin-top:6px">🛡️ \${this.NM} yields: \${R.pick(this.YIELD)} Double gold and half again the experience.</div>\` : ''; }
+};
+
 /* A familiar. Twenty right answers in campaign fights in one sitting hatch an
    egg, and a familiar joins the knight for the rest of the sitting: an owl, a
    fox kit, a drakeling or a wisp. From then on each right answer in a campaign
@@ -9753,13 +9800,14 @@ const Battle = {
   ehp:0, emax:0, combo:0, over:null,
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
-  begin(ri, fi, heroic){
+  begin(ri, fi, heroic, rival){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     // A foe already beaten here may come back as an elite with one twist.
     // ...or, not an elite, as a greedy foe with a fat purse that flees.
     // ...or, asked for, as a heroic rematch: the hardest riddles for double gold.
     const beaten=!!(Game.s && Game.s.cleared[ri+':'+fi]);
+    if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival
     this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])
       : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
   },
@@ -9833,6 +9881,7 @@ const Battle = {
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
+    else if(Rival.on(this)) UI.toast(Rival.intro());
     else if(this.prepared) UI.toast(Scout.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
@@ -9860,7 +9909,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
       (this.mode==='dungeon' ? \`⛏️ Depth \${Dungeon.run.depth}  ·  \` : '') +
@@ -10816,6 +10865,7 @@ const Battle = {
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // now and then someone on the road asks a question for a small prize
     const way=Wayfarer.roll(this);
+    const rival=Rival.won(this);
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -10846,6 +10896,7 @@ const Battle = {
           \${Oath.line(vGold)}
           \${Greedy.line(this)}
           \${Heroic.line(this)}
+          \${Rival.line(rival)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10867,6 +10918,7 @@ const Battle = {
         \${Wayfarer.html(way)}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
+        \${Rival.offer(this)}
         \${Heroic.button(this)}
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
