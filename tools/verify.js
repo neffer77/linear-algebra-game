@@ -4246,7 +4246,7 @@ const stanceNotes = (() => {
    shop sells; the card says so. Then the wiring. */
 const peddlerNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A stance. Before the first answer'));
+  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A dicer. On the fourth victory'));
   const items = html.slice(html.indexOf('const ITEMS = {'), html.indexOf('};', html.indexOf('const ITEMS = {')) + 2);
   let checks = 0;
   const want = (ok, key, msg) => { checks++; if (!ok) fail('peddler', key, msg); };
@@ -4289,6 +4289,88 @@ const peddlerNotes = (() => {
   // the wiring
   want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
   want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  return checks;
+})();
+
+/* The dicer. Met at the fourth victory of a sitting and every fifth after,
+   never on a milestone nor at a peddler, and only with a purse to stake and a
+   topic of the realm met. The topic is the one the fight ended on where it
+   can be, and another met one where not. A throw pays the stake again or loses
+   it, never past an empty purse, and feeds the sitting's tally the same; one
+   throw to a meeting, counted toward its topic either way. Then the wiring. */
+const dicerNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Dicer = {'), html.indexOf('/* A stance. Before the first answer'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('dicer', key, msg); };
+  const Game = { s: { gold: 0 }, saves: 0, save() { this.saves++; }, said: [], recordAnswer(k, ok, n) { this.said.push([k, ok, n]); } };
+  const Sitting = { gold: 0 };
+  let met = ['vec', 'dot'];
+  const Wayfarer = { topics: () => met.slice() };
+  const els = {}, el = id => (els[id] = els[id] || { id, innerHTML: '', remove() { els[id].gone = true; } });
+  const document = { getElementById: el, querySelectorAll: () => [], createElement: () => ({ dataset: {}, classList: { add() {}, remove() {} } }) };
+  el('dicerAsk'); el('dicerChoices').appendChild = () => {};
+  const Q = { key: 'vec', topic: 'Vectors', q: 'q?', a: 'right', choices: ['right', 'wrong'], ex: 'Because.', why: { wrong: 'Not so.' }, fig: null };
+  const asked = [];
+  const D = new Function('Game', 'Sitting', 'Wayfarer', 'TOPIC_LABEL', 'Sfx', 'Haptic', 'document', 'buildQuestion', 'Lesson', 'Mastery', 'Figure', src + ';return Dicer;')(
+    Game, Sitting, Wayfarer, { vec: 'Vectors', dot: 'Dot products' }, { coin() {}, bad() {} }, { hit() {} }, document,
+    (k, d) => { asked.push([k, d]); return Object.assign({}, Q, { key: k }); }, { diff: (k, d) => d }, { adjustDiff: (k, d) => d }, { render() {} });
+  const B = k => ({ cur: k ? { key: k } : null });
+  // when the dicer is met
+  for (let w = 0; w <= 40; w++) {
+    D.played = 0;
+    const at = w > 0 && w % 5 === 4, d = D.meet(w, 50, B('vec'));
+    want(!!d === at, 'when ' + w, `a dicer at win ${w}: ${!!d}`);
+    want(!at || (w % 5 !== 0 && w % 5 !== 3), 'apart ' + w, 'a dicer on a milestone or at a peddler');
+    if (d) {
+      want(d.at === w && d.stake === 50 && d.key === 'vec', 'meet ' + w, JSON.stringify(d));
+      D.played = w; want(D.meet(w, 50, B('vec')) === null, 'played ' + w, 'a dicer throws twice at one meeting');
+    }
+  }
+  for (const purse of [-5, 0, NaN, undefined, 1, 300]) {
+    D.played = 0;
+    want(!!D.meet(4, purse, B('vec')) === purse > 0, 'purse ' + purse, 'a dicer with no purse to stake');
+  }
+  // the topic
+  for (const [mt, k, out] of [[['vec', 'dot'], 'dot', 'dot'], [['vec', 'dot'], 'vec', 'vec'], [['vec', 'dot'], 'det', 'vec'], [['dot'], null, 'dot'], [[], 'vec', null]]) {
+    met = mt; D.played = 0;
+    const d = D.meet(4, 20, B(k));
+    want(D.topic(B(k)) === out && (out ? d && d.key === out : d === null), 'topic ' + JSON.stringify([mt, k]), JSON.stringify(d));
+  }
+  met = ['vec', 'dot'];
+  // the card
+  want(D.html(null) === '' && D.cur === null, 'none', 'a card with no dicer');
+  const card = D.html({ at: 4, stake: 37, key: 'dot' });
+  want(card.includes('id="dicer"') && card.includes('id="dicerGo"') && card.includes('Throw for 🪙 37') && card.includes('Double or nothing on your purse, 🪙 37?')
+    && card.includes('<b>Dot products</b>') && D.cur && D.cur.stake === 37, 'card', card);
+  // the purse, right or wrong
+  for (const gold of [0, 5, 37, 100]) for (const stake of [1, 37, 80]) for (const ok of [true, false]) {
+    Game.s.gold = gold; Sitting.gold = 40;
+    const n = D.settle(ok, stake), lost = Math.min(stake, gold);
+    want(ok ? n === stake && Game.s.gold === gold + stake && Sitting.gold === 40 + stake
+            : n === lost && Game.s.gold === gold - lost && Game.s.gold >= 0 && Sitting.gold === Math.max(0, 40 - lost), 'settle ' + [gold, stake, ok], JSON.stringify({ n, gold: Game.s.gold, sit: Sitting.gold }));
+  }
+  // a throw: asked once, counted once, saved once, said once
+  for (const ok of [true, false]) {
+    D.played = 0; asked.length = 0; Game.said = []; Game.saves = 0; Game.s.gold = 60; Sitting.gold = 60;
+    delete els.dicerGo; el('dicerGo'); el('dicerOut').innerHTML = '';
+    D.html(D.meet(9, 25, B('dot')));
+    D.ask();
+    want(asked.length === 1 && asked[0][0] === 'dot' && asked[0][1] === 2 && els.dicerGo.gone && D.played === 9 && D.meet(9, 25, B('dot')) === null,
+      'ask ' + ok, JSON.stringify({ asked, played: D.played }));
+    D.ask(); want(asked.length === 1, 'ask once ' + ok, 'the question is asked twice');
+    const btn = { classList: { add() {}, remove() {} } };
+    D.answer(btn, ok ? 'right' : 'wrong');
+    want(Game.said.length === 1 && Game.said[0][0] === 'dot' && Game.said[0][1] === ok && Game.saves === 1, 'count ' + ok, JSON.stringify(Game.said));
+    want(Game.s.gold === (ok ? 85 : 35) && Sitting.gold === (ok ? 85 : 35), 'gold ' + ok, JSON.stringify({ g: Game.s.gold, s: Sitting.gold }));
+    const out = els.dicerOut.innerHTML;
+    want(out.includes(`data-ok="${ok ? 1 : 0}"`) && (ok ? out.includes('+🪙 25') : out.includes('−🪙 25') && out.includes('<b>right</b>') && out.includes('Because.') && out.includes('Not so.')), 'said ' + ok, out);
+    D.answer(btn, 'right');
+    want(Game.said.length === 1 && Game.saves === 1 && Game.s.gold === (ok ? 85 : 35), 'once ' + ok, 'a second throw at one meeting');
+  }
+  // the wiring
+  want(html.includes("    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones\n    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold, this);"), 'meet', 'the dicer is not met on a counted victory, with the purse the card counts');
+  want(html.includes("        ${Peddler.html(pd)}\n        ${Dicer.html(dc)}\n") && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
   return checks;
 })();
 
@@ -26521,6 +26603,7 @@ console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
+console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}  (met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, on the fight's last topic where it can be, paying the purse again on a right answer and losing it on a miss, never past an empty purse, once a meeting)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
