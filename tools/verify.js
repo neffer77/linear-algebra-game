@@ -3374,7 +3374,7 @@ const sweepNotes = (() => {
   want(rarer(both) > rarer(boss), 'boss', `a boss swept found ${rarer(both)} rare things to a boss's ${rarer(boss)}`);
   want(sw.legendary > plain.legendary, 'legend', `a sweep found ${sw.legendary} legendaries to a plain win's ${plain.legendary}`);
   want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
-  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, march, tier:'), 'drop', 'a sweep does not drop a sure chest');
+  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, tier:'), 'drop', 'a sweep does not drop a sure chest');
   want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
   return checks;
 })();
@@ -3484,8 +3484,8 @@ const satchelNotes = (() => {
   const plain = tally({});
   want(plain.uncommon > 0 && plain.common > 0, 'plain', 'a plain chest never finds a common or an uncommon');
   want(html.includes('      Parry.earn(this);\n      Satchel.add(this);'), 'added', 'a right answer does not fill the satchel');
-  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes("this.foe.elite || satchel || boon==='find' || march ? 1 :") && html.includes('sweep, satchel, march, tier:'), 'drop', 'a full satchel does not open for a sure chest');
-  want(html.includes("if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a full satchel can find something plain');
+  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes("this.foe.elite || satchel || boon==='find' || march || mile ? 1 :") && html.includes('sweep, satchel, march, mile, tier:'), 'drop', 'a full satchel does not open for a sure chest');
+  want(html.includes("if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a full satchel can find something plain');
   want(html.includes('${Satchel.line(satchel)}') && html.includes('+Parry.tag(this)+Satchel.tag(this);'), 'said', 'the satchel is not shown beside the streak or on the card');
   return checks;
 })();
@@ -3535,7 +3535,7 @@ const boonNotes = (() => {
   want(B0.line('purse', 37).includes('+37 gold') && B0.line('find', 0).includes('sure chest') && B0.line(null, 0) === '', 'line', 'the card does not say the boon spent');
   want(html.includes("const boon=Boon.take(this), bGold=Boon.gold(boon, gold);\n    g.gold+=bGold;"), 'paid', 'a fat purse does not pay');
   want(html.includes("const ups=Game.gainXp(xp);\n    Boon.offer(this, ups);"), 'offered', 'a level-up does not offer a boon');
-  want(html.includes("satchel || boon==='find' || march ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
+  want(html.includes("satchel || boon==='find' || march || mile ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
   want(html.includes('${Boon.line(boon, bGold)}') && html.includes("${this.mode==='campaign'?Boon.card():''}"), 'said', 'the card does not show the boon');
   want(html.includes('gold+sGold+oGold+rGold+bGold+cGold, 900)'), 'counted', 'the card does not count the purse');
   return checks;
@@ -3597,7 +3597,7 @@ const marchNotes = (() => {
     const c = tally(ctx);
     want(c.common + c.uncommon + c.rare === 0 && c.epic > 0 && c.legendary > 0, `epic ${JSON.stringify(ctx)}`, JSON.stringify(c));
   }
-  want(html.includes("    const march=March.won(this);") && html.includes("|| march ? 1 :") && html.includes('satchel, march, tier:'), 'drop', 'a march does not drop a sure chest');
+  want(html.includes("    const march=March.won(this);") && html.includes("|| march || mile ? 1 :") && html.includes('satchel, march, mile, tier:'), 'drop', 'a march does not drop a sure chest');
   want(html.includes("if(ctx.march && rar!=='legendary') rar='epic';"), 'rarity', 'a march can find less than epic');
   want(html.includes('const path=WarPath.broke(); March.broke();') && html.includes("if(live && this.mode==='campaign') March.broke();"), 'broke', 'a fall or a flight does not end the march');
   want(html.includes('${March.line(march, this.realm.nm)}') && html.includes('</span>${March.tag(ri, r.foes.length)}'), 'said', 'the march is not shown on the map or the card');
@@ -3675,8 +3675,44 @@ const sittingNotes = (() => {
     want(h.includes(`<b>${wins}</b> ${wins === 1 ? 'victory' : 'victories'}`) && h.includes(`<b>${gold}</b> gold`) && h.includes(`best streak <b>${best}</b>`), `html ${step}`, h);
   }
   want(S.won(null, 10) === false && S.wins === wins, 'none', 'a win with no fight counts');
-  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);'), 'fed', 'the tally is not fed the gold the card counts');
+  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold)'), 'fed', 'the tally is not fed the gold the card counts');
   want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)'), 'shown', 'the map does not show the tally');
+  return checks;
+})();
+
+/* A sitting's milestones: every fifth victory this sitting drops a sure
+   chest, a rare find at the least. Worked over a long run of victories: a
+   milestone falls on every fifth and no other, the tally names the next one,
+   the card says which victory it was in the right words, and the win wires
+   it into the drop and the chest's rarity. */
+const mileNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Sitting = {'), html.indexOf('/* A comeback.'));
+  const S = new Function(src + ';return Sitting;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('milestone', key, msg); };
+  want(S.mile() === false && S.line(false) === '', 'none', 'a milestone before any victory');
+  const words = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th', 10: '10th', 11: '11th', 12: '12th', 13: '13th', 15: '15th',
+    20: '20th', 21: '21st', 22: '22nd', 23: '23rd', 25: '25th', 100: '100th', 101: '101st', 111: '111th', 112: '112th', 113: '113th', 122: '122nd' };
+  for (const n in words) want(S.nth(+n) === words[n], `nth ${n}`, `${n} said as ${S.nth(+n)}`);
+  let seen = 0;
+  for (let n = 1; n <= 600; n++) {
+    S.won({ mode: n % 7 ? 'campaign' : 'arena', runBest: 3 }, 10);
+    if (n % 7 === 0) { want(S.wins === n - Math.floor(n / 7), `skip ${n}`, 'an arena win counted'); continue; }
+    const w = S.wins, on = S.mile();
+    want(on === (w % 5 === 0), `mile ${w}`, `victory ${w} a milestone: ${on}`);
+    if (on) seen++;
+    const nx = S.next();
+    want(nx > w && nx % 5 === 0 && nx - w <= 5, `next ${w}`, `after ${w} the next milestone is ${nx}`);
+    want(S.html().includes(`a sure chest at <b>${nx}</b>`), `tally ${w}`, S.html());
+    const l = S.line(on);
+    want(on ? l.includes('id="sittingMile"') && l.includes(`Your ${S.nth(w)} victory this sitting`) && l.includes('a sure chest') : l === '', `line ${w}`, l);
+  }
+  want(seen === Math.floor(S.wins / 5), 'count', `${seen} milestones in ${S.wins} victories`);
+  want(html.includes('const mile=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold) && Sitting.mile();'), 'won', 'the win does not ask for its milestone');
+  want(html.includes("march || mile ? 1 : Sweep.odds(this, .5))") && html.includes('satchel, march, mile, tier:'), 'drop', 'a milestone does not drop a sure chest');
+  want(html.includes("if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a milestone can find something plain');
+  want(html.includes('${Comeback.line(cGold)}\n          ${Sitting.line(mile)}'), 'card', 'the card does not say the milestone');
   return checks;
 })();
 
@@ -27037,6 +27073,7 @@ console.log(`  boons checked              ${pad(boonNotes.toLocaleString(), 10)}
 console.log(`  marches checked            ${pad(marchNotes.toLocaleString(), 10)}  (paid when the last foe of a realm is beaten with no fall or flight between, once a realm a sitting, in the campaign only; counted on the map; a march's chest never finds less than epic)`);
 console.log(`  comebacks checked          ${pad(comebackNotes.toLocaleString(), 10)}  (marked when a blow leaves health above 0 and at a quarter or under, never cleared in the fight; paid in the campaign only, a quarter more gold; a new fight starts without it)`);
 console.log(`  sitting tallies checked    ${pad(sittingNotes.toLocaleString(), 10)}  (the campaign's victories, their gold with every bonus and the best streak this sitting; nothing shown before the first victory)`);
+console.log(`  sitting milestones checked ${pad(mileNotes.toLocaleString(), 10)}  (every fifth campaign victory of a sitting and no other; the next one named on the map; the card's 1st, 2nd, 3rd and 11th; a sure chest, a rare find at the least)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
