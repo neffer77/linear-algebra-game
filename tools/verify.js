@@ -3165,6 +3165,36 @@ const gradeTitleNotes = (() => {
   return checks;
 })();
 
+/* First S. The first win at S on a foe pays the foe's gold once more, said
+   on the victory card; every later S, and every lower grade, pays nothing
+   extra. It is reckoned from the grade the clear held before this win, so a
+   foe cleared before grades were kept earns it on its first S, and only the
+   campaign pays it. */
+const firstSNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Grade = {'), html.indexOf('const Battle = {'));
+  const G = new Function(src + ';return Grade;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('firsts', key, msg); };
+  const L = ['C', 'B', 'A', 'S'];
+  for (const had of [undefined, true, ...L]) for (const l of L) for (const gold of [1, 18, 52, 190, 999]) {
+    const n = G.sBonus(had, l, { gold }), want_n = l === 'S' && had !== 'S' ? gold : 0;
+    want(n === want_n, `${had} then ${l} at ${gold}`, `pays ${n}, not ${want_n}`);
+    const line = G.sLine(n);
+    want(n ? line.includes('id="firstS"') && line.includes('+' + n + ' bonus gold') : line === '', `line ${had} ${l} ${gold}`, `says ${line}`);
+  }
+  // played out: a foe won C, then S, then S again, then A, pays the bonus once
+  let had, paid = 0;
+  for (const l of ['C', 'S', 'S', 'A', 'S']) { paid += G.sBonus(had, l, { gold: 66 }); had = G.keep(had, l); }
+  want(paid === 66, 'once', `a foe paid its first-S bonus ${paid / 66} times`);
+  const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
+  want(win.includes("const sGold=this.mode==='campaign' ? Grade.sBonus(had, Grade.of(marks), this.foe) : 0;\n    g.gold+=sGold;"), 'campaign', 'the bonus is not paid from the clear before this win, in the campaign only');
+  want(win.indexOf('const sGold') > win.indexOf('const had=g.cleared[key]'), 'order', 'the bonus is reckoned before the clear it reads is known');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold, 900);"), 'count', 'the gold counted up on the card leaves the bonus out');
+  want(win.includes('${WarPath.line()}\n          ${Grade.sLine(sGold)}'), 'card', 'the victory card does not say the bonus under the war path');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26512,6 +26542,7 @@ console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
+console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10)}  (the first win at S on a foe pays its gold once more and says so, worked for every grade a clear can hold, never twice, in the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);

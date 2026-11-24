@@ -1,47 +1,61 @@
 {
-  "change": "Titles for grades: Exemplar, Crowned and Paragon",
+  "change": "First S: the first S on a foe pays its gold once more",
   "mutations": [
     {
-      "name": "Exemplar at nine",
+      "name": "every S pays",
       "file": "index.html",
-      "find": "t:g=>Grade.countS(g.cleared)>=10}",
-      "replace": "t:g=>Grade.countS(g.cleared)>=9}",
+      "find": "sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? foe.gold : 0; },",
+      "replace": "sBonus(had, l, foe){ return l==='S' ? foe.gold : 0; },",
       "run": "verify"
     },
     {
-      "name": "an old clear counts as S",
+      "name": "an A pays too",
       "file": "index.html",
-      "find": "countS(cleared){ return Object.values(cleared||{}).filter(v=>v==='S').length; },",
-      "replace": "countS(cleared){ return Object.values(cleared||{}).filter(v=>v==='S'||v===true).length; },",
+      "find": "sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? foe.gold : 0; },",
+      "replace": "sBonus(had, l, foe){ return (l==='S'||l==='A') && this.best(had)!=='S' ? foe.gold : 0; },",
       "run": "verify"
     },
     {
-      "name": "Crowned needs every realm",
+      "name": "half the gold",
       "file": "index.html",
-      "find": "    t:g=>REALMS.some((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))},",
-      "replace": "    t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))},",
+      "find": "sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? foe.gold : 0; },",
+      "replace": "sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? Math.round(foe.gold/2) : 0; },",
       "run": "verify"
     },
     {
-      "name": "Paragon needs one realm",
+      "name": "an old clear never pays",
       "file": "index.html",
-      "find": "    t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}\n];",
-      "replace": "    t:g=>REALMS.some((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}\n];",
+      "find": "sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? foe.gold : 0; },",
+      "replace": "sBonus(had, l, foe){ return l==='S' && had!==true && this.best(had)!=='S' ? foe.gold : 0; },",
       "run": "verify"
     },
     {
-      "name": "the grade titles go first",
+      "name": "the line is never said",
       "file": "index.html",
-      "find": "const TITLES = [\n",
-      "replace": "const TITLES = [\n  {id:'exemplar0', ic:'🏅', nm:'Exemplar', ds:'Beat 10 foes at S', t:g=>Grade.countS(g.cleared)>=10},\n",
+      "find": "          ${Grade.sLine(sGold)}\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "Exemplar is never earned",
+      "name": "the bonus is not counted up",
       "file": "index.html",
-      "find": "t:g=>Grade.countS(g.cleared)>=10}",
-      "replace": "t:g=>false}",
-      "run": "play:gradetitles"
+      "find": "countUp(document.getElementById('rGold'), gold+sGold, 900);",
+      "replace": "countUp(document.getElementById('rGold'), gold, 900);",
+      "run": "verify"
+    },
+    {
+      "name": "the bonus reads the new clear",
+      "file": "index.html",
+      "find": "Grade.sBonus(had, Grade.of(marks), this.foe)",
+      "replace": "Grade.sBonus(g.cleared[key], Grade.of(marks), this.foe)",
+      "run": "verify"
+    },
+    {
+      "name": "the bonus is said but never paid",
+      "file": "index.html",
+      "find": "    g.gold+=sGold;\n",
+      "replace": "",
+      "run": "play:firsts"
     }
   ]
 }
