@@ -46,6 +46,7 @@ const SUITES = [
   require('./play/elite'),       // a beaten foe comes back as an elite, one fight in four
   require('./play/phase'),       // a realm boss rallies at half health into a second phase
   require('./play/bestiary'),    // every foe on one page, a shadow until it is beaten
+  require('./play/saga'),        // a chapter of the story told as each realm's boss falls
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
