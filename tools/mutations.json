@@ -1,89 +1,96 @@
 {
- "change": "A peddler: the third victory of a sitting meets one thing to buy at half price",
+ "change": "The sky: each realm's omen this sitting, a gold moon, a fair wind or a mist",
  "mutations": [
   {
-   "name": "a peddler at every victory",
+   "name": "a gold moon pays nothing more",
    "file": "index.html",
-   "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
-   "replace": "    if(!(wins>0) || this.sold===wins) return null;",
+   "find": "say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1.25 },",
+   "replace": "say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1    },",
    "run": "verify"
   },
   {
-   "name": "a peddler on the milestones",
+   "name": "a fair wind costs the guard",
    "file": "index.html",
-   "find": "  AT: 3, EVERY: 5, OFF: 0.5,",
-   "replace": "  AT: 0, EVERY: 5, OFF: 0.5,",
+   "find": "say:'your blows land a fifth harder',      deal:1.2, take:1,   gold:1    },",
+   "replace": "say:'your blows land a fifth harder',      deal:1.2, take:1.2, gold:1    },",
    "run": "verify"
   },
   {
-   "name": "a peddler sells twice",
+   "name": "a mist lightens the knight too",
    "file": "index.html",
-   "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
-   "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT)) return null;",
+   "find": "say:'foes strike a fifth lighter',        deal:1,   take:0.8, gold:1    }",
+   "replace": "say:'foes strike a fifth lighter',        deal:0.8, take:0.8, gold:1    }",
    "run": "verify"
   },
   {
-   "name": "a peddler at the shop's price",
+   "name": "the sky changes every look",
    "file": "index.html",
-   "find": "  AT: 3, EVERY: 5, OFF: 0.5,",
-   "replace": "  AT: 3, EVERY: 5, OFF: 1,",
+   "find": "    if(!(ri in this.sky)) this.sky[ri] =",
+   "replace": "    this.sky[ri] =",
    "run": "verify"
   },
   {
-   "name": "a peddler offers the most carried",
+   "name": "an omen with no chance of one",
    "file": "index.html",
-   "find": "sort((a,b)=>(it[a]||0)-(it[b]||0))[0];",
-   "replace": "sort((a,b)=>(it[b]||0)-(it[a]||0))[0];",
+   "find": "    return this.CHANCE>0 && this.KINDS[this.sky[ri]] ? this.sky[ri] : null;",
+   "replace": "    return this.KINDS[this.sky[ri]] ? this.sky[ri] : null;",
    "run": "verify"
   },
   {
-   "name": "a peddler sells on credit",
+   "name": "a sky over the arena too",
    "file": "index.html",
-   "find": "    if(!ITEMS[id] || this.sold===at || g.gold<cost) return false;",
-   "replace": "    if(!ITEMS[id] || this.sold===at) return false;",
+   "find": "  on(B){ return B && B.mode==='campaign' ? this.KINDS[this.of(B.ri)] || null : null; },",
+   "replace": "  on(B){ return B ? this.KINDS[this.of(B.ri)] || null : null; },",
    "run": "verify"
   },
   {
-   "name": "a sale is not kept",
+   "name": "a mist blow lands as nothing",
    "file": "index.html",
-   "find": "g.items[id]=(g.items[id]||0)+1; this.sold=at;",
-   "replace": "g.items[id]=(g.items[id]||0)+1;",
+   "find": "return !k || k.take===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*k.take)); },",
+   "replace": "return !k || k.take===1 || dmg<=0 ? dmg : Math.round(dmg*k.take*0.01); },",
    "run": "verify"
   },
   {
-   "name": "a sale is free",
+   "name": "the gold ignores the moon",
    "file": "index.html",
-   "find": "    g.gold-=cost; g.items[id]",
-   "replace": "    g.items[id]",
+   "find": "*wp*Sky.gold(this));",
+   "replace": "*wp);",
    "run": "verify"
   },
   {
-   "name": "the card shows no peddler",
+   "name": "the blow ignores the wind",
    "file": "index.html",
-   "find": "        ${Peddler.html(pd)}\n",
+   "find": "(this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)",
+   "replace": "(this.unassisted?2:1) * (this.finisher||1)",
+   "run": "verify"
+  },
+  {
+   "name": "the guard ignores the mist",
+   "file": "index.html",
+   "find": "Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));",
+   "replace": "Stance.take(this, (Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));",
+   "run": "verify"
+  },
+  {
+   "name": "in play, the map shows no sky",
+   "file": "index.html",
+   "find": "${Treasure.tag(ri)}${Sky.tag(ri)}",
+   "replace": "${Treasure.tag(ri)}",
+   "run": "play:sky"
+  },
+  {
+   "name": "in play, a fight says nothing of the sky",
+   "file": "index.html",
+   "find": "    Sky.greet(this);   // a fight under an omen says so\n",
    "replace": "\n",
-   "run": "verify"
+   "run": "play:sky"
   },
   {
-   "name": "in play, a sale goes nowhere",
+   "name": "in play, the card says nothing of the moon",
    "file": "index.html",
-   "find": "g.items[id]=(g.items[id]||0)+1; this.sold=at;",
-   "replace": "this.sold=at;",
-   "run": "play:peddler"
-  },
-  {
-   "name": "in play, the button stays a button",
-   "file": "index.html",
-   "find": "    if(btn){ btn.disabled=true;",
-   "replace": "    if(false){ btn.disabled=true;",
-   "run": "play:peddler"
-  },
-  {
-   "name": "in play, a peddler on every win",
-   "file": "index.html",
-   "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;",
-   "replace": "    if(!(wins>0) || this.sold===wins) return null;",
-   "run": "play:peddler"
+   "find": "          ${Sky.line(this)}\n",
+   "replace": "\n",
+   "run": "play:sky"
   }
  ]
 }
