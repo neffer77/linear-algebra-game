@@ -158,6 +158,11 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.3)}
 .item .vs{font-size:12px;font-weight:700;color:var(--dim)}
 .item .vs.up{color:var(--green)}
+.btnRow{display:flex;gap:8px}
+.btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+details.road>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
+details.road>summary::-webkit-details-marker{display:none}
+details.road[open]>summary{color:var(--dim)}
 details.skillRest>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 details.skillRest>summary::-webkit-details-marker{display:none}
 details.skillRest[open]>summary{color:var(--dim)}
@@ -9458,6 +9463,21 @@ const Skillset = {
   work(k){ return k+(k===1?' needs work':' need work'); }
 };
 
+/* Road. A good win can meet the whole road at once: a scout's chance at the
+   next foe, a wayfarer's question, a campfire, a peddler and a dicer, each a
+   card of its own, stacked between the victory and the way back to the map.
+   The first two stay in view; the rest wait behind one line that says how
+   many more there are, and open in place. Nothing is lost and nothing saved. */
+const Road = {
+  SHOW:2, open:false,
+  group(parts){
+    const p=(parts||[]).filter(x=>x&&String(x).trim());
+    if(p.length-this.SHOW<2) return p.join('\n');   // one more is shown, not folded
+    return p.slice(0,this.SHOW).join('\n')+
+      `<details class="road" id="roadMore"${this.open?' open':''} ontoggle="Road.open=this.open"><summary>＋ ${p.length-this.SHOW} more on the road</summary>${p.slice(this.SHOW).join('\n')}</details>`;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -10913,6 +10933,7 @@ const Battle = {
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
   begin(ri, fi, heroic, rival){
+    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     Gauntlet.meet(ri, fi, heroic || rival);   // any other fight breaks off a gauntlet run
@@ -12069,16 +12090,11 @@ const Battle = {
         ${Letters.card(letter)}
         ${Gauntlet.button(gnt)}
         ${NextFight.html(nx)}
-        ${Scout.html(nx)}
-        ${Wayfarer.html(way)}
-        ${Campfire.html(this)}
-        ${Peddler.html(pd)}
-        ${Dicer.html(dc)}
+        ${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
-        <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         ${Rival.offer(this)}
         ${Heroic.button(this)}
-        <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
+        <div class="btnRow" id="winRow"><button class="btn" id="againBtn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills

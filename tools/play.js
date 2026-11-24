@@ -283,6 +283,7 @@ const SUITES = [
   require('./play/nameplate'),   // a long foe nameplate keeps the health on a phone's screen
   require('./play/ware'),        // the Smithy compares each piece with what is worn
   require('./play/skillset'),    // Gear folds the skills with no use yet
+  require('./play/road'),        // a win's road shows two and folds the rest
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

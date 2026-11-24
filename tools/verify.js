@@ -3959,7 +3959,7 @@ const campNotes = (() => {
   }
   // the wiring
   want(html.includes("      ? {key:this.cur.key, diff:this.curDiff} : null;\n    if(!ok) Campfire.note(this);") && html.split('Campfire.note(').length === 2, 'noted', 'a slip is not noted on a miss alone');
-  want(html.includes('${Campfire.html(this)}'), 'card', 'the card does not offer the camp');
+  want(html.includes('Campfire.html(this)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'card', 'the card does not offer the camp');
   const ans = src.slice(src.indexOf('  answer('));
   want(ans.includes('this.cur=null;     // one question, one rest') && ans.includes('Game.recordAnswer(q.key, ok, 1);')
     && /if\(ok\)\{\s*const n=this\.mend\(\); g\.hp=Math\.min\(g\.maxHp, g\.hp\+n\);\s*this\.slips=this\.slips\.filter\(x=>x\.key!==s\.key\);/.test(ans)
@@ -4290,7 +4290,7 @@ const peddlerNotes = (() => {
   want(P.buy(null, 'nonsense', 1, 3) === false && P.html(null) === '', 'none', 'the peddler sells what the shop does not');
   // the wiring
   want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
-  want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  want(html.includes('Campfire.html(this), Peddler.html(pd)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])') && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
   return checks;
 })();
 
@@ -4372,7 +4372,7 @@ const dicerNotes = (() => {
   }
   // the wiring
   want(html.includes("    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones\n    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, this);"), 'meet', 'the dicer is not met on a counted victory, with the purse the card counts');
-  want(html.includes("        ${Peddler.html(pd)}\n        ${Dicer.html(dc)}\n") && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
+  want(html.includes('Peddler.html(pd), Dicer.html(dc)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])') && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
   return checks;
 })();
 
@@ -4786,6 +4786,38 @@ const skillsetNotes = (() => {
     && html.includes('${Skillset.work(shaky)}') && html.includes('weak? Skillset.work(weak) :') && html.includes("${weak?Skillset.work(weak):keys.length+' topics'}")
     && !/\+' need work'/.test(html) && !html.includes('${shaky} need work'), 'wired', 'Gear does not fold its skills, or a count still reads "1 need work"');
   want(html.includes('details.skillRest>summary{list-style:none;') && !/Game\.s\.skillRest|g\.skillRest/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const roadNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Road = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('road', key, msg); };
+  const R = new Function(src + ';return Road;')();
+  // every mix of five offers, each there or empty, folded or opened
+  for (let m = 0; m < 32; m++) for (const open of [false, true]) for (const blank of ['', '  ', null, undefined]) {
+    R.open = open;
+    const parts = [0, 1, 2, 3, 4].map(i => (m >> i) & 1 ? '<div id="o' + i + '">' + i + '</div>' : blank);
+    const real = parts.filter(x => x && String(x).trim()), h = R.group(parts);
+    want(real.every(x => h.split(x).length === 2), 'all ' + m, 'an offer is dropped or drawn twice');
+    want(!/undefined|null/.test(h), 'blank ' + m, 'an empty offer is drawn as text');
+    if (real.length - R.SHOW < 2) { want(h === real.join('\n') && !h.includes('<details'), 'whole ' + m, 'a road of three or fewer is folded'); continue; }
+    const d = h.indexOf('<details');
+    want(h.slice(0, d) === real.slice(0, R.SHOW).join('\n'), 'first ' + m, 'the first two offers are not the ones in view');
+    want(h.slice(d).includes(real.slice(R.SHOW).join('\n')), 'rest ' + m, 'a folded offer is out of order or missing');
+    want(h.includes('<summary>＋ ' + (real.length - R.SHOW) + ' more on the road</summary>'), 'count ' + m, 'the fold does not count what is behind it');
+    want(h.includes('ontoggle="Road.open=this.open"') && h.includes('id="roadMore" open ') === open, 'open ' + m, 'the fold does not stay as it was left');
+  }
+  want(R.group() === '' && R.group([]) === '', 'none', 'a road with no one on it draws something');
+  R.open = false;
+  want(html.includes('${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}')
+    && !/\n\s*\$\{Scout\.html\(nx\)\}\n/.test(html), 'wired', 'the victory card stacks its road offers unfolded');
+  want(/begin\(ri, fi, heroic, rival\)\{\n\s*if\(typeof Road!=='undefined'\) Road\.open=false;/.test(html), 'reset', 'a new fight keeps the last road opened');
+  want(html.includes('<div class="btnRow" id="winRow"><button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
+    && !html.includes('🏪 Visit the Smithy'), 'row', 'Fight again and the Smithy are not one row');
+  want(html.includes('.btnRow{display:flex;gap:8px}') && html.includes('.btnRow>.btn{flex:1 1 0;min-width:0;'), 'css', 'the button row does not share its width');
+  want(html.includes('details.road>summary{list-style:none;') && !/Game\.s\.road|g\.roadOpen/.test(html), 'saved', 'the fold shows its marker, or is saved');
   return checks;
 })();
 const haulNotes = (() => {
@@ -5475,7 +5507,7 @@ const wayNotes = (() => {
     }
   }
   // the wiring
-  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('${Wayfarer.html(way)}'), 'wired', 'a victory does not roll or show a wayfarer');
+  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'wired', 'a victory does not roll or show a wayfarer');
   const ans = src.slice(src.indexOf('  answer('));
   want(ans.includes('this.cur=null;     // one question, one prize') && ans.includes('Game.recordAnswer(q.key, ok, 1);') && ans.includes('if(ok){ w.kind.give(w);') && !/else[^;]*give/.test(ans), 'answer', 'a meeting pays twice, is not counted, or pays a miss');
   const ask = src.slice(src.indexOf('  ask('), src.indexOf('  answer('));
@@ -5538,7 +5570,7 @@ const scoutNotes = (() => {
   want(S.intro({ nm: 'Imp' }).includes('scouted Imp') && S.intro({ nm: 'Imp' }).includes('×2'), 'intro', S.intro({ nm: 'Imp' }));
   // the wiring
   want(html.includes('this.prepared=Scout.spend(this); // a foe scouted first is fought prepared'), 'start', 'a fight does not spend the scouting');
-  want(html.includes('else if(this.prepared) UI.toast(Scout.intro(f));') && html.includes('${Scout.html(nx)}'), 'said', 'the scouting is not offered or told');
+  want(html.includes('else if(this.prepared) UI.toast(Scout.intro(f));') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'said', 'the scouting is not offered or told');
   const ans = src.slice(src.indexOf('  answer('), src.indexOf('  spend('));
   want(ans.includes('Game.recordAnswer(q.key, ok, 1);') && /if\(ok\)\{\s*this\.at=\{ri:this\.ri, fi:this\.fi\};/.test(ans) && !/else[\s\S]*this\.at=/.test(ans), 'answer', 'scouting is not counted, or a miss prepares the knight');
   const op = src.slice(src.indexOf('  open('), src.indexOf('  ask('));
@@ -29038,6 +29070,7 @@ console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)
 console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 10)}  (a long foe nameplate wraps in its own half of the bars, and the health beside it stays whole and on the screen)`);
 console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)}  (each piece in the Smithy says what it adds over what is worn, and the dear ones wait behind a fold)`);
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
+console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

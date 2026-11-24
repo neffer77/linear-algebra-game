@@ -1,68 +1,75 @@
 {
-  "change": "A shorter skills list: Gear folds the skills with no use yet behind one counted line, and one topic needs work",
+  "change": "A shorter victory card: the road's offers past the first two fold behind one counted line; Fight again and Smithy share a row",
   "mutations": [
     {
-      "name": "a carried skill folded",
+      "name": "a road of three folded",
       "file": "index.html",
-      "find": "    const shown=rows.filter(r=>r.on||r.n>0), rest=rows.filter(r=>!(r.on||r.n>0));",
-      "replace": "    const shown=rows.filter(r=>r.n>0), rest=rows.filter(r=>!(r.n>0));",
+      "find": "    if(p.length-this.SHOW<2) return p.join('\\n');   // one more is shown, not folded",
+      "replace": "    if(p.length-this.SHOW<1) return p.join('\\n');   // one more is shown, not folded",
       "run": "verify"
     },
     {
-      "name": "a lone skill folded",
+      "name": "three in view",
       "file": "index.html",
-      "find": "    if(rest.length<2) return rows.map(r=>r.html).join('');",
-      "replace": "    if(rest.length<1) return rows.map(r=>r.html).join('');",
+      "find": "    return p.slice(0,this.SHOW).join('\\n')+",
+      "replace": "    return p.slice(0,this.SHOW+1).join('\\n')+",
+      "run": "verify"
+    },
+    {
+      "name": "an empty offer counted",
+      "file": "index.html",
+      "find": "    const p=(parts||[]).filter(x=>x&&String(x).trim());",
+      "replace": "    const p=(parts||[]).filter(x=>x!==null);",
       "run": "verify"
     },
     {
       "name": "the fold forgets it was opened",
       "file": "index.html",
-      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"skillRest\" ontoggle",
+      "find": "id=\"roadMore\"${this.open?' open':''} ontoggle",
+      "replace": "id=\"roadMore\" ontoggle",
       "run": "verify"
     },
     {
-      "name": "the folded count wrong",
+      "name": "a new fight keeps the road open",
       "file": "index.html",
-      "find": "<summary>＋ ${rest.length} more skills",
-      "replace": "<summary>＋ ${rows.length} more skills",
+      "find": "    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "one topic need work",
+      "name": "the victory card stacks its road",
       "file": "index.html",
-      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
-      "replace": "  work(k){ return k+' need work'; }",
+      "find": "        ${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}",
+      "replace": "        ${[Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)].join('')}",
       "run": "verify"
     },
     {
-      "name": "Gear does not fold",
+      "name": "the buttons stacked again",
       "file": "index.html",
-      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
-      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
+      "find": ".btnRow{display:flex;gap:8px}",
+      "replace": ".btnRow{display:block}",
       "run": "verify"
     },
     {
-      "name": "Gear does not fold, seen in play",
+      "name": "the road does not fold, seen in play",
       "file": "index.html",
-      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
-      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
-      "run": "play:skillset"
+      "find": "    if(p.length-this.SHOW<2) return p.join('\\n');   // one more is shown, not folded",
+      "replace": "    if(p.length) return p.join('\\n');",
+      "run": "play:road"
     },
     {
-      "name": "the fold forgets, seen in play",
+      "name": "the buttons stacked, seen in play",
       "file": "index.html",
-      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"skillRest\" ontoggle",
-      "run": "play:skillset"
+      "find": ".btnRow{display:flex;gap:8px}",
+      "replace": ".btnRow{display:block}",
+      "run": "play:road"
     },
     {
-      "name": "one topic need work, seen in play",
+      "name": "the next road stays open, seen in play",
       "file": "index.html",
-      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
-      "replace": "  work(k){ return k+' need work'; }",
-      "run": "play:skillset"
+      "find": "    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded\n",
+      "replace": "",
+      "run": "play:road"
     }
   ]
 }
