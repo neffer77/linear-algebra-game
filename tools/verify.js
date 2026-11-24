@@ -3284,6 +3284,57 @@ const quarryNotes = (() => {
   return checks;
 })();
 
+/* A parry: five right in a row earn one, and the next blow a miss would land
+   is turned away. Worked over streaks of every length in every mode: a parry
+   is earned at five, ten, fifteen and on and never at any other streak, one
+   at a time, never in the daily or a rite; it turns away one blow and is
+   gone; it is said beside the streak while held, and the explanation says a
+   miss was parried. The fight's wiring is checked where the game uses it. */
+const parryNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Parry = {'), html.indexOf('const SecondWind = {'));
+  const env = { floats: [], toasts: [] };
+  const P = new Function('Anim', 'UI', 'H', src + ';return Parry;')(
+    { float: (x, y, t) => env.floats.push(t) }, { toast: t => env.toasts.push(t) }, 600);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('parry', key, msg); };
+  for (const mode of ['campaign', 'arena', 'dungeon', 'daily']) for (const rite of [null, { steps: [] }]) {
+    const B = { mode, rite, combo: 0, parry: false, parryTold: false, parried: false };
+    const on = mode !== 'daily' && !rite;
+    let earned = 0, m = false;
+    for (let c = 1; c <= 40; c++) {
+      B.combo = c;
+      const got = P.earn(B), wanted = on && !m && c % 5 === 0;
+      want(got === wanted, `earn ${mode} ${!!rite} ${c} ${m}`, `earned ${got}`);
+      if (wanted) { m = true; earned++; }
+      want(B.parry === m, `held ${mode} ${!!rite} ${c}`, `parry ${B.parry}`);
+      want(P.tag(B) === (m ? '  ·  🛡️ parry ready' : ''), `tag ${mode} ${c}`, P.tag(B));
+      if (c % 10 === 0) {   // a miss's blow, every so often: turned away once, then not
+        B.parried = false;
+        want(P.turn(B) === m && B.parry === false && B.parried === m, `turn ${mode} ${!!rite} ${c}`, 'the blow is not turned away, or is with no parry');
+        m = false; B.parried = false;
+        want(P.turn(B) === false && B.parried === false, `once ${mode} ${c}`, 'a second blow is turned away too');
+      }
+    }
+    want(earned === (on ? 4 : 0), `count ${mode} ${!!rite}`, `${earned} parries in a streak of forty with four blows`);
+  }
+  want(env.toasts.length === 3, 'told', `the parry was told ${env.toasts.length} times in three fights that earned one`);
+  env.toasts.length = 0;
+  const B = { mode: 'campaign', rite: null, combo: 5, parry: false, parryTold: false };
+  P.earn(B); B.parry = false; B.combo = 10; P.earn(B);
+  want(env.toasts.length === 1 && env.toasts[0].includes('parried'), 'toast', 'a parry is not told once a fight: ' + env.toasts.join(' | '));
+  want(P.line(true).includes('id="parryLine"') && P.line(true).includes('Parried') && P.line(false) === '', 'line', 'the explanation does not say the parry');
+  want(env.floats.includes('PARRY READY') && env.floats.includes('PARRIED'), 'floats', 'the scene does not say the parry');
+  const take = html.slice(html.indexOf('  takeHit(raw){'), html.indexOf('  useSkill(id){'));
+  want(take.indexOf('if(Parry.turn(this)) return 0;') > take.indexOf('this.beastLeft--') && take.indexOf('if(Parry.turn(this)) return 0;') < take.indexOf('if(this.wardUp)'), 'take', 'a miss\'s blow is not parried, or a ward is spent first');
+  want(html.includes('this.runBest=Math.max(this.runBest||0,this.combo);\n      Parry.earn(this);'), 'earned', 'a right answer does not earn the parry');
+  want(html.includes('this.parry=false; this.parryTold=false; this.parried=false;'), 'start', 'a fight starts with the last fight\'s parry');
+  want(html.includes('this.lastRiposte=false; this.lastCoup=false; this.parried=false;'), 'reset', 'a parry is said again on the next answer');
+  want(html.includes('Parry.line(!inRite && this.parried)+'), 'said', 'the explanation does not say the parry');
+  want(html.includes('streak ${this.combo}`+Parry.tag(this);'), 'shown', 'the parry is not shown beside the streak');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -24899,6 +24950,7 @@ console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)
 console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
 console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10)}  (the first win at S on a foe pays its gold once more and says so, worked for every grade a clear can hold, never twice, in the campaign only)`);
 console.log(`  today's quarry checked     ${pad(quarryNotes.toLocaleString(), 10)}  (one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win, full gold, said on the card and the map)`);
+console.log(`  parries checked            ${pad(parryNotes.toLocaleString(), 10)}  (a parry at five, ten, fifteen and on, never otherwise, one at a time, never in the daily or a rite; one blow turned away; shown beside the streak and said on the scene and in the explanation; told once a fight)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
