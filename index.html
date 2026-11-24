@@ -9247,6 +9247,26 @@ const Overkill = {
   line(over, n){ return n ? `<div id="overLine" style="color:#ff8a80;font-weight:800;margin-top:6px">💥 Overkill: ${over} past its last health, +${n} gold.</div>` : ''; }
 };
 
+/* A greedy foe. Now and then a foe already beaten comes back greedy, with a
+   purse three times as fat, and flees after six questions if it still
+   stands. The scene says so as it arrives and counts the questions above
+   each one, and a victory over it says the purse is yours. A greedy foe that
+   gets away takes nothing from you: no fall, no lost streak of victories.
+   An elite or a boss is never greedy. Nothing is saved: greed is the fight's. */
+const Greedy = {
+  CHANCE: 0.1, LEAVE: 6, MUL: 3,
+  roll(foe, beaten){
+    if(!foe || !beaten || foe.elite || foe.boss || !R.chance(this.CHANCE)) return foe;
+    return Object.assign({}, foe, {gold:Math.round(foe.gold*this.MUL), greedy:true});
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.greedy); },
+  gone(B){ return this.on(B) && !B.over && B.ehp>0 && (B.asked||0)>=this.LEAVE; },
+  intro(f){ return `💰 A greedy ${f.nm}, its purse three times as fat. Fell it within ${this.LEAVE} questions or it flees!`; },
+  tele(B){ return `<span id="greedyTele" style="color:#ffd36b">💰 <b>Greedy:</b> question ${B.asked} of ${this.LEAVE} before ${B.foe.nm} flees.</span>`; },
+  fled(nm){ return `💰 The greedy ${nm} slips away with its purse. It costs you nothing, and it will be back.`; },
+  line(B){ return this.on(B) ? `<div id="greedyWon" style="color:#ffd36b;font-weight:800;margin-top:6px">💰 You caught the greedy ${B.foe.nm} before it fled: its fat purse is yours.</div>` : ''; }
+};
+
 /* An oath. Before the first answer of a campaign fight the knight may swear
    to win it with no miss. Kept, the victory pays half again the gold and a
    sure chest, an epic find at the least. Broken by any miss, the oath costs
@@ -9505,7 +9525,9 @@ const Battle = {
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     // A foe already beaten here may come back as an elite with one twist.
-    this._start(Elite.roll(this.realm.foes[fi], !!(Game.s && Game.s.cleared[ri+':'+fi])));
+    // ...or, not an elite, as a greedy foe with a fat purse that flees.
+    const beaten=!!(Game.s && Game.s.cleared[ri+':'+fi]);
+    this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
   },
   beginDaily(){
     this.mode='daily';
@@ -9562,6 +9584,7 @@ const Battle = {
     this.overkill=0; this.low=false;   // nor any comeback
     this.gilded=false; this.gildGold=0;   // nor any gilded question
     this.sworn=false; this.oathBroken=false;   // nor any oath
+    this.asked=0;   // questions asked this fight, which a greedy foe counts
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9573,6 +9596,7 @@ const Battle = {
     this.nextQuestion();
     Talk.say('meet');
     if(f.elite) UI.toast(Elite.intro(f));
+    else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
   },
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
@@ -9599,7 +9623,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
@@ -9755,6 +9779,8 @@ const Battle = {
 
   nextQuestion(){
     if(this.over) return;
+    if(Greedy.gone(this)){ this.escape(); return; }
+    this.asked=(this.asked||0)+1;
     this.answered=false;
     this.shownWork=false;
     this.nudged=null;
@@ -9818,6 +9844,7 @@ const Battle = {
       tg.style.display='block';
     }
     if(this.standing){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+SecondWind.tele(); tg.style.display='block'; }
+    if(Greedy.on(this)){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+Greedy.tele(this); tg.style.display='block'; }
     this.gilded=Gild.roll(this);
     if(this.gilded){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+Gild.tele(Gild.worth(this.foe)); tg.style.display='block'; }
     this.renderStep();
@@ -10576,6 +10603,7 @@ const Battle = {
           ${Sitting.freshLine(fXp)}
           ${Gild.line(this.gildGold)}
           ${Oath.line(vGold)}
+          ${Greedy.line(this)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10653,6 +10681,13 @@ const Battle = {
      that is offered first, priced, and the plain retry says what it starts at. */
   restAgain(){ if(Game.rest()) this.begin(this.ri,this.fi); },
 
+  // a greedy foe gets away: the fight ends with nothing lost
+  escape(){
+    const nm=this.foe.nm;
+    clearInterval(this.timer); this.over='escape'; Anim.stop(); this.tension(1); Talk.hide();
+    UI.go('s-map');
+    UI.toast(Greedy.fled(nm));
+  },
   flee(){
     const live=!this.over;
     clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1); Talk.hide();
