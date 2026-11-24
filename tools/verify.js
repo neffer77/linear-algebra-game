@@ -3746,6 +3746,57 @@ const freshNotes = (() => {
   return checks;
 })();
 
+/* A gilded question: now and then a campaign question comes gilded and pays
+   a fifth of the foe's gold when answered right. Worked over a long run of
+   questions in every mode: only a fresh campaign question is gilded, at about
+   one in eight; the gold is at least one coin and a fifth of the foe's, paid
+   once into the purse and the fight's count; the telegraph and the card say
+   it; and the battle wires it in where a question is asked and answered. */
+const gildNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Gild = {'), html.indexOf('/* A parry.'));
+  let seed = 71;   // mulberry32
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const Game = { s: { gold: 0 } }, floats = [];
+  const G = new Function('R', 'Game', 'Anim', 'Sfx', 'H', src + ';return Gild;')(
+    { chance: p => rnd() < p }, Game, { float: (x, y, t) => floats.push(t) }, { coin() {} }, 800);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('gild', key, msg); };
+  const modes = ['campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  let fresh = 0, gilt = 0;
+  for (let step = 0; step < 20000; step++) {
+    const B = { mode: modes[step % 5], cur: step % 7 ? { redo: step % 3 === 0 } : null };
+    const on = G.roll(B);
+    const may = B.mode === 'campaign' && !!B.cur && !B.cur.redo;
+    if (may) { fresh++; if (on) gilt++; }
+    want(may || on === false, `roll ${step}`, `a ${B.mode} question${B.cur && B.cur.redo ? ' asked again' : ''} was gilded`);
+  }
+  want(gilt > fresh * 0.1 && gilt < fresh * 0.15, 'odds', `${gilt} of ${fresh} fresh questions gilded`);
+  want(G.roll(null) === false, 'none', 'no fight is gilded');
+  for (let gold = 0; gold <= 600; gold++) {
+    const n = G.worth({ gold });
+    want(n === Math.max(1, Math.round(gold / 5)), `worth ${gold}`, `a ${gold}-gold foe's gilding is worth ${n}`);
+    want(G.tele(n).includes('id="gildTele"') && G.tele(n).includes(`for ${n} gold`), `tele ${gold}`, G.tele(n));
+  }
+  for (let step = 0; step < 3000; step++) {
+    const B = { foe: { gold: Math.floor(rnd() * 400) }, gilded: rnd() < 0.5, gildGold: Math.floor(rnd() * 50) };
+    const was = Game.s.gold, had = B.gildGold, gilded = B.gilded, n = G.pay(B);
+    const w = gilded ? G.worth(B.foe) : 0;
+    want(n === w && Game.s.gold === was + w && B.gildGold === had + w && B.gilded === false, `pay ${step}`, `paid ${n} of ${w}; purse ${Game.s.gold - was}, fight ${B.gildGold - had}`);
+    want(G.pay(B) === 0 && Game.s.gold === was + w, `once ${step}`, 'a gilded question paid twice');
+    const l = G.line(B.gildGold);
+    want(B.gildGold > 0 ? l.includes('id="gildWon"') && l.includes(`paid you ${B.gildGold} gold`) : l === '', `line ${step}`, l);
+  }
+  want(G.pay(null) === 0 && floats.length > 0 && floats.every(f => /^\+\d+ GOLD$/.test(f)), 'float', floats.slice(0, 3).join());
+  want(html.includes("this.gilded=false; this.gildGold=0;   // nor any gilded question"), 'reset', 'a fight starts with the last one\'s gilding');
+  want(html.includes("    this.gilded=Gild.roll(this);\n    if(this.gilded){ tg.innerHTML="), 'asked', 'a question is not gilded as it is asked');
+  const ok = html.indexOf('    if(ok){\n      this.combo++;');
+  want(ok > 0 && html.indexOf('      Satchel.add(this);\n      Gild.pay(this);') > ok && html.indexOf('      Satchel.add(this);\n      Gild.pay(this);') < html.indexOf('} else if(this.shownWork){', ok), 'paid', 'a right answer does not pay the gilding');
+  want(html.includes('${Gild.line(this.gildGold)}'), 'card', 'the card does not say what the gilding paid');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -25371,6 +25422,7 @@ console.log(`  comebacks checked          ${pad(comebackNotes.toLocaleString(), 
 console.log(`  sitting tallies checked    ${pad(sittingNotes.toLocaleString(), 10)}  (the campaign's victories, their gold with every bonus and the best streak this sitting; nothing shown before the first victory)`);
 console.log(`  sitting milestones checked ${pad(mileNotes.toLocaleString(), 10)}  (every fifth campaign victory of a sitting and no other; the next one named on the map; the card's 1st, 2nd, 3rd and 11th; a sure chest, a rare find at the least)`);
 console.log(`  welcome backs checked      ${pad(freshNotes.toLocaleString(), 10)}  (the first campaign victory of a sitting and no other, not an arena, daily or dungeon win before it; double experience, gained, said and counted)`);
+console.log(`  gilded questions checked   ${pad(gildNotes.toLocaleString(), 10)}  (fresh campaign questions only, about one in eight; a fifth of the foe's gold and at least a coin, paid once on a right answer into the purse and the fight's count; told above the question and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
