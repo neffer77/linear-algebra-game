@@ -50,6 +50,8 @@ module.exports = {
   async run(t) {
     await t.newKnight('Ada');
     const keys = await t.ev(() => Object.keys(Game.s).sort().join());
+    // today's quarry pays a beaten foe its full gold, which these sums leave out
+    await t.ev(() => { window.__quarry = Quarry.of; Quarry.of = () => null; });
 
     // --- who comes back as an elite ---
     const dice = await t.ev(() => {
@@ -130,6 +132,6 @@ module.exports = {
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));
     t.eq('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()), keys);
-    await t.ev(() => { Elite.force = null; UI.go('s-title'); });
+    await t.ev(() => { Elite.force = null; Quarry.of = window.__quarry; UI.go('s-title'); });
   }
 };

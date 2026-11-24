@@ -9038,6 +9038,44 @@ const Saga = {
    falls. Three marks is an S, two an A, one a B and none a C. Nothing is
    saved: the grade is this fight's alone, and the line under it names the
    first mark still open, so the next try has one plain thing to aim at. */
+/* Today's quarry. Each day one foe already beaten, never a boss, is marked on
+   the map, and a win over it today pays its full gold, as the first win did,
+   where a foe beaten before pays a little under half. It is a reason to go back
+   to an old foe, and a new one each day. Nothing is saved: the day and the
+   clears decide it. Each beaten foe draws a number from the day, and the
+   lowest is the quarry, so clearing a new foe moves the quarry only when the
+   new foe itself draws lower. */
+const Quarry = {
+  draw(day, key){ let h=2166136261; for(const c of 'quarry '+day+' '+key){ h^=c.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; },
+  of(cleared, day, realms=REALMS){
+    let best=null, low=Infinity;
+    realms.forEach((r,ri)=>r.foes.forEach((f,fi)=>{
+      const key=ri+':'+fi;
+      if(f.boss || !cleared[key]) return;
+      const d=this.draw(day, key);
+      if(d<low){ low=d; best=key; }
+    }));
+    return best;
+  },
+  today(){ return Game.s ? this.of(Game.s.cleared, dayKey(new Date())) : null; },
+  tag(on){ return on ? '<span class="tag" id="quarryTag" style="color:var(--gold);border-color:var(--gold-dk)">🎯 today\'s quarry</span>' : ''; },
+  dt(on){ return on ? ' · <b style="color:var(--gold)">full gold today</b>' : ''; },
+  // a place at the head of the campaign, since the quarry's realm is often folded away
+  node(key, realms=REALMS){
+    if(!key) return '';
+    const [ri,fi]=key.split(':').map(Number), r=realms[ri], f=r.foes[fi];
+    return `<div class="node" id="quarryNode" style="margin:0 0 8px;border-color:var(--gold-dk)" onclick="Battle.begin(${ri},${fi})">
+        <div class="ico" style="font-size:24px">🎯</div>
+        <div style="flex:1">
+          <div class="nm">Today's quarry: ${f.nm}</div>
+          <div class="dt">${r.nm} · a win today pays its full 🪙 ${f.gold}, as the first did</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>`;
+  },
+  line(on){ return on ? `<div id="quarryWon" style="color:var(--gold);font-weight:800;margin-top:6px">🎯 Today's quarry: its full gold, as on the first win.</div>` : ''; }
+};
+
 const Grade = {
   LET: ['C','B','A','S'],
   COL: {S:'var(--gold)', A:'var(--green)', B:'var(--blue)', C:'var(--dim)'},
@@ -10221,13 +10259,15 @@ const Battle = {
     const g=Game.s;
     const key=this.ri+':'+this.fi;
     const had=g.cleared[key], first=!had;
+    // today's quarry is read from the clears before this win
+    const quarry=this.mode==='campaign' && !first && Quarry.of(g.cleared, dayKey(new Date()))===key;
     // whether the realm was crowned is read before this win marks its clear
     const nfoes=this.realm.foes.length, wasCrowned=Grade.crowned(g.cleared, this.ri, nfoes);
     g.cleared[key]=true; g.stats.wins++;
     Bounty.bump('wins',1);
     if(this.missed===0) Bounty.bump('flaw',1);
-    // An elite pays like a first clear, and always drops a chest.
-    const full=first || !!this.foe.elite;
+    // An elite pays like a first clear, and always drops a chest; so does today's quarry, without the chest.
+    const full=first || !!this.foe.elite || quarry;
     // A second phase got through without a miss pays a quarter more gold.
     // Victories in a row this sitting pay a tenth more each, up to half again.
     const wp=this.mode==='campaign' ? WarPath.won() : 1;
@@ -10266,6 +10306,7 @@ const Battle = {
           ${WarPath.line()}
           ${Grade.sLine(sGold)}
           ${Overkill.line(over, oGold)}
+          ${Quarry.line(quarry && !this.foe.elite)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -15746,7 +15787,9 @@ const UI = {
      only the realm being worked through left open. Every fight is still on
      the page; tapping a place on the road opens its realm and goes to it. */
     const ahead=this.nextFoe(), cur = ahead ? ahead.ri : REALMS.length-1;
-    let realms=this.realmPath(cur);
+    const quarry=Quarry.today();
+    // today's quarry heads the campaign, above the road
+    let realms=Quarry.node(quarry)+this.realmPath(cur);
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
@@ -15763,8 +15806,8 @@ const UI = {
         realms+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
           <div class="ico" style="font-size:24px">${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}</div>
-            <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}</div>
+            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}</div>
+            <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}${Quarry.dt(quarry===ri+':'+fi)}</div>
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;
