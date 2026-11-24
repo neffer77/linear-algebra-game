@@ -9247,6 +9247,29 @@ const Overkill = {
   line(over, n){ return n ? `<div id="overLine" style="color:#ff8a80;font-weight:800;margin-top:6px">💥 Overkill: ${over} past its last health, +${n} gold.</div>` : ''; }
 };
 
+/* A gilded question. Now and then a campaign question comes gilded, said
+   above it before you answer. Answer it right and it pays gold on the spot,
+   a fifth of the foe's gold, with a shower of coins; a miss costs nothing
+   but the gilding. The victory card says what the fight's gilded questions
+   paid. A question asked again after a miss is never gilded, so the gold is
+   for working it out the first time. The daily, the arena and the dungeon
+   keep their own rewards. Nothing is saved: the gilding is the question's. */
+const Gild = {
+  CHANCE: 0.125, MUL: 0.2,
+  roll(B){ return !!(B && B.mode==='campaign' && B.cur && !B.cur.redo && R.chance(this.CHANCE)); },
+  worth(foe){ return Math.max(1, Math.round(((foe && foe.gold)||0)*this.MUL)); },
+  tele(n){ return `<span id="gildTele" style="color:#ffd36b">🪙 <b>A gilded question:</b> answer it right for ${n} gold.</span>`; },
+  pay(B){
+    if(!B || !B.gilded) return 0;
+    const n=this.worth(B.foe);
+    B.gilded=false; B.gildGold=(B.gildGold||0)+n; Game.s.gold+=n;
+    Anim.float(220, H-370, '+'+n+' GOLD', '#ffd36b', true);
+    for(let i=0;i<3;i++) Sfx.coin(i);
+    return n;
+  },
+  line(n){ return n>0 ? `<div id="gildWon" style="color:#ffd36b;font-weight:800;margin-top:6px">🪙 The fight's gilded questions paid you ${n} gold as you answered.</div>` : ''; }
+};
+
 /* A parry. Five right answers in a row earn a parry, shown beside the streak,
    and the next blow a miss would land is turned away and costs no health. The
    miss still breaks the streak, so the parry is earned again from nothing. One
@@ -9506,6 +9529,7 @@ const Battle = {
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
     this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
     this.overkill=0; this.low=false;   // nor any comeback
+    this.gilded=false; this.gildGold=0;   // nor any gilded question
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9760,6 +9784,8 @@ const Battle = {
       tg.style.display='block';
     }
     if(this.standing){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+SecondWind.tele(); tg.style.display='block'; }
+    this.gilded=Gild.roll(this);
+    if(this.gilded){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+Gild.tele(Gild.worth(this.foe)); tg.style.display='block'; }
     this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
@@ -10074,6 +10100,7 @@ const Battle = {
       this.runBest=Math.max(this.runBest||0,this.combo);
       Parry.earn(this);
       Satchel.add(this);
+      Gild.pay(this);
       if(owed && this.cur.redo){
         this.recovered=Recover.heal(owed);
         if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
@@ -10509,6 +10536,7 @@ const Battle = {
           ${Comeback.line(cGold)}
           ${Sitting.line(mile)}
           ${Sitting.freshLine(fXp)}
+          ${Gild.line(this.gildGold)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
