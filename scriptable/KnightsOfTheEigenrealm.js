@@ -7373,6 +7373,18 @@ const Arms = {
   plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; }
 };
 
+/* A blade aflame. A streak shows on the knight: from five right answers in
+   a row the blade burns, and hotter at six and at seven, where the streak's
+   blow stops growing, so the fire says the streak is worth keeping and
+   a miss puts it out. Drawn only in a fight; nothing is saved. */
+const Flame = {
+  of(B){
+    const c=B && B.combo|0;
+    if(c<5) return null;
+    return c>=7 ? {col:'#ff5d2d', blur:20} : c===6 ? {col:'#ff7a33', blur:15} : {col:'#ff9c3d', blur:10};
+  }
+};
+
 /* --- knight (the player) --- */
 function drawKnight(x,y,s,lunge,hurt,dead){
   cx.save();
@@ -7445,6 +7457,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   const tip=-10-blade.len, g=cx.createLinearGradient(0,tip+4,0,-8);
   g.addColorStop(0,blade.top); g.addColorStop(.5,hon.glow?'#fff1c2':blade.mid); g.addColorStop(1,hon.glow?'#e9c46a':blade.low);
   if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }
+  const fire=Flame.of(Battle);   // a streak sets the blade burning
+  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }
   setFill(g);
   cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,tip+10); cx.lineTo(0,tip); cx.lineTo(-4,tip+10); cx.closePath(); cx.fill();
   cx.restore();

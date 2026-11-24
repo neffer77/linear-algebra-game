@@ -4,7 +4,7 @@
  * own length and steel and each armour its own plate. These checks open a
  * real fight on a phone, read the frame's own calls, and count the gold of
  * the best blade and plate on the scene against the starting gear's.
- * Nothing new is saved.
+ * A streak of five or more sets the blade burning. Nothing new is saved.
  */
 'use strict';
 
@@ -50,6 +50,15 @@ module.exports = {
     t.ok('and they show: the long gold blade and the gold plate cover far more of the scene in gold', best.gold > start.gold + 300, JSON.stringify([start.gold, best.gold]));
     const plate = await look(t, 'w0', 'a8');
     t.ok('the regalia alone shows in gold too', plate.gold > start.gold + 150 && plate.gold < best.gold, JSON.stringify([start.gold, plate.gold, best.gold]));
+    // a streak of seven sets the blade burning, and a miss puts it out
+    const burn = async (combo) => {
+      await t.ev((combo) => { Battle.combo = combo; window.__fl = []; const f = Flame.of; window.__flFn = f;
+        Flame.of = B => { const r = f.call(Flame, B); window.__fl.push(r ? r.blur : 0); return r; }; }, combo);
+      await sleep(500);
+      return t.ev(() => { Flame.of = window.__flFn; return [...new Set(window.__fl)]; });
+    };
+    const hot = await burn(7), cold = await burn(0);
+    t.ok('a streak of seven sets the drawn blade burning, and none leaves it cold', hot.length === 1 && hot[0] === 20 && cold.join() === '0', JSON.stringify([hot, cold]));
     await t.ev(() => { Battle.flee(); UI.go('s-map'); });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
   }
