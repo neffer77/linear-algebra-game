@@ -864,6 +864,11 @@ The game is built so that losing teaches you as much as winning.
   under it a line of its own mathematics, the Vector Wyrm's coils that point every way and add up to nowhere
   or the Eigen Dragon's fire that runs along its own lines and no others, so the fight that ends a realm opens
   like one and the line is a hint of how to beat it. Campaign bosses only; nothing is saved.
+- **🗡️ The reckoning.** Under every open fight on the map, two numbers worked from the ones above them:
+  how many plain blows of your weapon fell the foe (its health over your blade's blow, rounded up) and how many
+  of its blows would fell you as you stand (your health over its blow through your armour). Hover or hold to see
+  the sum. A streak, speed and criticals make a fight shorter; the line turns red when you would fall first,
+  which is the cue to rest or buy a better blade. Nothing is saved.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
@@ -3458,6 +3463,7 @@ Inside `index.html` the code is organised as:
 | `Hearth` | the day streak paying the first campaign victory of a sitting a tenth more gold a day, up to seven, in no other mode and on no later victory; counted in on the card and in the sitting's tally; what the card and the title say; the wiring |
 | `Letters` | one letter for every tenth victory, eight in all, each a few plain sentences; a draught tucked in each; what the victory card and the Saga page say, with when the next arrives; the wiring |
 | `Herald` | every realm boss with a line of its own, eight and none alike; announced in the campaign only and never for a foe that is not a boss, by name in capitals and in its own colour, with a sound; once, as the fight opens; the wiring |
+| `Reckon` | for every foe, weapon, armour, rune and health, the plain blows that fell the foe and the foe's blows that fell the knight, each the least whole number that covers the health; the words, the sum in its title and red where the knight falls first; nothing for nothing; under open fights only; the wiring |
 | `Sky` | each realm's sky rolled once and kept for the sitting, plain with no chance of an omen; a gold moon, a fair wind and a mist, each one plain help of its own kind and none a cost; only in the campaign and its own realm; the foe's blow never under one health; a thousand sittings roll every omen and plain skies; what the map, the fight and the card say; the wiring |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |

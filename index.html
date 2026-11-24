@@ -8756,6 +8756,32 @@ const Talk = {
   }
 };
 
+/* A reckoning. Under every fight on the map that is open to the
+   knight, two numbers worked out of the ones above them: how many plain
+   blows of the knight's weapon fell the foe, its health divided by the
+   weapon's blow and rounded up, and how many of the foe's blows would fell
+   the knight as they stand now, their health divided by the foe's blow
+   through their armour, rounded up the same way. A plain blow has no
+   streak, no speed and no critical in it, so a good fight takes fewer; the
+   wind-up slam and a boss's second phase are left out, so a hard one can
+   take more. Its title shows the sum. It reads the save and writes nothing. */
+const Reckon = {
+  blow(){ return Math.max(1, Game.weapon().dmg); },
+  def(){ return Game.armor().def + Runes.def(); },
+  of(f, g){
+    if(!f || !g) return null;
+    const blow=this.blow(), hit=Combat.foeHit(f.atk, this.def(), 1), hp=Math.max(1, Math.round(g.hp));
+    return { blow, hit, hp, blows:Math.ceil(f.hp/blow), falls:Math.ceil(hp/hit) };
+  },
+  line(f, g){
+    const s=this.of(f, g);
+    if(!s) return '';
+    const tip=`${f.hp} ÷ ${s.blow} = ${(f.hp/s.blow).toFixed(1)}, so ${s.blows}; your ${s.hp} ÷ its ${s.hit} = ${(s.hp/s.hit).toFixed(1)}, so ${s.falls}`;
+    const risk=s.falls<=s.blows ? ' style="color:#ff8f6b"' : '';
+    return `<div class="dt reckon" data-blows="${s.blows}" data-falls="${s.falls}" title="${tip}"${risk}>🗡️ ${s.blows} plain ${s.blows===1?'blow fells':'blows fell'} it · 💔 ${s.falls} of its ${s.falls===1?'blow fells':'blows fell'} you</div>`;
+  }
+};
+
 /* A herald. A realm's boss is announced as it arrives: its name across the
    screen in its own colour, and under it what it is in its own mathematics,
    the same trick the Saga tells once it has fallen, so the fight that ends a
@@ -17201,6 +17227,7 @@ const UI = {
           <div style="flex:1">
             <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
             <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}${Quarry.dt(quarry===ri+':'+fi)}</div>
+            ${open?Reckon.line(f, g):''}
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;

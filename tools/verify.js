@@ -4454,6 +4454,40 @@ const letterNotes = (() => {
   return checks;
 })();
 
+const reckonNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Reckon = {');
+  const src = html.slice(start, html.indexOf('/* A herald.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('reckon', key, msg); };
+  const W = { dmg: 18 }, A = { def: 2 }, Rn = { d: 0 };
+  const Game = { weapon: () => W, armor: () => A }, Runes = { def: () => Rn.d };
+  const Combat = { foeHit(atk, def, j) { return Math.max(4, Math.round(atk * j - def)); } };
+  const S = new Function('Game', 'Runes', 'Combat', src + ';return Reckon;')(Game, Runes, Combat);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const foes = [...realms.matchAll(/\{nm:'([^']+)',\s*art:'[^']+',\s*hp:(\d+),\s*atk:(\d+)/g)].map(m => ({ nm: m[1], hp: +m[2], atk: +m[3] }));
+  want(foes.length === 32, 'foes', foes.length);
+  const weapons = [...html.slice(html.indexOf('const WEAPONS'), html.indexOf('];', html.indexOf('const WEAPONS'))).matchAll(/dmg:(\d+)/g)].map(m => +m[1]);
+  const armors = [...html.slice(html.indexOf('const ARMORS'), html.indexOf('];', html.indexOf('const ARMORS'))).matchAll(/def:(\d+)/g)].map(m => +m[1]);
+  want(weapons.length >= 3 && armors.length >= 3, 'gear', JSON.stringify([weapons, armors]));
+  for (const dmg of weapons) for (const def of armors) for (const rd of [0, 3]) for (const hp of [1, 37.4, 120, 999]) for (const f of foes) {
+    W.dmg = dmg; A.def = def; Rn.d = rd;
+    const g = { hp, maxHp: 1000 }, s = S.of(f, g), hit = Math.max(4, Math.round(f.atk - def - rd)), h = Math.max(1, Math.round(hp));
+    const blows = Math.ceil(f.hp / dmg), falls = Math.ceil(h / hit);
+    want(s.blow === dmg && s.hit === hit && s.hp === h && s.blows === blows && s.falls === falls
+      && (s.blows - 1) * dmg < f.hp && s.blows * dmg >= f.hp && (s.falls - 1) * hit < h && s.falls * hit >= h, 'reckon ' + [dmg, def, rd, hp, f.nm], JSON.stringify(s));
+    const l = S.line(f, g);
+    want(l.includes(`data-blows="${blows}"`) && l.includes(`data-falls="${falls}"`) && l.includes(`🗡️ ${blows} plain ${blows === 1 ? 'blow fells' : 'blows fell'} it`)
+      && l.includes(`💔 ${falls} of its ${falls === 1 ? 'blow fells' : 'blows fell'} you`)
+      && l.includes(`title="${f.hp} ÷ ${dmg} = ${(f.hp / dmg).toFixed(1)}, so ${blows}; your ${h} ÷ its ${hit} = ${(h / hit).toFixed(1)}, so ${falls}"`)
+      && l.includes('color:#ff8f6b') === (falls <= blows) && !/ id=/.test(l), 'line ' + [dmg, def, rd, hp, f.nm], l);
+  }
+  want(S.of(null, {}) === null && S.of(foes[0], null) === null && S.line(null, { hp: 5 }) === '', 'none', 'a reckoning with nothing to reckon');
+  // the wiring: under each open fight on the map, never a sealed one
+  want(html.includes("${Quarry.dt(quarry===ri+':'+fi)}</div>\n            ${open?Reckon.line(f, g):''}\n          </div>\n"), 'wired', 'the map does not reckon its open fights');
+  return checks;
+})();
+
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -28457,6 +28491,7 @@ console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
 console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
 console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
+console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
