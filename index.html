@@ -9229,6 +9229,49 @@ const NextFight = {
   }
 };
 
+/* A familiar. Twenty right answers in campaign fights in one sitting hatch an
+   egg, and a familiar joins the knight for the rest of the sitting: an owl, a
+   fox kit, a drakeling or a wisp. From then on each right answer in a campaign
+   fight mends a little of the knight's health, never past full, and at sixty
+   right answers it is grown and mends twice as much. It never strikes the
+   foe, so a fight lasts as long as ever and every question is still asked:
+   it pays for practice with staying power. The streak line shows the egg's
+   count or the familiar. Nothing is saved: a new sitting finds a new egg. */
+const Familiar = {
+  HATCH: 20, GROWN: 60, MEND: 0.03,
+  KINDS: [{ic:'🦉', nm:'owl'}, {ic:'🦊', nm:'fox kit'}, {ic:'🐉', nm:'drakeling'}, {ic:'✨', nm:'wisp'}],
+  n:0, kind:null,
+  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
+  hatched(){ return this.n>=this.HATCH && !!this.kind; },
+  grown(){ return this.hatched() && this.n>=this.GROWN; },
+  // a right answer in a campaign fight: counted, the egg hatched at twenty,
+  // and after that a little mended. It returns the health mended.
+  add(B){
+    if(!this.can(B)) return 0;
+    this.n++;
+    if(this.n===this.HATCH){
+      this.kind=R.pick(this.KINDS);
+      Celebrate.banner('THE EGG HATCHES', `a ${this.kind.nm} joins you for this sitting`, '#9fe6b8', ()=>Sfx.milestone());
+      return 0;
+    }
+    if(!this.hatched()) return 0;
+    if(this.n===this.GROWN) Anim.float(220, H-410, this.kind.ic+' GROWN', '#9fe6b8', true);
+    return this.mend();
+  },
+  amount(maxHp){ return Math.max(1, Math.round(maxHp*this.MEND*(this.grown()?2:1))); },
+  mend(){
+    const g=Game.s; if(!g || g.hp<=0) return 0;
+    const was=g.hp; g.hp=Math.min(g.maxHp, g.hp+this.amount(g.maxHp));
+    const got=g.hp-was;
+    if(got) Anim.float(220, H-290, `${this.kind.ic} +${got}`, '#9fe6b8', true);
+    return got;
+  },
+  tag(B){
+    if(!this.can(B)) return '';
+    return this.hatched() ? `  ·  ${this.kind.ic} ${this.grown()?'grown':'mending'}` : `  ·  🥚 ${this.n}/${this.HATCH}`;
+  }
+};
+
 /* Wayfarers. Now and then, about one campaign victory in six, someone on the
    road stops the knight with a question on a topic of the realm already met:
    a scholar, a hermit, a smith or a bard, each with a small prize, a draught,
@@ -9807,6 +9850,7 @@ const Battle = {
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
       (this.mode==='daily' ? `🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}  ·  ${Daily.score} pts  ·  ` : '') +
       `Combo ×${Combat.comboMul(this.combo).toFixed(2)}  ·  streak ${this.combo}`+Parry.tag(this)+Satchel.tag(this);
+    document.getElementById('comboTxt').textContent += Familiar.tag(this);   // the egg, or the familiar
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
@@ -10340,6 +10384,7 @@ const Battle = {
       Parry.earn(this);
       Satchel.add(this);
       Gild.pay(this);
+      Familiar.add(this);   // the egg's count, or the familiar's mending
       if(owed && this.cur.redo){
         this.recovered=Recover.heal(owed);
         if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);

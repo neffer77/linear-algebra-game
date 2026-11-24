@@ -1,89 +1,82 @@
 {
-  "change": "Wayfarers: now and then someone on the road asks a question for a small prize",
+  "change": "A familiar: twenty right answers in a sitting hatch an egg, and the familiar mends a little health on each right answer",
   "mutations": [
     {
-      "name": "no victory meets a wayfarer",
+      "name": "the egg hatches at ten",
       "file": "index.html",
-      "find": "    const way=Wayfarer.roll(this);",
-      "replace": "    const way=null;",
-      "run": "play:wayfarer"
+      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
+      "replace": "  HATCH: 10, GROWN: 60, MEND: 0.03,",
+      "run": "verify"
     },
     {
-      "name": "the card hides the meeting",
+      "name": "the familiar never grows",
       "file": "index.html",
-      "find": "${Wayfarer.html(way)}",
+      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
+      "replace": "  HATCH: 20, GROWN: 1e9, MEND: 0.03,",
+      "run": "verify"
+    },
+    {
+      "name": "the familiar mends nothing",
+      "file": "index.html",
+      "find": "  HATCH: 20, GROWN: 60, MEND: 0.03,",
+      "replace": "  HATCH: 20, GROWN: 60, MEND: 0,",
+      "run": "verify"
+    },
+    {
+      "name": "a familiar mends past full",
+      "file": "index.html",
+      "find": "    const was=g.hp; g.hp=Math.min(g.maxHp, g.hp+this.amount(g.maxHp));",
+      "replace": "    const was=g.hp; g.hp=g.hp+this.amount(g.maxHp);",
+      "run": "verify"
+    },
+    {
+      "name": "the egg counts arena and daily answers",
+      "file": "index.html",
+      "find": "  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },\n  hatched()",
+      "replace": "  can(B){ return !!B; },\n  hatched()",
+      "run": "verify"
+    },
+    {
+      "name": "the egg mends before it hatches",
+      "file": "index.html",
+      "find": "    if(!this.hatched()) return 0;\n    if(this.n===this.GROWN)",
+      "replace": "    if(this.n===this.GROWN)",
+      "run": "verify"
+    },
+    {
+      "name": "a familiar mends a fallen knight",
+      "file": "index.html",
+      "find": "    const g=Game.s; if(!g || g.hp<=0) return 0;",
+      "replace": "    const g=Game.s; if(!g) return 0;",
+      "run": "verify"
+    },
+    {
+      "name": "a grown familiar mends no more",
+      "file": "index.html",
+      "find": "Math.round(maxHp*this.MEND*(this.grown()?2:1))",
+      "replace": "Math.round(maxHp*this.MEND)",
+      "run": "verify"
+    },
+    {
+      "name": "right answers are not counted",
+      "file": "index.html",
+      "find": "      Familiar.add(this);   // the egg's count, or the familiar's mending\n",
       "replace": "",
-      "run": "play:wayfarer"
+      "run": "play:familiar"
     },
     {
-      "name": "an arena victory meets wayfarers too",
+      "name": "the streak line hides the familiar",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !R.chance(this.CHANCE)) return null;",
-      "replace": "    if(!B || !R.chance(this.CHANCE)) return null;",
-      "run": "verify"
-    },
-    {
-      "name": "a wayfarer asks topics never met",
-      "file": "index.html",
-      "find": "    return pool.filter(k=>GEN[k] && g && g.topicStats[k] && g.topicStats[k].seen>0);",
-      "replace": "    return pool.filter(k=>GEN[k]);",
-      "run": "verify"
-    },
-    {
-      "name": "wayfarers come every victory",
-      "file": "index.html",
-      "find": "  CHANCE: 1/6,\n  KINDS: [",
-      "replace": "  CHANCE: 1,\n  KINDS: [",
-      "run": "verify"
-    },
-    {
-      "name": "the smith pays the same in every realm",
-      "file": "index.html",
-      "find": "  gold(w){ return 30 + 15*((w && w.ri)||0); },",
-      "replace": "  gold(w){ return 30; },",
-      "run": "verify"
-    },
-    {
-      "name": "the hermit gives a draught, not an insight",
-      "file": "index.html",
-      "find": "prize:()=>\"a Sage's Insight\", give(){ Game.s.items.insight++; }},",
-      "replace": "prize:()=>\"a Sage's Insight\", give(){ Game.s.items.potion++; }},",
-      "run": "verify"
-    },
-    {
-      "name": "a miss wins the prize too",
-      "file": "index.html",
-      "find": "    if(ok){ w.kind.give(w); Sfx.good(); Haptic.hit(); } else Sfx.bad();",
-      "replace": "    w.kind.give(w); if(ok){ Sfx.good(); Haptic.hit(); } else Sfx.bad();",
-      "run": "verify"
-    },
-    {
-      "name": "a meeting pays again and again",
-      "file": "index.html",
-      "find": "    this.cur=null;     // one question, one prize\n",
+      "find": "    document.getElementById('comboTxt').textContent += Familiar.tag(this);   // the egg, or the familiar\n",
       "replace": "",
-      "run": "verify"
+      "run": "play:familiar"
     },
     {
-      "name": "wayfarer answers are not counted",
+      "name": "the egg hatches unsaid",
       "file": "index.html",
-      "find": "    Game.recordAnswer(q.key, ok, 1);      // the road teaches either way\n",
+      "find": "      Celebrate.banner('THE EGG HATCHES', `a ${this.kind.nm} joins you for this sitting`, '#9fe6b8', ()=>Sfx.milestone());\n",
       "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "a right answer is not said",
-      "file": "index.html",
-      "find": "Well answered! You are given ${w.kind.prize(w)}.",
-      "replace": "Well answered!",
-      "run": "play:wayfarer"
-    },
-    {
-      "name": "a miss does not show the answer",
-      "file": "index.html",
-      "find": "Not this time, and it costs you nothing. The answer was <b>${q.a}</b>. ${q.ex||''}",
-      "replace": "Not this time, and it costs you nothing.",
-      "run": "play:wayfarer"
+      "run": "play:familiar"
     }
   ]
 }

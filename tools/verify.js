@@ -3904,6 +3904,63 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* A familiar. The egg counts right answers in campaign fights only, never a
+   rite, an arena, the daily or the Deep, and hatches at exactly the
+   twentieth, into one of its four kinds; before that nothing is mended. After
+   it each right answer mends three in a hundred of full health, at least 1,
+   six once grown at sixty, never past full and never a fallen knight; the
+   streak line shows the count or the familiar. The wiring is checked where
+   it lives: it is counted on a right answer only, and it never touches the
+   foe. */
+const familiarNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Familiar = {'), html.indexOf('/* Wayfarers. Now and then'));
+  let seed = 29;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const said = [];
+  const mk = () => new Function('R', 'Game', 'Celebrate', 'Anim', 'Sfx', 'H', src + ';return Familiar;')(
+    { pick: a => a[rnd(a.length)] }, Game, { banner: (t, sub) => said.push(t + ' ' + sub) }, { float: (x, y, t) => said.push(t) }, { milestone() {} }, 800);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('familiar', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  const kinds = new Set();
+  for (let run = 0; run < 200; run++) {
+    const F = mk(); said.length = 0;
+    let right = 0;
+    for (let step = 0; step < 200; step++) {
+      const maxHp = 50 + rnd(400);
+      Game.s = { maxHp, hp: rnd(5) ? rnd(maxHp + 1) : maxHp };
+      const B = { mode: modes[rnd(6)], rite: !rnd(8) };
+      const counts = B.mode === 'campaign' && !B.rite;
+      const before = Game.s.hp, was = right;
+      const got = F.add(B);
+      if (counts) right++;
+      const k = `run ${run} step ${step}`;
+      want(F.n === right, 'count ' + k, `${F.n} counted after ${right} right campaign answers (${B.mode}${B.rite ? ', rite' : ''})`);
+      want(F.hatched() === (right >= 20) && F.grown() === (right >= 60), 'hatch ' + k, `${right} right: hatched ${F.hatched()}, grown ${F.grown()}`);
+      if (right === 20 && was === 19) {
+        want(said.some(t => t.startsWith('THE EGG HATCHES') && t.includes(F.kind.nm)) && got === 0 && Game.s.hp === before, 'hatching ' + k, said.join('|'));
+        kinds.add(F.kind.nm);
+      }
+      const mends = counts && was >= 20 && before > 0;
+      const each = Math.max(1, Math.round(maxHp * 0.03 * (right >= 60 ? 2 : 1)));
+      const exp = mends ? Math.min(maxHp, before + each) : before;
+      want(Game.s.hp === exp && got === exp - before, 'mend ' + k, `${right} right, ${before}/${maxHp}: mended to ${Game.s.hp} (${got}), wanted ${exp}`);
+      const tag = F.tag(B);
+      want(counts ? (right >= 20 ? tag.includes(F.kind.ic) && tag.includes(right >= 60 ? 'grown' : 'mending') : tag.includes(`🥚 ${right}/20`)) : tag === '', 'tag ' + k, tag);
+    }
+  }
+  want(kinds.size === 4, 'kinds', `${kinds.size} kinds hatched`);
+  want(!/ehp|emax|\.foe/.test(src), 'foe', 'the familiar touches the foe');
+  const ok = html.indexOf('    if(ok){\n      this.combo++;'), add = html.indexOf('      Familiar.add(this);');
+  want(ok > 0 && add > ok && add < html.indexOf('} else if(this.shownWork){', ok) && html.split('Familiar.add(').length === 2, 'wired', 'the familiar is not counted on a right answer alone');
+  want(html.includes("document.getElementById('comboTxt').textContent += Familiar.tag(this);"), 'line', 'the streak line does not show the familiar');
+  return checks;
+})();
+
 /* Wayfarers. About one campaign victory in six meets one, never another
    kind of fight; only a topic of the realm already met is asked, and a
    knight who has met none meets no one; every kind says what it gives and
@@ -27501,6 +27558,7 @@ console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10
 console.log(`  heroic rematches checked   ${pad(heroicNotes.toLocaleString(), 10)}  (twice the gold, half again the experience, a quarter harder blows and all else kept; only a campaign fight, only a beaten foe asked for, never elite or greedy as well; the hardest riddles)`);
 console.log(`  scouting checked           ${pad(scoutNotes.toLocaleString(), 10)}  (every foe with a weak point offered by name; only its next campaign fight prepared, and spent by it; prepared, its weak point lands ×2 and says so; the rule shown before the question; a miss prepares nothing)`);
 console.log(`  wayfarers checked          ${pad(wayNotes.toLocaleString(), 10)}  (about one campaign victory in six, on a topic of the realm already met; four kinds, each giving just the prize it names; one answer, one prize, a miss nothing, counted toward the topic)`);
+console.log(`  familiars checked          ${pad(familiarNotes.toLocaleString(), 10)}  (twenty right campaign answers of a sitting hatch one of four kinds; then each right answer mends 3% of full health, 6% once grown at sixty, never past full; shown on the streak line; never touches the foe)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
