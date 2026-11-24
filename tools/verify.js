@@ -4663,6 +4663,43 @@ const scarsNotes = (() => {
   return checks;
 })();
 
+const waymarkNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Waymark = {');
+  const src = html.slice(start, html.indexOf("/* A herald. A realm's boss", start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('waymark', key, msg); };
+  const shown = [], sounds = [];
+  const Celebrate = { banner(t, s, c, snd) { shown.push({ t, s, c }); if (snd) snd(); } };
+  const Sfx = { milestone() { sounds.push('milestone'); } };
+  const W = new Function('Celebrate', 'Sfx', src + ';return Waymark;')(Celebrate, Sfx);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const named = [...realms.matchAll(/^  \{nm:'([^']+)', col:'(#[0-9a-f]{6})'/gim)].map(m => ({ nm: m[1], col: m[2] }));
+  want(named.length === 8 && Object.keys(W.SAY).length === 8 && named.every(r => W.SAY[r.nm]), 'every', JSON.stringify([named.map(r => r.nm), Object.keys(W.SAY)]));
+  want(new Set(Object.values(W.SAY)).size === 8, 'apart', 'two realms are greeted the same');
+  Object.entries(W.SAY).forEach(([nm, t]) => want(typeof t === 'string' && t.length > 10 && t.length < 60 && !/[{}<>$.!—–]/.test(t) && /^[a-z]/.test(t), 'line ' + nm, t));
+  const foes = n => [0, 1, 2, 3].map(fi => fi);
+  for (let ri = 0; ri < 8; ri++) for (const mode of ['campaign', 'daily', 'dungeon', 'arena', undefined]) for (const boss of [false, true]) {
+    // every way the save can stand: nothing beaten, this realm touched, only other realms touched
+    const saves = [{}, { cleared: {} }, { cleared: { [ri + ':0']: true } }, { cleared: { [ri + ':2']: 'A' } }, { cleared: { [ri + ':1']: false } },
+      { cleared: { [((ri + 1) % 8) + ':0']: true, [((ri + 3) % 8) + ':3']: true } }, { cleared: { [(ri + 10) + ':0']: true, [ri + '1:0']: true } }];
+    for (const g of saves) {
+      shown.length = 0; sounds.length = 0;
+      const B = { mode, ri, realm: named[ri], foe: { nm: 'A foe', boss } };
+      const touched = Object.keys(g.cleared || {}).some(k => k.split(':')[0] === String(ri) && g.cleared[k]);
+      const on = mode === 'campaign' && !boss && !touched;
+      want(W.on(B, g) === on, 'on ' + ri + mode + boss + JSON.stringify(g), String(W.on(B, g)));
+      const r = W.announce(B, g);
+      want(r === on && shown.length === (on ? 1 : 0) && sounds.join() === (on ? 'milestone' : ''), 'announce ' + ri + mode + boss, JSON.stringify(shown));
+      if (on) want(shown[0].t === '🗺️ ' + named[ri].nm.toUpperCase() && shown[0].s === W.SAY[named[ri].nm] && shown[0].c === named[ri].col, 'banner ' + ri, JSON.stringify(shown[0]));
+    }
+  }
+  shown.length = 0;
+  want(W.on(null, {}) === false && W.on({ mode: 'campaign', ri: 0, realm: named[0] }, {}) === false && W.announce({ mode: 'campaign', ri: 0, realm: { nm: 'Nowhere' }, foe: {} }, {}) === false && W.fresh(null, 0) === true && shown.length === 0, 'none', 'a waymark with no foe or no realm');
+  want(html.includes("    Herald.announce(this);   // a realm's boss arrives announced\n    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n")
+    && (html.match(/Waymark\.announce\(/g) || []).length === 1, 'wired', 'the fight does not greet a new realm once as it opens');
+  return checks;
+})();
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -28669,6 +28706,7 @@ console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
+console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10)}  (a realm's name and a line of its land across the screen at its first fights, until a foe of it falls; never for a boss, never outside the campaign)`);
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
