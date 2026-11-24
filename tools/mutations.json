@@ -1,16 +1,14 @@
 {
-  "change": "A Smithy that compares: each blade and coat says what it adds over what is worn, and the dear ones wait behind a fold",
+  "change": "A shorter skills list: Gear folds the skills with no use yet behind one counted line, and one topic needs work",
   "mutations": [
-    {"name": "a worse piece shown green", "file": "index.html", "find": "    if(!up.length) return {up:false, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};", "replace": "    if(!up.length) return {up:true, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};", "run": "verify"},
-    {"name": "crit left out of the comparison", "file": "index.html", "find": ",[Math.round(it.crit*100)-Math.round(worn.crit*100),'% crit','% less crit']]", "replace": "]", "run": "verify"},
-    {"name": "health left out of the comparison", "file": "index.html", "find": ",[it.hp-worn.hp,' health',' less health']];", "replace": "];", "run": "verify"},
-    {"name": "the fold hides one more piece than it should", "file": "index.html", "find": "    const n=i+this.AHEAD;\n", "replace": "    const n=i+1;\n", "run": "verify"},
-    {"name": "a lone row folded", "file": "index.html", "find": "    return list.length-n<2 ? list.length : n;", "replace": "    return list.length-n<1 ? list.length : n;", "run": "verify"},
-    {"name": "the fold never opens", "file": "index.html", "find": "    if(this.open[kind]) return list.length;\n", "replace": "\n", "run": "verify"},
-    {"name": "the blades not compared in the Smithy", "file": "index.html", "find": "${Ware.line('w',w,wWorn)}</div>", "replace": "</div>", "run": "verify"},
-    {"name": "the dear blades dropped with no fold", "file": "index.html", "find": "    out.push(Ware.more('w',ws.slice(wn)));   // the dearer blades, behind a fold\n", "replace": "\n", "run": "verify"},
-    {"name": "the blades not compared, seen in play", "file": "index.html", "find": "${Ware.line('w',w,wWorn)}</div>", "replace": "</div>", "run": "play:ware"},
-    {"name": "the coats never folded, seen in play", "file": "index.html", "find": "const as=ARMORS.filter(a=>!a.forge), an=Ware.shown('a',as,own,g.gold), aWorn=Game.armor();", "replace": "const as=ARMORS.filter(a=>!a.forge), an=as.length, aWorn=Game.armor();", "run": "play:ware"},
-    {"name": "the better line not green", "file": "index.html", "find": ".item .vs.up{color:var(--green)}\n", "replace": "\n", "run": "verify"}
+    {"name": "a carried skill folded", "file": "index.html", "find": "    const shown=rows.filter(r=>r.on||r.n>0), rest=rows.filter(r=>!(r.on||r.n>0));", "replace": "    const shown=rows.filter(r=>r.n>0), rest=rows.filter(r=>!(r.n>0));", "run": "verify"},
+    {"name": "a lone skill folded", "file": "index.html", "find": "    if(rest.length<2) return rows.map(r=>r.html).join('');", "replace": "    if(rest.length<1) return rows.map(r=>r.html).join('');", "run": "verify"},
+    {"name": "the fold forgets it was opened", "file": "index.html", "find": "id=\"skillRest\"${this.open?' open':''} ontoggle", "replace": "id=\"skillRest\" ontoggle", "run": "verify"},
+    {"name": "the folded count wrong", "file": "index.html", "find": "<summary>＋ ${rest.length} more skills", "replace": "<summary>＋ ${rows.length} more skills", "run": "verify"},
+    {"name": "one topic need work", "file": "index.html", "find": "  work(k){ return k+(k===1?' needs work':' need work'); }", "replace": "  work(k){ return k+' need work'; }", "run": "verify"},
+    {"name": "Gear does not fold", "file": "index.html", "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{", "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{", "run": "verify"},
+    {"name": "Gear does not fold, seen in play", "file": "index.html", "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{", "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{", "run": "play:skillset"},
+    {"name": "the fold forgets, seen in play", "file": "index.html", "find": "id=\"skillRest\"${this.open?' open':''} ontoggle", "replace": "id=\"skillRest\" ontoggle", "run": "play:skillset"},
+    {"name": "one topic need work, seen in play", "file": "index.html", "find": "  work(k){ return k+(k===1?' needs work':' need work'); }", "replace": "  work(k){ return k+' need work'; }", "run": "play:skillset"}
   ]
 }
