@@ -7360,6 +7360,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   fillRR(-19,-118,38,40,13,skin);
   setFill('#1a1622'); cx.fillRect(-14,-106,28,8);
   setFill('#5ad1ff'); cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
+  const hon = Battle.honours || {stars:0, crowns:0, glow:false};
+  Honours.circlet(hon.crowns);
   // plume
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
@@ -7371,6 +7373,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.beginPath(); cx.moveTo(-14,-20); cx.lineTo(14,-20); cx.lineTo(14,8); cx.quadraticCurveTo(0,24,-14,8); cx.closePath();
   setFill('#3f6bb5'); cx.fill(); cx.lineWidth=3; setStroke('#f2c14e'); cx.stroke();
   setFill('#f2c14e'); cx.font='bold 15px serif'; cx.textAlign='center'; cx.fillText('λ',0,2);
+  Honours.stars(hon.stars);
   cx.restore();
 
   // sword (right arm) — swings with the lunge
@@ -7380,7 +7383,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
   setFill('#f2c14e'); cx.fillRect(-13,-10,28,7);        // crossguard
   const g=cx.createLinearGradient(0,-70,0,-8);
-  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#dfe8f5'); g.addColorStop(1,'#93a3ba');
+  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,hon.glow?'#fff1c2':'#dfe8f5'); g.addColorStop(1,hon.glow?'#e9c46a':'#93a3ba');
+  if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }
   setFill(g);
   cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
   cx.restore();
@@ -9239,6 +9243,57 @@ const NextFight = {
   }
 };
 
+/* Honours. The knight wears what they have done, worked out from the foes
+   already beaten, so nothing new is saved. Every realm whose boss has fallen
+   sets a gold star in the ring around the lambda on the shield; a realm with
+   every foe beaten at S sets a gold circlet on the helm, with a gem for each
+   such realm; and once three bosses have fallen the sword's blade shines.
+   The victory card says when a win adds one, so the knight on screen grows
+   with the campaign and a player can see how far they have come. */
+const Honours = {
+  GLOW: 3,
+  of(g){
+    const c=(g && g.cleared) || {};
+    let stars=0, crowns=0;
+    REALMS.forEach((r, ri)=>{
+      if(r.foes.some((f, fi)=>f.boss && c[ri+':'+fi])) stars++;
+      if(Grade.crowned(c, ri, r.foes.length)) crowns++;
+    });
+    return { stars, crowns, glow: stars>=this.GLOW };
+  },
+  // what a win added, in the order the card says it
+  gain(a, b){
+    if(!a || !b) return [];
+    const out=[];
+    if(b.stars>a.stars) out.push({ k:'star', n:b.stars });
+    if(b.crowns>a.crowns) out.push({ k:'crown', n:b.crowns });
+    if(b.glow && !a.glow) out.push({ k:'glow', n:b.stars });
+    return out;
+  },
+  say(h){
+    return h.k==='star' ? `⭐ A new star on your shield: ${h.n} of ${REALMS.length} realms' bosses beaten.`
+         : h.k==='crown' ? (h.n===1 ? '👑 A gold circlet for your helm: a realm beaten at S, foe by foe.' : `👑 A new gem in your circlet: ${h.n} realms beaten at S.`)
+         : `✨ Your blade shines now: ${h.n} bosses beaten.`;
+  },
+  line(gains){
+    return gains && gains.length ? `<div id="honours" style="color:#ffe08a;font-weight:800;margin-top:6px">${gains.map(h=>`<div data-k="${h.k}">${this.say(h)}</div>`).join('')}</div>` : '';
+  },
+  // the stars, drawn on the shield in its own frame, the lambda at its middle
+  stars(n){
+    for(let i=0; i<n; i++){
+      const a=-Math.PI/2 + i*2*Math.PI/REALMS.length, x=Math.cos(a)*11, y=-3+Math.sin(a)*11;
+      cx.beginPath();
+      for(let j=0; j<10; j++){ const r=j%2 ? 1.2 : 2.8, b=-Math.PI/2+j*Math.PI/5; cx.lineTo(x+Math.cos(b)*r, y+Math.sin(b)*r); }
+      cx.closePath(); setFill('#ffe08a'); cx.fill();
+    }
+  },
+  circlet(n){
+    if(!n) return;
+    fillRR(-19,-119,38,5,2,'#f2c14e');
+    for(let i=0; i<Math.min(n, 5); i++) circle(-12+i*6, -116.5, 1.8, '#ff6f91');
+  }
+};
+
 /* A ballad. Every victory is sung in a line of verse about how it was won,
    read from the fight itself: a win from the brink of falling, a fight with
    no miss in it, a killing blow far past what was needed, a long streak, a
@@ -10256,6 +10311,7 @@ const Battle = {
     const me=Profiles.active();
     this.capeCol  = me ? shadeCol(col_(me), -70) : null;
     this.plumeCol = me ? col_(me) : null;
+    this.honours  = Honours.of(Game.s);   // and what they have done, worn where it shows
     this.learned={};                 // what moved in the mastery model, this fight
     this.redo=null;                  // a miss's second go does not follow it out
     // Skill abilities recharge every fight — they are what you know, not what
@@ -11252,6 +11308,7 @@ const Battle = {
     const wp=this.mode==='campaign' ? WarPath.won() : 1;
     const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp*Sky.gold(this));
     const xp=Math.round(this.foe.xp*(full?1:0.4));
+    const hon0=Honours.of(g);   // the honours worn before this win
     g.gold+=gold;
     // graded on the health left as the foe falls, before a level-up restores it
     const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);
@@ -11285,6 +11342,7 @@ const Battle = {
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
     Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
+    const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
@@ -11335,6 +11393,7 @@ const Battle = {
           ${Treasure.line(tr)}
           ${Gauntlet.line(gnt)}
           ${Sky.line(this)}
+          ${Honours.line(hon)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">

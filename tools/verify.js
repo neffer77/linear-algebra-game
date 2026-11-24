@@ -4464,6 +4464,82 @@ const taleNotes = (() => {
   return checks;
 })();
 
+/* Honours. What the knight wears is worked out from the foes already beaten
+   and nothing else: a star for each realm whose boss is down, a circlet once
+   a realm is beaten at S foe by foe with a gem for each such realm, and a
+   shining blade from the third boss on. A win says exactly what it added, in
+   that order, and a win that adds nothing says nothing. The drawing puts one
+   star per realm in its ring, never more, and the wiring is checked where it
+   lives: worn from the fight's start, read before and after the win, drawn
+   on the helm, the shield and the sword. */
+const honourNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Honours = {'), html.indexOf('/* A ballad. Every victory is sung'));
+  let seed = 77;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('honours', key, msg); };
+  const Grade = { best: v => typeof v === 'string' && 'SABC'.includes(v) ? v : null,
+    crowned(c, ri, n) { for (let fi = 0; fi < n; fi++) if (this.best((c || {})[ri + ':' + fi]) !== 'S') return false; return n > 0; } };
+  const calls = { path: 0, fill: 0, round: 0, dot: 0 };
+  const cx = { beginPath() { calls.path++; }, lineTo() {}, closePath() {}, fill() { calls.fill++; } };
+  for (let step = 0; step < 3000; step++) {
+    const REALMS = [...Array(1 + rnd(9))].map(() => ({ foes: [...Array(1 + rnd(5))].map((_, i, a) => ({ boss: i === a.length - 1 })) }));
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')(
+      REALMS, Grade, cx, () => {}, () => { calls.round++; }, () => { calls.dot++; });
+    const cleared = {};
+    REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { const v = rnd(6); if (v) cleared[ri + ':' + fi] = v === 5 ? true : 'SSABC'[v - 1]; }));
+    const stars = REALMS.filter((r, ri) => r.foes.some((f, fi) => f.boss && cleared[ri + ':' + fi])).length;
+    const crowns = REALMS.filter((r, ri) => r.foes.every((f, fi) => cleared[ri + ':' + fi] === 'S')).length;
+    const a = H.of({ cleared }), k = `step ${step}`;
+    want(a.stars === stars && a.crowns === crowns && a.glow === (stars >= 3), 'of ' + k, JSON.stringify([a, stars, crowns]));
+    // a win: one foe beaten, at some grade
+    const ri = rnd(REALMS.length), fi = rnd(REALMS[ri].foes.length), after = Object.assign({}, cleared);
+    after[ri + ':' + fi] = 'SABC'[rnd(4)];
+    const b = H.of({ cleared: after }), gains = H.gain(a, b);
+    const expect = [b.stars > a.stars && 'star', b.crowns > a.crowns && 'crown', b.glow && !a.glow && 'glow'].filter(Boolean);
+    want(gains.map(h => h.k).join() === expect.join(), 'gain ' + k, JSON.stringify([a, b, gains]));
+    want(b.stars >= a.stars || cleared[ri + ':' + fi], 'never less ' + k, 'a win took a star away');
+    const l = H.line(gains);
+    want(gains.length ? l.includes('id="honours"') && gains.every(h => l.includes(`data-k="${h.k}"`) && l.includes(H.say(h))) : l === '', 'line ' + k, l);
+    for (const h of gains) {
+      const w = H.say(h);
+      want(h.k === 'star' ? w === `⭐ A new star on your shield: ${h.n} of ${REALMS.length} realms' bosses beaten.`
+        : h.k === 'crown' ? w.startsWith('👑') && w.includes(h.n === 1 ? 'circlet' : `${h.n} realms`)
+        : w === `✨ Your blade shines now: ${h.n} bosses beaten.`, 'say ' + k, w);
+    }
+    // drawn: one star a realm, a circlet only once crowned, a gem a crown up to five
+    calls.path = calls.round = calls.dot = 0;
+    H.stars(a.stars); H.circlet(a.crowns);
+    want(calls.path === a.stars && a.stars <= REALMS.length, 'drawn stars ' + k, JSON.stringify(calls));
+    want(calls.round === (a.crowns ? 1 : 0) && calls.dot === Math.min(a.crowns, 5), 'drawn circlet ' + k, JSON.stringify(calls));
+  }
+  {
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')([{ foes: [{ boss: true }] }], Grade, cx, () => {}, () => {}, () => {});
+    want(H.of(null).stars === 0 && H.of({}).crowns === 0 && H.gain(null, H.of({})).length === 0 && H.line([]) === '' && H.line(null) === '', 'none', 'no knight still wears honours');
+  }
+  // the stars sit on the shield, inside its rim
+  {
+    const pts = [];
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')([...Array(8)].map(() => ({ foes: [{ boss: true }] })), Grade,
+      { beginPath() {}, lineTo(x, y) { pts.push([x, y]); }, closePath() {}, fill() {} }, () => {}, () => {}, () => {});
+    H.stars(8);
+    want(pts.length === 80 && pts.every(([x, y]) => Math.abs(x) <= 14 && y >= -20 && y <= 12), 'rim', 'a star falls off the shield');
+  }
+  // only drawn and said: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(|cleared\[[^\]]*\]\s*=/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'honours do more than show');
+  // the wiring
+  want(html.includes("    this.plumeCol = me ? col_(me) : null;\n    this.honours  = Honours.of(Game.s);"), 'worn', 'a fight does not wear the honours');
+  want(html.indexOf('const hon0=Honours.of(g);') > 0 && html.indexOf('const hon0=Honours.of(g);') < html.indexOf('g.cleared[key]=Grade.keep(had, Grade.of(marks));'), 'before', 'the honours before the win are read after it');
+  want(html.includes('const hon=Honours.gain(hon0, this.honours=Honours.of(g));') && html.indexOf('const hon=Honours.gain(') > html.indexOf('g.cleared[key]=Grade.keep('), 'after', 'the win\'s honours are not read after it');
+  want(html.includes('          ${Sky.line(this)}\n          ${Honours.line(hon)}\n'), 'card', 'the card does not say what the win added');
+  const dk = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(dk.includes('Honours.circlet(hon.crowns);') && dk.includes("fillText('λ',0,2);\n  Honours.stars(hon.stars);\n  cx.restore();") && dk.includes("if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }"), 'drawn', 'the knight does not wear the honours');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -26447,6 +26523,7 @@ console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
+console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
 console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
