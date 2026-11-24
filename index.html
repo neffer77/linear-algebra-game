@@ -8751,7 +8751,9 @@ const Talk = {
    Armoured shrugs off half of every blow until three answers in a row crack
    its armour. Vampiric drinks back the blow it lands when you miss. Swift
    winds up its slam a turn sooner, so bracing matters more. Frenzied hits
-   half again as hard on a quarter less health. An elite has a quarter more
+   half again as hard on a quarter less health. Cunning asks its riddles two
+   steps harder, as hard as the knight is ready for, and every right
+   answer against it lands half again as hard. An elite has a quarter more
    health than the foe it was, and beating one pays the first-clear reward
    again with a sure chest, where a plain rematch pays under half and drops
    loot only sometimes. Nothing is saved: the twist is rolled as the fight
@@ -8759,12 +8761,14 @@ const Talk = {
 const Elite = {
   CHANCE:0.25,
   force:null,          // a twist to roll next instead of the dice; spent on use
-  ORDER:['armoured','vampiric','swift','frenzied'],
+  ORDER:['armoured','vampiric','swift','frenzied','cunning'],
+  HARD:2, SHARP:1.5,
   KINDS:{
     armoured:{ic:'🛡️', nm:'Armoured', say:'it shrugs off half of every blow until you land three answers in a row.'},
     vampiric:{ic:'🩸', nm:'Vampiric', say:'every miss feeds it, healing it by the blow it lands.'},
     swift:   {ic:'💨', nm:'Swift',    say:'it winds up its slam a turn sooner, so brace for it.'},
-    frenzied:{ic:'🔥', nm:'Frenzied', say:'it hits half again as hard, on a quarter less health.'}
+    frenzied:{ic:'🔥', nm:'Frenzied', say:'it hits half again as hard, on a quarter less health.'},
+    cunning: {ic:'🎭', nm:'Cunning',  say:'its riddles come two steps harder, but every right answer lands half again as hard.'}
   },
   // the foe to fight: itself on a first meeting, sometimes an elite once beaten
   roll(foe, beaten){
@@ -8777,6 +8781,9 @@ const Elite = {
     const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));
     return Object.assign({}, foe, {hp, atk:k==='frenzied' ? Math.round(foe.atk*1.5) : foe.atk, elite:k});
   },
+  // a cunning elite: how many steps harder its riddles come, and what a right answer lands for
+  hard(B){ return B && B.foe && B.foe.elite==='cunning' ? this.HARD : 0; },
+  bonus(B){ return B && B.foe && B.foe.elite==='cunning' ? this.SHARP : 1; },
   label(f){ const K=f && this.KINDS[f.elite]; return K ? `${K.ic} ${K.nm}` : ''; },
   // the line that opens an elite fight
   intro(f){ const K=this.KINDS[f.elite]; return `⭐ Elite! ${K.ic} ${K.nm} ${f.nm}: ${K.say}`; },
@@ -10151,7 +10158,7 @@ const Battle = {
                       (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null));
       key=Mastery.pick(pool, prefer);
       const base = (this.mode==='arena' || Heroic.on(this) ? 3
-                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3))
+                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0) + Elite.hard(this), 1, 3))
                  // The Library's stacks reach into fights too — it would be a
                  // strange shelf where only the chests got older.
                  + (this.mode==='dungeon' ? Dungeon.stacks() : 0);
@@ -10518,7 +10525,7 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * SecondWind.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);

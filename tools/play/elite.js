@@ -3,8 +3,9 @@
  * A campaign foe already beaten comes back, one fight in four, as an elite
  * with one twist: Armoured halves every blow until three answers in a row
  * crack it, Vampiric heals by the blow it lands on a miss, Swift winds up a
- * turn sooner, and Frenzied hits half again as hard on a quarter less
- * health. These checks stand each one up and play it with real answers: a
+ * turn sooner, Frenzied hits half again as hard on a quarter less health,
+ * and Cunning asks its riddles two steps harder while every right answer
+ * against it lands half again as hard. These checks stand each one up and play it with real answers: a
  * first meeting is never an elite, the dice pick a twist only for a beaten
  * foe, the bar names the twist and the fight opens by saying what it does,
  * each twist does what it says, and beating an elite pays the first-clear
@@ -98,6 +99,37 @@ module.exports = {
     f = await fight(t, 'frenzied');
     t.eq('a frenzied elite has a quarter less than an elite\'s health', f.hp, Math.round(f.base.hp * 1.25 * 0.75));
     t.eq('and hits half again as hard', f.atk, Math.round(f.base.atk * 1.5));
+
+    // --- Cunning: riddles two steps harder, right answers half again as hard ---
+    /* The step asked for is the one the fight hands the mastery model; how far a
+       knight is ready to go is that model's to say, so the base is what is checked.
+       Every other multiplier on a blow is held at one so the twist alone shows. */
+    const sharp = (kind) => t.ev(kind => {
+      const ad = Mastery.adjustDiff, bases = [];
+      Mastery.adjustDiff = function (k, b) { bases.push(b); return ad.call(this, k, b); };
+      Battle.flee();
+      document.querySelectorAll('.toast').forEach(d => d.remove());
+      Game.s.cleared['0:1'] = true; Elite.force = kind;
+      const odds = Elite.CHANCE; if (!kind) Elite.CHANCE = 0;
+      Battle.begin(0, 1);
+      Elite.CHANCE = odds; Mastery.adjustDiff = ad;
+      Game.s.maxHp = Game.s.hp = 99999; Battle.beastLeft = 0; Battle.wardUp = false;
+      const keep = [Combat.strike, Weak.bonus, Riposte.bonus, Phase.bonus, SecondWind.bonus];
+      let got = null;
+      Combat.strike = (d, s, c, cr, r, bonus) => { got = bonus; return 20; };
+      Weak.bonus = Riposte.bonus = Phase.bonus = SecondWind.bonus = () => 1;
+      Battle.answered = false; Battle.shownWork = false;
+      Battle.answer(null, Battle.cur.a);
+      [Combat.strike, Weak.bonus, Riposte.bonus, Phase.bonus, SecondWind.bonus] = keep;
+      return { base: bases[0], bonus: got, elite: Battle.foe.elite || null, hp: Battle.emax,
+               name: document.getElementById('foeName').textContent, toast: [...document.querySelectorAll('.toast')].map(d => d.innerText).join(' | ') };
+    }, kind);
+    const sly = await sharp('cunning'), flat = await sharp(null);
+    t.eq('a cunning elite has a quarter more health', sly.hp, Math.round(f.base.hp * 1.25));
+    t.ok('the bar names the twist', /⭐ Cunning Bramble Goblin/.test(sly.name), sly.name);
+    t.ok('the fight opens by saying what the twist does', /⭐ Elite! 🎭 Cunning Bramble Goblin: its riddles come two steps harder, but every right answer lands half again as hard\./.test(sly.toast), sly.toast);
+    t.eq('its riddles are asked two steps harder than the same foe plain', [sly.base, flat.base], [3, 1]);
+    t.ok('and a right answer against it lands half again as hard', flat.bonus > 0 && Math.abs(sly.bonus / flat.bonus - 1.5) < 1e-9, JSON.stringify([sly.bonus, flat.bonus]));
 
     // --- beating one: the full reward, a sure chest, and a word to say so ---
     /* What the win pays, counted as it pays it, its overkill aside: the gold a chest may hold is
