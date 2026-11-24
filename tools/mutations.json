@@ -2,73 +2,59 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "no cracks ever",
+      "name": "no dents ever",
       "file": "index.html",
-      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;",
-      "replace": "    return 0;",
+      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
+      "replace": "    return 0;\n  },\n  beat(",
       "run": "verify"
     },
     {
-      "name": "the first crack too late",
+      "name": "a dent on a whole knight",
       "file": "index.html",
-      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;",
-      "replace": "    return k>0.5 ? 0 : k>0.25 ? 2 : 3;",
+      "find": "    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
+      "replace": "    return k>=1 ? 1 : k>0.5 ? 1 : k>0.25 ? 2 : 3;\n  },\n  beat(",
       "run": "verify"
     },
     {
-      "name": "scars after the fight",
+      "name": "a dent in the air",
       "file": "index.html",
-      "find": "    if(!B || !B.foe || B.over || !(B.emax>0)) return 0;",
-      "replace": "    if(!B || !B.foe || !(B.emax>0)) return 0;",
+      "find": "  AT:[[-13,-62,7],[9,-109,6],[13,-41,6]],",
+      "replace": "  AT:[[-13,-62,7],[9,-139,6],[13,-41,6]],",
       "run": "verify"
     },
     {
-      "name": "the slime's cracks in the air",
+      "name": "a dent in another colour",
       "file": "index.html",
-      "find": "  DROP:{slime:28},",
-      "replace": "  DROP:{},",
-      "run": "verify"
-    },
-    {
-      "name": "a pale crack",
-      "file": "index.html",
-      "find": "      cx.strokeStyle='#1a1622'; cx.lineWidth=4; cx.stroke();",
-      "replace": "      cx.strokeStyle='#1a1622'; cx.lineWidth=1; cx.stroke();",
+      "find": "      cx.strokeStyle=dark; cx.lineWidth=3; cx.stroke();",
+      "replace": "      cx.strokeStyle='#1a1622'; cx.lineWidth=3; cx.stroke();",
       "run": "verify"
     },
     {
       "name": "the canvas state leaks",
       "file": "index.html",
-      "find": "    cx.save(); cx.lineCap='round'; cx.lineJoin='round';",
-      "replace": "    cx.lineCap='round'; cx.lineJoin='round';",
+      "find": "    cx.save(); cx.lineCap='round';\n    for(let i=0;i<n;i++){\n      const [x,y,r]",
+      "replace": "    cx.lineCap='round';\n    for(let i=0;i<n;i++){\n      const [x,y,r]",
       "run": "verify"
     },
     {
-      "name": "cracks outside the sprite's frame",
+      "name": "the fight never dents its knight",
       "file": "index.html",
-      "find": "  if(scars) Scars.cut(scars, art);   // its wounds, riding with it\n  cx.restore();\n}\n",
-      "replace": "  cx.restore();\n  if(scars) Scars.cut(scars, art);   // its wounds, riding with it\n}\n",
+      "find": "pose, Dents.of(Game.s)));",
+      "replace": "pose, 0));",
       "run": "verify"
     },
     {
-      "name": "the fight never scars its foe",
+      "name": "the fight never dents its knight, seen in play",
       "file": "index.html",
-      "find": "eLunge, Anim.eh, B.over==='win', Scars.of(B)));",
-      "replace": "eLunge, Anim.eh, B.over==='win', 0));",
-      "run": "verify"
-    },
-    {
-      "name": "the fight never scars its foe, seen in play",
-      "file": "index.html",
-      "find": "eLunge, Anim.eh, B.over==='win', Scars.of(B)));",
-      "replace": "eLunge, Anim.eh, B.over==='win', 0));",
+      "find": "pose, Dents.of(Game.s)));",
+      "replace": "pose, 0));",
       "run": "play:scars"
     },
     {
-      "name": "one crack too few, seen in play",
+      "name": "the foe never scarred, seen in play",
       "file": "index.html",
-      "find": "    n=Math.min(n|0, this.CUTS.length);",
-      "replace": "    n=Math.min((n|0)-1, this.CUTS.length);",
+      "find": "eLunge, Anim.eh, B.over==='win', Scars.of(B)));",
+      "replace": "eLunge, Anim.eh, B.over==='win', 0));",
       "run": "play:scars"
     }
   ]

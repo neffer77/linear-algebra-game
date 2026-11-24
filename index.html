@@ -7401,7 +7401,7 @@ const Pose = {
 };
 
 /* --- knight (the player) --- */
-function drawKnight(x,y,s,lunge,hurt,dead,pose){
+function drawKnight(x,y,s,lunge,hurt,dead,pose,dents){
   cx.save();
   cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));   // a won fight: a hop for joy
   if(dead){ cx.rotate(-0.9); cx.globalAlpha=.55; }
@@ -7449,6 +7449,7 @@ function drawKnight(x,y,s,lunge,hurt,dead,pose){
   setFill('#5ad1ff'); cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
   const hon = Battle.honours || {stars:0, crowns:0, glow:false};
   Honours.circlet(hon.crowns);
+  Dents.beat(dents, dark);   // the plate shows the blows taken
   // plume
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
@@ -7480,6 +7481,35 @@ function drawKnight(x,y,s,lunge,hurt,dead,pose){
 
   cx.restore();
 }
+
+/* ---------- Dents ----------
+   The knight wears their wounds as well. Each quarter of their health lost
+   beats a dent into the plate: the breastplate first, then the helm, then
+   the other side of the chest. The dents are drawn in the knight's own
+   frame in the plate's own dark, so they ride with the lunge and the hop,
+   and they go as health comes back. Nothing is saved. */
+const Dents = {
+  AT:[[-13,-62,7],[9,-109,6],[13,-41,6]],     // x, y, radius in the knight's frame
+  of(g){
+    if(!g || !(g.maxHp>0)) return 0;
+    const k=g.hp/g.maxHp;
+    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;
+  },
+  beat(n, dark){
+    n=Math.min(n|0, this.AT.length);
+    if(n<=0) return 0;
+    cx.save(); cx.lineCap='round';
+    for(let i=0;i<n;i++){
+      const [x,y,r]=this.AT[i];
+      cx.beginPath(); cx.arc(x,y,r,0.2*Math.PI,1.1*Math.PI);
+      cx.strokeStyle=dark; cx.lineWidth=3; cx.stroke();
+      cx.beginPath(); cx.arc(x+1,y+1.5,r,1.2*Math.PI,1.9*Math.PI);
+      cx.strokeStyle='rgba(255,255,255,.45)'; cx.lineWidth=1.5; cx.stroke();
+    }
+    cx.restore();
+    return n;
+  }
+};
 
 /* ---------- Scars ----------
    A foe wears its wounds. Each quarter of its health lost opens a crack
@@ -8139,7 +8169,7 @@ const Anim = {
     const gy = H-120;
     const pLunge=Anim.pl>0?Math.sin(Anim.pl*Math.PI):0;
     const pose=Pose.of(B, Anim.t);
-    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));
+    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose, Dents.of(Game.s)));
     if(B.foe && B.slamNext && !B.over){
       const r=1+Math.sin(Anim.t*6)*.5;
       cx.save(); cx.globalAlpha=.25+r*.2; cx.strokeStyle='#e5484d'; cx.lineWidth=3+r*2;
