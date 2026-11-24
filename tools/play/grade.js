@@ -28,7 +28,7 @@ const fight = t => t.ev(() => {
   Boon.open = false; Boon.held = null;
   // and a familiar hatched by this sitting's twentieth right answer mends a little
   // on each right one, which lifts the knight over half health as the foe falls
-  Familiar.n = 0; Familiar.kind = null;
+  if (typeof Familiar !== 'undefined') { Familiar.n = 0; Familiar.kind = null; }
   window.__banners = [];
   return Battle.foe.nm;
 });
