@@ -4658,6 +4658,39 @@ const levelBarNotes = (() => {
     && (html.match(/LevelBar\.(html|fill)\(/g) || []).length === 2, 'wired', 'the victory card shows no level bar, or it never fills');
   return checks;
 })();
+const topicsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Topics = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('topics', key, msg); };
+  const TOPIC_LABEL = {};
+  for (let i = 0; i < 40; i++) TOPIC_LABEL['k' + i] = 'Topic ' + i;
+  const T = new Function('TOPIC_LABEL', src + ';return Topics;')(TOPIC_LABEL);
+  const strip = h => h.replace(/<[^>]+>/g, '');
+  for (let n = 0; n <= 30; n++) {
+    const keys = Array.from({ length: n }, (_, i) => 'k' + ((i * 7) % 40));
+    const ls = keys.map(k => TOPIC_LABEL[k]);
+    const h = T.line(keys);
+    const head = h.slice(0, h.indexOf('<span') < 0 ? h.length : h.indexOf('<span'));
+    const more = (h.match(/<span class="rmore">([^<]*)<\/span>/) || [])[1];
+    const less = (h.match(/<span class="rless">([^<]*)<\/span>/) || [])[1];
+    // closed: the first three named, in order, and the rest counted
+    want(strip(head) === ls.slice(0, 3).join(' · '), 'head ' + n, 'a closed realm does not name its first three topics in order');
+    if (n <= 3) want(more === undefined && less === undefined, 'whole ' + n, 'a short topic list is cut');
+    else {
+      want(less === ' · and ' + (n - 3) + ' more', 'count ' + n, 'a closed realm miscounts its other topics');
+      // opened: every topic named, each once, in the realm's own order
+      want(more === ' · ' + ls.slice(3).join(' · ') && (strip(head) + more) === ls.join(' · '), 'all ' + n, 'an opened realm leaves a topic out or out of order');
+    }
+  }
+  want(T.line([]) === '<div class="small rtopics" style="margin:2px 0 4px"></div>' && T.line(null).includes('rtopics') && T.line(['nope']).includes('nope'), 'edges', 'no topics, or a topic with no label, breaks the line');
+  // the closed and open states are the realm's own: the rest shown only when open, the count only when closed
+  want(html.includes('details.realm:not([open]) .rmore{display:none}') && html.includes('details.realm[open] .rless{display:none}'), 'css', 'the rest of the topics show on a closed realm, or the count on an open one');
+  want(html.includes("            ${Topics.line(r.pool)}</summary>`;   // its first few topics, the rest when it is opened") && (html.match(/Topics\.line\(/g) || []).length === 1
+    && !html.includes("r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>"), 'wired', 'the map still names every topic of a closed realm');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -27170,6 +27203,7 @@ console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)} 
 console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe not yet beaten marked new on its nameplate; its first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds, a purse every eighth page; campaign only)`);
 console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
 console.log(`  victory spoils checked     ${pad(haulNotes.toLocaleString(), 10)}  (the totals as chips at the top, the bonuses one list under them, folded past the first few and opened in place)`);
+console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)}  (a closed realm on the map names its first three topics and counts the rest; opened, it names them all, each once, in order)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
