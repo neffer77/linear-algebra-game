@@ -72,6 +72,7 @@ const SUITES = [
   require('./play/gild'),        // now and then a question pays gold when answered right
   require('./play/oath'),        // swear to win a fight with no miss, for more gold and an epic chest
   require('./play/greedy'),      // a beaten foe comes back with triple gold and flees after six questions
+  require('./play/riddle'),      // a chest's riddle on the fight's topic raises its find a rarity
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
