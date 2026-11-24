@@ -2443,7 +2443,7 @@ const eliteNotes = (() => {
   }
   want(first === 0, 'dice', `a first meeting came back elite ${first} times`);
   want(Math.abs(beaten / N - 0.25) < 0.03, 'dice', `a beaten foe was elite ${(beaten / N * 100).toFixed(1)}% of the time`);
-  want(Elite.ORDER.every(k => Math.abs((seen[k] || 0) / beaten - 0.25) < 0.05), 'dice', `the twists came ${JSON.stringify(seen)}`);
+  want(Elite.ORDER.every(k => Math.abs((seen[k] || 0) / beaten - 1 / Elite.ORDER.length) < 0.04), 'dice', `the twists came ${JSON.stringify(seen)}`);
   Elite.force = 'swift';
   want(Elite.roll(foes[0], false).elite === 'swift' && Elite.force === null, 'force', 'a forced twist is not used, or not spent');
   // the armour: half of every blow, at least one, until the third answer in a row lands in full
@@ -2454,6 +2454,19 @@ const eliteNotes = (() => {
     want(Elite.through({ armour: 0, combo }, dmg) === dmg, 'armour', 'a foe with no armour has a blow cut');
   }
   want(floats.length && floats.every(t => t === 'ARMOUR CRACKED'), 'armour', 'cracking the armour does not say so');
+  // cunning: its riddles two steps harder, which from the easiest is the hardest, and a right answer half again as hard
+  want(Elite.HARD === 2 && Elite.SHARP === 1.5, 'cunning', `a cunning elite is ${Elite.HARD} steps harder and lands ×${Elite.SHARP}`);
+  for (const k of [...Elite.ORDER, undefined]) {
+    const B = { foe: k ? Elite.make(foes[1], k) : foes[1] };
+    want(Elite.hard(B) === (k === 'cunning' ? 2 : 0) && Elite.bonus(B) === (k === 'cunning' ? 1.5 : 1), 'cunning:' + k,
+      `a ${k || 'plain'} foe asks ${Elite.hard(B)} steps harder and lands ×${Elite.bonus(B)}`);
+  }
+  want(Elite.hard({}) === 0 && Elite.bonus({}) === 1 && Elite.hard(null) === 0 && Elite.bonus(null) === 1, 'cunning', 'no foe at all changes a riddle or a blow');
+  const clamp3 = v => Math.max(1, Math.min(3, v));
+  for (let fi = 0; fi < 8; fi++) for (const boss of [false, true])
+    want(clamp3(1 + Math.floor(fi / 2) + (boss ? 1 : 0) + Elite.hard({ foe: { elite: 'cunning' } })) === 3, 'cunning', `a cunning foe at ${fi} does not ask at the hardest`);
+  want(html.includes("clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0) + Elite.hard(this), 1, 3))"), 'cunning', 'a campaign riddle does not ask a cunning foe\'s steps harder');
+  want(html.includes('* Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);'), 'cunning', 'a right answer on a cunning foe does not land harder');
   return { checks, foes: foes.length };
 })();
 /* A boss's second phase: when it comes, what it does to the boss's blows
@@ -25902,7 +25915,7 @@ console.log(`  algebraic identities       ${pad(algebraChecks.toLocaleString(), 
 console.log(`  determinants explained     ${pad(detMeaning.toLocaleString(), 10)}  (area or volume, flipped, or pressed flat)`);
 console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(), 10)}`);
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
-console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
+console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the five twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, what the armour lets through, and how hard a cunning one asks and is struck)`);
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
