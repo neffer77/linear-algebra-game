@@ -1,89 +1,82 @@
 {
-  "change": "Letters from home: every tenth victory a letter from Linden Ford, with a draught inside",
+  "change": "Herald: a realm's boss arrives announced, its name across the screen and a line of its own mathematics",
   "mutations": [
     {
-      "name": "a letter at every fifth victory",
+      "name": "the herald for every foe",
       "file": "index.html",
-      "find": "  EVERY: 10, FROM: 'Maren',",
-      "replace": "  EVERY: 5, FROM: 'Maren',",
+      "find": "  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },",
+      "replace": "  on(B){ return !!(B && B.mode==='campaign' && B.foe && this.SAY[B.foe.nm]); },",
       "run": "verify"
     },
     {
-      "name": "a ninth letter that is not there",
+      "name": "the herald outside the campaign",
       "file": "index.html",
-      "find": "  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 && w/this.EVERY<=this.L.length ? w/this.EVERY : 0; },",
-      "replace": "  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 ? w/this.EVERY : 0; },",
+      "find": "  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },",
+      "replace": "  on(B){ return !!(B && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },",
       "run": "verify"
     },
     {
-      "name": "no draught in the letter",
+      "name": "the banner in the wrong colour",
       "file": "index.html",
-      "find": "g.items.potion=(g.items.potion||0)+1; return true; },",
-      "replace": "return true; },",
+      "find": "    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col, ()=>{ Sfx.slam(); Haptic.hit(); });",
+      "replace": "    Celebrate.banner(this.text(f), this.SAY[f.nm], '#ffd34d', ()=>{ Sfx.slam(); Haptic.hit(); });",
       "run": "verify"
     },
     {
-      "name": "a draught with no letter",
+      "name": "no line under the name",
       "file": "index.html",
-      "find": "  gift(g, n){ if(!n || !g || !g.items) return false;",
-      "replace": "  gift(g, n){ if(!g || !g.items) return false;",
+      "find": "    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col, ()=>{ Sfx.slam(); Haptic.hit(); });",
+      "replace": "    Celebrate.banner(this.text(f), '', f.col, ()=>{ Sfx.slam(); Haptic.hit(); });",
       "run": "verify"
     },
     {
-      "name": "the page shows a letter not yet come",
+      "name": "a silent herald",
       "file": "index.html",
-      "find": "      + Array.from({length:n}, (_, i)=>this.letter(i+1)).join('');",
-      "replace": "      + Array.from({length:Math.min(N, n+1)}, (_, i)=>this.letter(i+1)).join('');",
+      "find": "    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col, ()=>{ Sfx.slam(); Haptic.hit(); });",
+      "replace": "    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col);",
       "run": "verify"
     },
     {
-      "name": "the page counts past the last letter",
+      "name": "the name not in capitals",
       "file": "index.html",
-      "find": "  had(g){ return Math.min(this.L.length, Math.floor(this.wins(g)/this.EVERY)); },",
-      "replace": "  had(g){ return Math.floor(this.wins(g)/this.EVERY); },",
+      "find": "  text(f){ return '👑 '+f.nm.toUpperCase(); },",
+      "replace": "  text(f){ return '👑 '+f.nm; },",
       "run": "verify"
     },
     {
-      "name": "the card reads the wrong letter",
+      "name": "a boss with no line",
       "file": "index.html",
-      "find": "      <div class=\"sub\" style=\"margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0\">${this.L[n-1]}</div>",
-      "replace": "      <div class=\"sub\" style=\"margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0\">${this.L[n%this.L.length]}</div>",
-      "run": "verify"
-    },
-    {
-      "name": "the victory gives no letter",
-      "file": "index.html",
-      "find": "    const letter=Letters.arrived(g); Letters.gift(g, letter);\n",
-      "replace": "    const letter=0;\n",
-      "run": "verify"
-    },
-    {
-      "name": "the card does not show the letter",
-      "file": "index.html",
-      "find": "        ${Letters.card(letter)}\n",
+      "find": "    'The Unbounded':          'it swears it grows without end',\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the Saga page keeps no letters",
+      "name": "two bosses announced alike",
       "file": "index.html",
-      "find": "    if(id==='s-saga'){ Saga.render(); Letters.render(); }",
-      "replace": "    if(id==='s-saga'){ Saga.render(); }",
+      "find": "    'The Gradient Itself':    'the way up, from wherever you stand'",
+      "replace": "    'The Gradient Itself':    'it swears it grows without end'",
       "run": "verify"
     },
     {
-      "name": "no draught in the letter [play]",
+      "name": "the herald never called",
       "file": "index.html",
-      "find": "g.items.potion=(g.items.potion||0)+1; return true; },",
-      "replace": "return true; },",
-      "run": "play:letters"
+      "find": "    Herald.announce(this);   // a realm's boss arrives announced\n",
+      "replace": "",
+      "run": "verify"
     },
     {
-      "name": "the Saga page keeps no letters [play]",
+      "name": "the herald never called, seen in play",
       "file": "index.html",
-      "find": "    if(id==='s-saga'){ Saga.render(); Letters.render(); }",
-      "replace": "    if(id==='s-saga'){ Saga.render(); }",
-      "run": "play:letters"
+      "find": "    Herald.announce(this);   // a realm's boss arrives announced\n",
+      "replace": "",
+      "run": "play:herald"
+    },
+    {
+      "name": "the herald for every foe, seen in play",
+      "file": "index.html",
+      "find": "  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },",
+      "replace": "  on(B){ return !!(B && B.mode==='campaign' && B.foe && this.SAY[B.foe.nm] || B && B.foe); },",
+      "run": "play:herald"
     }
   ]
 }
