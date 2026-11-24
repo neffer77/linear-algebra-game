@@ -9266,6 +9266,32 @@ const Overkill = {
   line(over, n){ return n ? \`<div id="overLine" style="color:#ff8a80;font-weight:800;margin-top:6px">💥 Overkill: \${over} past its last health, +\${n} gold.</div>\` : ''; }
 };
 
+/* A parry. Five right answers in a row earn a parry, shown beside the streak,
+   and the next blow a miss would land is turned away and costs no health. The
+   miss still breaks the streak, so the parry is earned again from nothing. One
+   is held at a time, and it comes again at ten, fifteen and on. A wind-up's
+   blow is its own and is not parried. The daily and the rites keep their own
+   rules. Nothing is saved: a parry lasts the fight. */
+const Parry = {
+  AT: 5,
+  can(B){ return !!(B && B.mode!=='daily' && !B.rite); },
+  earn(B){
+    if(!this.can(B) || B.parry || !B.combo || B.combo%this.AT) return false;
+    B.parry=true;
+    Anim.float(220, H-330, 'PARRY READY', '#9fe3c4', true);
+    if(!B.parryTold){ B.parryTold=true; UI.toast('🛡️ Five right in a row: the next blow a miss would land is parried.'); }
+    return true;
+  },
+  turn(B){
+    if(!B.parry) return false;
+    B.parry=false; B.parried=true;
+    Anim.float(560, H-230, 'PARRIED', '#9fe3c4', true);
+    return true;
+  },
+  tag(B){ return B.parry ? '  ·  🛡️ parry ready' : ''; },
+  line(on){ return on ? \`<div class="miss again" id="parryLine">🛡️ <b>Parried!</b> Your streak had earned a parry, so the miss cost no health. The streak starts again from nothing.</div>\` : ''; }
+};
+
 const SecondWind = {
   MUL: 2,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -9350,6 +9376,7 @@ const Battle = {
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
     this.weakHit=false;              // the weak point is told once a fight
     this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
+    this.parry=false; this.parryTold=false; this.parried=false;   // a parry lasts the fight
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
     this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
     this.overkill=0;
@@ -9395,7 +9422,7 @@ const Battle = {
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
       (this.mode==='dungeon' ? \`⛏️ Depth \${Dungeon.run.depth}  ·  \` : '') +
       (this.mode==='daily' ? \`🗡️ \${Math.min(Daily.n+1,Daily.LEN)}/\${Daily.LEN}  ·  \${Daily.score} pts  ·  \` : '') +
-      \`Combo ×\${Combat.comboMul(this.combo).toFixed(2)}  ·  streak \${this.combo}\`;
+      \`Combo ×\${Combat.comboMul(this.combo).toFixed(2)}  ·  streak \${this.combo}\`+Parry.tag(this);
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
@@ -9473,6 +9500,7 @@ const Battle = {
       setTimeout(()=>this.renderPowers(), 60);
       return 0;
     }
+    if(Parry.turn(this)) return 0;
     if(this.wardUp) return this.spendWard(raw);
     return Dungeon.spendSigil(raw);
   },
@@ -9910,7 +9938,7 @@ const Battle = {
        usual draw, so a struggling knight is never held on one topic. A first
        meeting is the lesson ladder's to pace, so it is left to it. */
     const owed=this.recover||0; this.recover=0; this.recovered=0;
-    this.lastRiposte=false; this.lastCoup=false;
+    this.lastRiposte=false; this.lastCoup=false; this.parried=false;
     this.lastStand=SecondWind.take(this);
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
@@ -9918,6 +9946,7 @@ const Battle = {
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
       this.runBest=Math.max(this.runBest||0,this.combo);
+      Parry.earn(this);
       if(owed && this.cur.redo){
         this.recovered=Recover.heal(owed);
         if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
@@ -10136,6 +10165,7 @@ const Battle = {
       (!inRite && ok && this.cur.redo ? \`<div class="miss again">↺ <b>Got it this time.</b> The second go landed\${Recover.back(this.recovered)}.</div>\` : '')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       Riposte.line(!inRite && this.lastRiposte)+
+      Parry.line(!inRite && this.parried)+
       SecondWind.line(this, ok)+
       \`<div>\${st.ex}</div>\`+ rule +
       \`<div id="afig"></div>\`+

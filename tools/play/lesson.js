@@ -274,6 +274,7 @@ module.exports = {
       // a false claim, called true: an ordinary miss
       let s, tries = 0; do { s = __L.ask('det2', 0.25); } while (Battle.step().truth && ++tries < 200);
       out.falseClaim = Battle.step().claim; out.falseReal = Battle.cur.a;
+      Battle.parry = false;   // a parry earned by the right answers above would turn this blow away
       [...document.querySelectorAll('#choices .choice')].find(b => b.innerHTML === Lesson.TRUE).click();
       out.calledTrue = { hpLost: Game.s.maxHp - Game.s.hp, rec: __L.rec('det2'), text: __L.explain() };
       __L.next();
