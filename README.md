@@ -868,7 +868,8 @@ The game is built so that losing teaches you as much as winning.
   how many plain blows of your weapon fell the foe (its health over your blade's blow, rounded up) and how many
   of its blows would fell you as you stand (your health over its blow through your armour). Hover or hold to see
   the sum. A streak, speed and criticals make a fight shorter; the line turns red when you would fall first,
-  which is the cue to rest or buy a better blade. Nothing is saved.
+  which is the cue to rest or buy a better blade. The victory card's next fight on the road carries the same
+  line. Nothing is saved.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
