@@ -552,6 +552,10 @@ details.realm .realmhdr{min-height:44px;}
 details.realm .rcount{margin-left:auto; font-size:12px; color:var(--dim); font-weight:800;}
 details.realm .schev{color:var(--dim); transition:transform .18s ease; margin-left:6px;}
 details.realm[open] .schev{transform:rotate(90deg)}
+/* a closed realm names its first few topics and counts the rest; opened, it names them all */
+details.realm:not([open]) .rmore{display:none}
+details.realm[open] .rless{display:none}
+details.realm .rless{color:var(--gold); font-weight:700}
 /* ---- the knight on the title, and the hall of doors ---- */
 .kcard{display:flex; align-items:center; gap:12px; margin:10px 0 8px; padding:10px 12px; border-radius:14px;
   background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--edge);}
@@ -9374,6 +9378,21 @@ const Haul = {
   }
 };
 
+/* The topics under each realm on the map. Every realm's heading named all its
+   topics, up to twenty-six of them, so the closed realms below the one being
+   worked through were a wall of small print, most of it out of reach. A closed
+   realm now names its first three and says how many more; opened, it names
+   them all, in the same order. Every topic is still on the page. */
+const Topics = {
+  SHOW:3,
+  line(keys){
+    const ls=(keys||[]).map(k=>TOPIC_LABEL[k]||k), rest=ls.slice(this.SHOW);
+    return `<div class="small rtopics" style="margin:2px 0 4px">${ls.slice(0,this.SHOW).join(' · ')}`
+      + (rest.length ? `<span class="rmore"> · ${rest.join(' · ')}</span><span class="rless"> · and ${rest.length} more</span>` : '')
+      + `</div>`;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -17570,7 +17589,7 @@ const UI = {
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
             <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Sky.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
-            <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
+            ${Topics.line(r.pool)}</summary>`;   // its first few topics, the rest when it is opened
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];

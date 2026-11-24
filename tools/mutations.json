@@ -1,82 +1,61 @@
 {
-  "change": "Victory spoils: the card leads with its totals as chips, and a big win's bonuses sit in one list, folded past the first three",
+  "change": "Realm topics: a closed realm on the map names its first three topics and counts the rest; opened, it names them all",
   "mutations": [
     {
-      "name": "the totals under the bonuses again",
+      "name": "every topic named again",
       "file": "index.html",
-      "find": "          ${Ballad.line(song)}\n          ${Haul.chips(loot)}\n",
-      "replace": "          ${Ballad.line(song)}\n",
+      "find": "    return `<div class=\"small rtopics\" style=\"margin:2px 0 4px\">${ls.slice(0,this.SHOW).join(' · ')}`",
+      "replace": "    return `<div class=\"small rtopics\" style=\"margin:2px 0 4px\">${ls.join(' · ')}`",
       "run": "verify"
     },
     {
-      "name": "never folded",
+      "name": "the count off by one",
       "file": "index.html",
-      "find": "    if(hid<2) return 0;   // one more line is shown",
-      "replace": "    if(hid<99) return 0;   // one more line is shown",
+      "find": "<span class=\"rless\"> · and ${rest.length} more</span>",
+      "replace": "<span class=\"rless\"> · and ${rest.length+1} more</span>",
       "run": "verify"
     },
     {
-      "name": "one line folded alone",
+      "name": "the rest never shown",
       "file": "index.html",
-      "find": "    if(hid<2) return 0;   // one more line is shown",
-      "replace": "    if(hid<1) return 0;   // one more line is shown",
+      "find": "<span class=\"rmore\"> · ${rest.join(' · ')}</span>",
+      "replace": "<span class=\"rmore\"> · ${rest.slice(1).join(' · ')}</span>",
       "run": "verify"
     },
     {
-      "name": "the opener miscounts",
+      "name": "a short list cut",
       "file": "index.html",
-      "find": "    b.textContent='＋ '+hid+' more bonuses';",
-      "replace": "    b.textContent='＋ '+rows.length+' more bonuses';",
+      "find": "      + (rest.length ? `<span",
+      "replace": "      + (ls.length ? `<span",
       "run": "verify"
     },
     {
-      "name": "the opener never opens",
+      "name": "the rest shown on a closed realm",
       "file": "index.html",
-      "find": "const open=()=>{ el.classList.remove('folded'); el.style.maxHeight=''; b.remove(); };",
-      "replace": "const open=()=>{ b.remove(); };",
-      "run": "verify"
-    },
-    {
-      "name": "any key opens",
-      "file": "index.html",
-      "find": "if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }",
-      "replace": "{ e.preventDefault(); open(); }",
-      "run": "verify"
-    },
-    {
-      "name": "folded by hiding",
-      "file": "index.html",
-      "find": ".haul.folded{overflow:hidden;",
-      "replace": ".haul.folded>div:nth-child(n+5){display:none}.haul.folded{overflow:hidden;",
-      "run": "verify"
-    },
-    {
-      "name": "the list never titled",
-      "file": "index.html",
-      "find": "    el.insertBefore(h, el.firstChild);\n",
+      "find": "details.realm:not([open]) .rmore{display:none}\n",
       "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "folded too short",
+      "name": "the count on an open realm",
       "file": "index.html",
-      "find": "el.style.maxHeight=(last.offsetTop+last.offsetHeight+18)+'px';",
-      "replace": "el.style.maxHeight=(last.offsetTop)+'px';",
+      "find": "details.realm[open] .rless{display:none}\n",
+      "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "a bonus outside the list",
+      "name": "the old line kept",
       "file": "index.html",
-      "find": "          ${Sky.line(this)}\n          ${Honours.line(hon)}\n          ${this.foe.elite?",
-      "replace": "          ${Sky.line(this)}\n          ${this.foe.elite?",
+      "find": "            ${Topics.line(r.pool)}</summary>`;",
+      "replace": "            <div class=\"small\" style=\"margin:2px 0 4px\">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;",
       "run": "verify"
     },
     {
-      "name": "never folded, seen in play",
+      "name": "the rest shown on a closed realm, seen in play",
       "file": "index.html",
-      "find": "    if(hid<2) return 0;   // one more line is shown",
-      "replace": "    if(hid<99) return 0;   // one more line is shown",
-      "run": "play:haul"
+      "find": "details.realm:not([open]) .rmore{display:none}\n",
+      "replace": "\n",
+      "run": "play:topics"
     }
   ]
 }
