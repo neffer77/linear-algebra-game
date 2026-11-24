@@ -1,33 +1,82 @@
 {
-  "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
+  "change": "Victory spoils: the card leads with its totals as chips, and a big win's bonuses sit in one list, folded past the first three",
   "mutations": [
     {
-      "name": "no purse",
+      "name": "the totals under the bonuses again",
       "file": "index.html",
-      "find": "    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n",
-      "replace": "",
+      "find": "          ${Ballad.line(song)}\n          ${Haul.chips(loot)}\n",
+      "replace": "          ${Ballad.line(song)}\n",
       "run": "verify"
     },
     {
-      "name": "no purse, seen in play",
+      "name": "never folded",
       "file": "index.html",
-      "find": "    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n",
-      "replace": "",
-      "run": "play:folio"
-    },
-    {
-      "name": "a purse at the wrong page",
-      "file": "index.html",
-      "find": "  MARKS:{8:60, 16:150, 24:250, 32:500},",
-      "replace": "  MARKS:{7:60, 16:150, 24:250, 32:500},",
+      "find": "    if(hid<2) return 0;   // one more line is shown",
+      "replace": "    if(hid<99) return 0;   // one more line is shown",
       "run": "verify"
     },
     {
-      "name": "the purse unsaid",
+      "name": "one line folded alone",
       "file": "index.html",
-      "find": "      ${p.prize?`<div id=\"folioPrize\"",
-      "replace": "      ${false?`<div id=\"folioPrize\"",
+      "find": "    if(hid<2) return 0;   // one more line is shown",
+      "replace": "    if(hid<1) return 0;   // one more line is shown",
       "run": "verify"
+    },
+    {
+      "name": "the opener miscounts",
+      "file": "index.html",
+      "find": "    b.textContent='＋ '+hid+' more bonuses';",
+      "replace": "    b.textContent='＋ '+rows.length+' more bonuses';",
+      "run": "verify"
+    },
+    {
+      "name": "the opener never opens",
+      "file": "index.html",
+      "find": "const open=()=>{ el.classList.remove('folded'); el.style.maxHeight=''; b.remove(); };",
+      "replace": "const open=()=>{ b.remove(); };",
+      "run": "verify"
+    },
+    {
+      "name": "any key opens",
+      "file": "index.html",
+      "find": "if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }",
+      "replace": "{ e.preventDefault(); open(); }",
+      "run": "verify"
+    },
+    {
+      "name": "folded by hiding",
+      "file": "index.html",
+      "find": ".haul.folded{overflow:hidden;",
+      "replace": ".haul.folded>div:nth-child(n+5){display:none}.haul.folded{overflow:hidden;",
+      "run": "verify"
+    },
+    {
+      "name": "the list never titled",
+      "file": "index.html",
+      "find": "    el.insertBefore(h, el.firstChild);\n",
+      "replace": "\n",
+      "run": "verify"
+    },
+    {
+      "name": "folded too short",
+      "file": "index.html",
+      "find": "el.style.maxHeight=(last.offsetTop+last.offsetHeight+18)+'px';",
+      "replace": "el.style.maxHeight=(last.offsetTop)+'px';",
+      "run": "verify"
+    },
+    {
+      "name": "a bonus outside the list",
+      "file": "index.html",
+      "find": "          ${Sky.line(this)}\n          ${Honours.line(hon)}\n          ${this.foe.elite?",
+      "replace": "          ${Sky.line(this)}\n          ${this.foe.elite?",
+      "run": "verify"
+    },
+    {
+      "name": "never folded, seen in play",
+      "file": "index.html",
+      "find": "    if(hid<2) return 0;   // one more line is shown",
+      "replace": "    if(hid<99) return 0;   // one more line is shown",
+      "run": "play:haul"
     }
   ]
 }
