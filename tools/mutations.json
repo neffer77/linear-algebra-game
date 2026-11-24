@@ -2,73 +2,45 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "a bar by another measure",
+      "name": "every foe new",
       "file": "index.html",
-      "find": "  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+(g.lvl-1)*45} : null; },",
-      "replace": "  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+g.lvl*45} : null; },",
+      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
       "run": "verify"
     },
     {
-      "name": "a level gained starts from the old bar",
+      "name": "new outside the campaign",
       "file": "index.html",
-      "find": "    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);",
-      "replace": "    const from = this.pct(a.xp, a.need);",
+      "find": "    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';",
+      "replace": "    if(!B || !B.foe || B.ri==null || B.fi==null) return '';",
       "run": "verify"
     },
     {
-      "name": "the bar starts full",
+      "name": "the wrong foe's clear",
       "file": "index.html",
-      "find": "    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);",
-      "replace": "    const from = b.lvl>a.lvl ? 0 : this.pct(b.xp, b.need);",
+      "find": "    return c[B.ri+':'+B.fi] ? '' :",
+      "replace": "    return c[B.ri+':0'] ? '' :",
       "run": "verify"
     },
     {
-      "name": "the wrong amount left",
+      "name": "never marked",
       "file": "index.html",
-      "find": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};",
-      "replace": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:b.need};",
+      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
+      "replace": ";\n",
       "run": "verify"
     },
     {
-      "name": "the bar jumps",
+      "name": "never marked, seen in play",
       "file": "index.html",
-      "find": "    setTimeout(()=>{ el.style.width=p.to+'%'; }, 150);",
-      "replace": "    el.style.width=p.to+'%';",
-      "run": "verify"
-    },
-    {
-      "name": "read after the gain",
-      "file": "index.html",
-      "find": "    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n    const ups=Game.gainXp(xp+fXp);\n",
-      "replace": "    const ups=Game.gainXp(xp+fXp);\n    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n",
-      "run": "verify"
-    },
-    {
-      "name": "never on the card",
-      "file": "index.html",
-      "find": "          ${LevelBar.html(lvl)}\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "never fills",
-      "file": "index.html",
-      "find": "      LevelBar.fill(lvl);   // and the way to the next level fills\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "never fills, seen in play",
-      "file": "index.html",
-      "find": "      LevelBar.fill(lvl);   // and the way to the next level fills\n",
-      "replace": "",
+      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
+      "replace": ";\n",
       "run": "play:folio"
     },
     {
-      "name": "the wrong amount left, seen in play",
+      "name": "every foe new, seen in play",
       "file": "index.html",
-      "find": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};",
-      "replace": "    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:b.need};",
+      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
       "run": "play:folio"
     }
   ]
