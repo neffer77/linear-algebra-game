@@ -2568,7 +2568,7 @@ const weakNotes = (() => {
   want(env.floats.join() === 'WEAK POINT,WEAK POINT', 'float', `the scene says ${JSON.stringify(env.floats)}`);
   want(env.toasts.length === 1 && env.toasts[0] === `🎯 Weak point! ${foe.nm} cannot stand ${TOPIC_LABEL[k]}.`, 'told', `the fight says ${JSON.stringify(env.toasts)}`);
   const battle = html.slice(html.indexOf('const Battle = {'), html.indexOf('const Battle = {') + 60000);
-  want(/\* Phase\.bonus\(this\) \* Weak\.bonus\(this\);/.test(battle), 'damage', 'the weak point is not folded into the strike');
+  want(/\* Phase\.bonus\(this\) \* Weak\.bonus\(this\)[ ;]/.test(battle), 'damage', 'the weak point is not folded into the strike');
   want(/this\.weakHit=false;/.test(battle.slice(battle.indexOf('_start(f){'), battle.indexOf('wStats(){'))), 'reset', 'the weak point is not told afresh each fight');
   want(/Weak\.chip\(this\)/.test(battle), 'shown', 'the question never shows the weak point chip');
   return { checks, foes: names.size };
@@ -2816,6 +2816,62 @@ const recoverNotes = (() => {
   want(ex.includes("so you can use this straight away.</div>`+Recover.line(this.recover) : '')"), 'explain', 'a miss does not say what landing the next one wins back');
   want(ex.includes('The second go landed${Recover.back(this.recovered)}.</div>'), 'explain', 'the second go does not say what it won back');
   want(!/(Game\.s|\bg|this\.s)\.(recover|recovered|owed)\b/.test(html), 'save', 'what is owed is saved');
+  return checks;
+})();
+
+/* Riposte: a right answer while the foe winds up lands half again as hard.
+   Worked here from its own rule, and its place in a fight read off the source. */
+const riposteNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Riposte = {'), html.indexOf('const Battle = {'));
+  const said = [], toasts = [];
+  const Anim = { float: (x, y, text) => said.push(text) }, UI = { toast: m => toasts.push(m) };
+  const R = new Function('Anim', 'UI', 'H', src + ';return Riposte;')(Anim, UI, 640);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('riposte', key, msg); };
+  want(R.MUL === 1.5, 'rule', `a riposte lands ×${R.MUL}, not ×1.5`);
+  for (const slamNext of [true, false, undefined, 0, 1]) {
+    const B = { slamNext, foe: { nm: 'Meadow Slime' } };
+    const on = !!slamNext;
+    want(R.on(B) === on, `a foe with slamNext ${slamNext}`, `is ${R.on(B) ? '' : 'not '}taken as winding up`);
+    want(R.bonus(B) === (on ? 1.5 : 1), `a foe with slamNext ${slamNext}`, `gives ×${R.bonus(B)}`);
+  }
+  want(R.on(null) === false && R.bonus(null) === 1, 'no fight', 'ripostes with no fight');
+  // said every time on the scene, told once a fight
+  said.length = 0; toasts.length = 0;
+  const B = { slamNext: true, riposted: false, foe: { nm: 'Bramble Goblin' } };
+  want(R.hit(B) === true && R.hit(B) === true, 'hit', 'a riposte as it winds up is not taken');
+  want(said.join() === 'RIPOSTE,RIPOSTE', 'hit', `says ${said.join()} on the scene`);
+  want(toasts.length === 1 && toasts[0] === '🤺 Riposte! A right answer as Bramble Goblin winds up lands half again as hard.', 'hit', `tells ${JSON.stringify(toasts)}`);
+  said.length = 0;
+  want(R.hit({ slamNext: false, riposted: false, foe: B.foe }) === false && said.length === 0, 'hit', 'ripostes with no wind-up');
+  for (const nm of ['Meadow Slime', 'The Eigen Dragon']) {
+    const t = R.tele(nm);
+    want(t.includes(`<b>${nm}</b> is winding up`) && t.includes('brace the blow') && t.includes('riposte</b> for ×1.5'), 'tele', `warns ${t}`);
+  }
+  want(R.line(false) === '' && R.line(true).includes('id="riposteLine"') && R.line(true).includes('half again as hard'), 'line', 'the explanation line is wrong');
+
+  // its place in a fight
+  const Bt = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const start = Bt.slice(Bt.indexOf('\n  _start(f){'), Bt.indexOf('\n  }', Bt.indexOf('\n  _start(f){')));
+  want(start.includes('this.riposted=false; this.lastRiposte=false;'), 'begin', 'a fight does not start untold');
+  const next = Bt.slice(Bt.indexOf('\n  nextQuestion(){'), Bt.indexOf('\n  }', Bt.indexOf('\n  nextQuestion(){')));
+  want(next.includes('tg.innerHTML=Riposte.tele(this.foe.nm);') && next.indexOf('Riposte.tele') > next.indexOf('if(this.slamNext){'), 'warning', 'the wind-up does not warn of the riposte');
+  const ans = Bt.slice(Bt.indexOf('\n  answer(btn, choice){'), Bt.indexOf('\n  showExplain('));
+  const okAt = ans.indexOf('    if(ok){\n      this.combo++;'), shown = ans.indexOf('} else if(this.shownWork){');
+  const mul = ans.indexOf('* Weak.bonus(this) * Riposte.bonus(this);');
+  want(mul > okAt && mul < shown, 'answer', 'the riposte is not folded into a right answer\'s strike');
+  const strike = ans.indexOf('const dmg = Combat.strike(', okAt);
+  want(mul < strike && ans.indexOf('riposte=this.lastRiposte=Riposte.hit(this);') > mul && ans.indexOf('riposte=this.lastRiposte=Riposte.hit(this);') < strike, 'answer', 'the riposte is not said with the strike');
+  const slam = ans.indexOf('else if(this.slamNext){');
+  want(slam > shown && ans.indexOf('this.slamNext=false;', slam) > slam, 'answer', 'the wind-up is spent before the strike reads it');
+  const reset = ans.indexOf('this.lastRiposte=false;');
+  want(reset > -1 && reset < okAt && reset > ans.indexOf("if(this.mode==='daily'){"), 'answer', 'a riposte is not forgotten before the next answer');
+  want((html.match(/Riposte\.bonus\(/g) || []).length === 1, 'answer', 'the riposte lands somewhere else too');
+  want(ans.includes("else if(crit || weak || riposte) Talk.say('reel');"), 'answer', 'a riposte does not make the foe reel');
+  const ex = Bt.slice(Bt.indexOf('\n  showExplain('), Bt.indexOf('\n  }', Bt.indexOf('\n  showExplain(') + 900));
+  want(ex.includes('Riposte.line(!inRite && this.lastRiposte)+'), 'explain', 'the explanation does not say the riposte landed');
+  want(!/(Game\.s|\bg|this\.s)\.(riposted|lastRiposte)\b/.test(html), 'save', 'the riposte is saved');
   return checks;
 })();
 
@@ -26167,6 +26223,7 @@ console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
+console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
