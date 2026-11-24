@@ -740,6 +740,11 @@ The game is built so that losing teaches you as much as winning.
   plain one: its find is drawn with more luck, the way a boss's is, so rare purses, feathers and
   gear turn up more often. The victory card says so ("✨ Clean sweep: not one miss, so a sure chest
   with richer odds."). A win with a miss in it drops a chest only by chance, as ever. Nothing is saved.
+- **⚔️ Revenge.** A campaign foe that fells you holds the gold lost in the retreat. The defeat says
+  so ("⚔️ Goblin holds your 150 gold. Beat it and you win it back."), the map marks that foe with
+  what it holds, and beating it pays the gold back on top of the win's own, said on the victory card
+  and counted into the gold shown. Falls to one foe add up, and each foe holds its own. It turns a
+  loss into a score to settle. It lasts the sitting: nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3143,6 +3148,7 @@ Inside `index.html` the code is organised as:
 | `Quarry` | one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win; full gold; the card, the head of the campaign and the foe's own place |
 | `Parry` | earned at five, ten, fifteen and on and never otherwise, one at a time, never in the daily or a rite; turns away one blow and is spent; shown beside the streak, said on the scene and in the explanation, told once a fight |
 | `Sweep` | a win with no miss in the campaign only; a sure chest, never a plain one; rarer finds than a plain win over the whole spread of the draw, and a boss's odds tipped further; the card's line |
+| `Revenge` | each foe holds the gold lost to it and no other's, falls adding up; a win over it pays exactly that once and clears it; a fall that lost nothing holds nothing; said on the defeat, the map and the victory card, and counted in |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3260,6 +3266,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `quarry` | no quarry before a foe is beaten; the map names it at the head of the campaign and marks its own place only; another beaten foe pays 45%; the quarry says so on the card and pays its full gold, counted in, every win today; it stays put once beaten; nothing is saved |
 | `parry` | four in a row earn nothing; five earn a parry shown beside the streak; the next miss costs no health and says it was parried; the streak starts again; the miss after lands; ten in a row hold one parry, not two; a new fight starts with none; nothing is saved |
 | `sweep` | three wins with no miss each say so on the card and drop a chest drawn with a sweep's luck, none of them a plain one; the card fits a phone; a win with a miss says nothing and draws as ever; the next fight starts with no miss; nothing is saved |
+| `revenge` | a fall says the foe holds the gold lost, and a second fall adds to it; the map marks that foe only; a win over another foe pays none of it; beating the foe pays it back on top, said on the card and counted in; the mark goes; a second win pays nothing more; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |

@@ -61,6 +61,7 @@ const SUITES = [
   require('./play/quarry'),      // one beaten foe a day pays its full gold again
   require('./play/parry'),       // five right in a row turn away the next miss's blow
   require('./play/sweep'),       // a win with no miss drops a sure, richer chest
+  require('./play/revenge'),     // the foe that felled you holds your lost gold until you beat it
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
