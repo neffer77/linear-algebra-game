@@ -1,89 +1,89 @@
 {
- "change": "A treasure map: three wins at A or better make a map, and a win where X marks digs up a hoard",
+ "change": "The gauntlet: a realm all beaten runs again back to back for every first-clear purse",
  "mutations": [
   {
-   "name": "a B finds a scrap",
+   "name": "a realm not all beaten offers a gauntlet",
    "file": "index.html",
-   "find": "    if(grade!=='S' && grade!=='A') return null;",
-   "replace": "    if(grade==='C') return null;",
+   "find": "r.foes.every((f,fi)=>!!g.cleared[ri+':'+fi]);",
+   "replace": "r.foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);",
    "run": "verify"
   },
   {
-   "name": "a hoard is dug up anywhere",
+   "name": "a gauntlet pays again and again",
    "file": "index.html",
-   "find": "      if(B.ri!==this.at) return null;\n",
+   "find": "this.run=null; this.paid[r.ri]=1; g.gold+=gold;",
+   "replace": "this.run=null; g.gold+=gold;",
+   "run": "verify"
+  },
+  {
+   "name": "a gauntlet pays nothing",
+   "file": "index.html",
+   "find": "this.run=null; this.paid[r.ri]=1; g.gold+=gold;",
+   "replace": "this.run=null; this.paid[r.ri]=1;",
+   "run": "verify"
+  },
+  {
+   "name": "a gauntlet starts at its second foe",
+   "file": "index.html",
+   "find": "    this.run={ri, i:0};\n    Battle.begin(ri, 0);",
+   "replace": "    this.run={ri, i:1};\n    Battle.begin(ri, 1);",
+   "run": "verify"
+  },
+  {
+   "name": "a heroic fight keeps the run",
+   "file": "index.html",
+   "find": "meet(ri, fi, extra){ if(this.run && (extra || ri!==this.run.ri",
+   "replace": "meet(ri, fi, extra){ if(this.run && (ri!==this.run.ri",
+   "run": "verify"
+  },
+  {
+   "name": "any foe of the realm steps the run on",
+   "file": "index.html",
+   "find": "B.ri!==r.ri || B.fi!==r.i || !g) return null;",
+   "replace": "B.ri!==r.ri || !g) return null;",
+   "run": "verify"
+  },
+  {
+   "name": "the arena steps the run on",
+   "file": "index.html",
+   "find": "if(!r || !B || B.mode!=='campaign' || B.ri",
+   "replace": "if(!r || !B || B.ri",
+   "run": "verify"
+  },
+  {
+   "name": "the purse is the boss's alone",
+   "file": "index.html",
+   "find": "purse(ri){ return REALMS[ri].foes.reduce((a,f)=>a+f.gold, 0); },",
+   "replace": "purse(ri){ const f=REALMS[ri].foes; return f[f.length-1].gold; },",
+   "run": "verify"
+  },
+  {
+   "name": "a fall keeps the run",
+   "file": "index.html",
+   "find": "    Gauntlet.end();   // a fall breaks off a gauntlet run\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "two scraps make a map",
+   "name": "in play, a flight keeps the run",
    "file": "index.html",
-   "find": "  NEED: 3,",
-   "replace": "  NEED: 2,",
-   "run": "verify"
-  },
-  {
-   "name": "X may fall where the knight just won",
-   "file": "index.html",
-   "find": "pick=away.length ? away : all;",
-   "replace": "pick=all;",
-   "run": "verify"
-  },
-  {
-   "name": "X may fall on a sealed realm",
-   "file": "index.html",
-   "find": "      return (ri===0 || !!g.cleared[key]) && REALMS[ri]",
-   "replace": "      return REALMS[ri]",
-   "run": "verify"
-  },
-  {
-   "name": "X may fall on a realm never fought in",
-   "file": "index.html",
-   "find": "      return (ri===0 || !!g.cleared[key]) && REALMS[ri].foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);",
-   "replace": "      return (ri===0 || !!g.cleared[key]);",
-   "run": "verify"
-  },
-  {
-   "name": "the hoard is the first foe's gold",
-   "file": "index.html",
-   "find": "return f ? f[f.length-1].gold : 0; },",
-   "replace": "return f ? f[0].gold : 0; },",
-   "run": "verify"
-  },
-  {
-   "name": "the scraps never begin again",
-   "file": "index.html",
-   "find": "      this.at=null; this.n=0; g.gold+=gold;",
-   "replace": "      this.at=null; g.gold+=gold;",
-   "run": "verify"
-  },
-  {
-   "name": "the hoard pays nothing",
-   "file": "index.html",
-   "find": "      this.at=null; this.n=0; g.gold+=gold;",
-   "replace": "      this.at=null; this.n=0;",
-   "run": "verify"
-  },
-  {
-   "name": "the arena finds scraps",
-   "file": "index.html",
-   "find": "    if(!B || B.mode!=='campaign' || !g) return null;\n    if(this.at!==null){",
-   "replace": "    if(!B || !g) return null;\n    if(this.at!==null){",
-   "run": "verify"
-  },
-  {
-   "name": "the card does not say what was found",
-   "file": "index.html",
-   "find": "          ${Treasure.line(tr)}\n",
+   "find": "    if(live) Gauntlet.end();   // so does a flight from a live fight\n",
    "replace": "",
-   "run": "play:treasure"
+   "run": "play:gauntlet"
   },
   {
-   "name": "the map does not mark the realm",
+   "name": "in play, the card does not lead on",
    "file": "index.html",
-   "find": "${Treasure.tag(ri)}",
+   "find": "        ${Gauntlet.button(gnt)}\n",
    "replace": "",
-   "run": "play:treasure"
+   "run": "play:gauntlet"
+  },
+  {
+   "name": "in play, the map offers no gauntlet",
+   "file": "index.html",
+   "find": "      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way\n",
+   "replace": "",
+   "run": "play:gauntlet"
   }
  ]
 }
