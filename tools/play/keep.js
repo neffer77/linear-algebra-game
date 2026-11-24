@@ -117,7 +117,8 @@ module.exports = {
         script: SCRIPTORIUM.every(e => out.each.script.text.includes(e.nm)),
         crucible: Crucible.SHARES.every(s => out.each.crucible.text.includes(s.nm))
       };
-      // and none of them is still in the Smithy
+      // and none of them is still in the Smithy, with its dearer pieces unfolded
+      Ware.open = { w: 1, a: 1 };
       UI.go('s-shop');
       const shop = document.getElementById('shopList').innerText;
       out.shopClean = !FORGE.concat(RUNES, APOTHECARY, SCRIPTORIUM).some(x => shop.includes(x.nm)) && !/Crucible[^·]/.test(shop.replace(/Forge · Rune Bench · Apothecary · Scriptorium · Crucible/, ''));

@@ -138,7 +138,9 @@ module.exports = {
       out.notInShop = WEAPONS.concat(ARMORS).filter(x => x.forge).every(x => x.cost === 0);
       UI.go('s-shop');
       const shop = document.getElementById('shopList').innerText;
-      out.shopHidesForged = !/Deepsteel Edge[\s\S]{0,40}🪙/.test(shop);
+      Ware.open = { w: 1, a: 1 };
+      UI.renderShop();
+      out.shopHidesForged = ![...document.querySelectorAll('#shopList .nm')].some(n => /Deepsteel/.test(n.innerText));
       // The benches are rooms of the Keep now; the Smithy points the way.
       UI.go('s-keep');
       const keep = document.getElementById('keepBody').innerText;

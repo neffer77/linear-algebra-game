@@ -4703,6 +4703,59 @@ const topicsNotes = (() => {
     && !html.includes("r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>"), 'wired', 'the map still names every topic of a closed realm');
   return checks;
 })();
+const wareNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Ware = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  const grab = name => { const a = html.indexOf('const ' + name + ' = ['); return html.slice(a, html.indexOf('\n];\n', a) + 3); };
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('ware', key, msg); };
+  const { W, A, Ware } = new Function(grab('WEAPONS') + grab('ARMORS') + src + ';return {W:WEAPONS,A:ARMORS,Ware};')();
+  const pct = c => Math.round(c * 100);
+  // every piece beside every worn piece: the line is green only when nothing is lost, and it names the worn piece
+  for (const [kind, list, d] of [['w', W, x => [x.dmg, pct(x.crit)]], ['a', A, x => [x.def, x.hp]]]) {
+    for (const worn of list) for (const it of list) {
+      const g = Ware.gain(kind, it, worn);
+      if (it.id === worn.id) { want(g === null && Ware.line(kind, it, worn) === '', 'self ' + it.id, 'the worn piece compares itself with itself'); continue; }
+      const dd = d(it).map((v, i) => v - d(worn)[i]);
+      const better = dd.every(v => v >= 0) && dd.some(v => v > 0);
+      want(g && g.up === better, 'up ' + kind + it.id + worn.id, 'a piece is shown as better when it is not, or not when it is');
+      want(g.text.endsWith(worn.nm), 'names ' + it.id + worn.id, 'the line does not name the piece worn');
+      // each difference is in the line with its true size
+      for (const v of dd) if (v) want(g.text.includes((better ? '+' : '') + (better ? v : Math.abs(v))), 'size ' + kind + it.id + worn.id + v, 'the line gives a wrong difference');
+      const l = Ware.line(kind, it, worn);
+      want(l.includes('class="vs' + (better ? ' up"' : '"')) && l.includes(g.text), 'html ' + it.id + worn.id, 'the row line is not drawn, or green when it should not be');
+    }
+  }
+  // the ones met in the Smithy read as a knight would say them
+  want(Ware.gain('w', W[3], W[2]).text === '+7 damage, +2% crit over your Vector Saber', 'cleaver', 'the Cleaver over a Saber reads wrong');
+  want(Ware.gain('w', W[1], W[2]).text === '6 less damage, 2% less crit than your Vector Saber', 'shortsword', 'a Shortsword under a Saber reads wrong');
+  want(Ware.gain('a', A[1], A[0]).text === '+2 defence, +10 health over your Peasant Tunic', 'jerkin', 'a Jerkin over a Tunic reads wrong');
+  const mixed = Ware.gain('w', { id: 'x', dmg: 25, crit: .05 }, W[2]);
+  want(mixed && !mixed.up && mixed.text === '+5 damage, −5% crit against your Vector Saber', 'mixed', 'a piece that gains and loses reads wrong');
+  want(Ware.gain('w', W[1], null) === null && Ware.gain('w', null, W[1]) === null, 'none', 'no worn piece breaks the line');
+  // the fold: shown up to the next two out of reach, never hiding a single row, open when asked
+  const own = ids => x => ids.includes(x.id);
+  for (let gold = 0; gold <= 6000; gold += 37) for (const ids of [['w0'], ['w0', 'w1', 'w2'], W.map(x => x.id)]) {
+    Ware.open = {};
+    const n = Ware.shown('w', W.slice(0, 10), own(ids), gold), list = W.slice(0, 10);
+    const i = list.findIndex(x => !ids.includes(x.id) && x.cost > gold);
+    want(n >= 1 && n <= 10 && list.slice(n).every(x => !ids.includes(x.id) && x.cost > gold), 'reach ' + gold + ids.length, 'a blade owned or within the purse is folded away');
+    want(list.slice(0, n).filter(x => !ids.includes(x.id) && x.cost <= gold).length === list.filter(x => !ids.includes(x.id) && x.cost <= gold).length, 'afford ' + gold + ids.length, 'a blade within the purse is folded away');
+    want(i < 0 ? n === 10 : (n === 10 || (n === i + 2 && 10 - n >= 2)), 'fold ' + gold + ids.length, 'the fold shows the wrong number of rows, or hides only one');
+    Ware.open = { w: 1 };
+    want(Ware.shown('w', list, own(ids), gold) === 10, 'open ' + gold, 'an opened fold still hides blades');
+  }
+  Ware.open = {};
+  want(Ware.shown('w', W.slice(0, 10), own(['w0', 'w1', 'w2']), 731) === 7, 'smithy', 'a purse of 731 does not show up to the Integral Greatsword');
+  const m = Ware.more('w', W.slice(7, 10));
+  want(m.includes('＋ 3 dearer blades, up to 🪙 5200') && m.includes("Ware.open['w']=1;UI.renderShop()") && m.includes('role="button"') && m.includes('tabindex="0"') && Ware.more('a', A.slice(7, 9)).includes('dearer coats, up to 🪙 4000') && Ware.more('w', []) === '', 'more', 'the fold does not say how many are behind it and how dear');
+  // wired into the Smithy, and the save untouched
+  want(html.includes("${Ware.line('w',w,wWorn)}</div>") && html.includes("${Ware.line('a',a,aWorn)}</div>") && html.includes("ws.slice(0,wn).forEach(w=>{") && html.includes("as.slice(0,an).forEach(a=>{")
+    && html.includes("out.push(Ware.more('w',ws.slice(wn)));") && html.includes("out.push(Ware.more('a',as.slice(an)));"), 'wired', 'the Smithy does not use the comparison or the fold');
+  want(html.includes('.item .vs.up{color:var(--green)}') && !/Game\.s\.ware|g\.ware/.test(html), 'css', 'a better piece is not green, or the fold is saved');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -27217,6 +27270,7 @@ console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 1
 console.log(`  victory spoils checked     ${pad(haulNotes.toLocaleString(), 10)}  (the totals as chips at the top, the bonuses one list under them, folded past the first few and opened in place)`);
 console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)}  (a closed realm on the map names its first three topics and counts the rest; opened, it names them all, each once, in order)`);
 console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 10)}  (a long foe nameplate wraps in its own half of the bars, and the health beside it stays whole and on the screen)`);
+console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)}  (each piece in the Smithy says what it adds over what is worn, and the dear ones wait behind a fold)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
