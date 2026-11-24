@@ -4756,6 +4756,38 @@ const wareNotes = (() => {
   want(html.includes('.item .vs.up{color:var(--green)}') && !/Game\.s\.ware|g\.ware/.test(html), 'css', 'a better piece is not green, or the fold is saved');
   return checks;
 })();
+const skillsetNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Skillset = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('skillset', key, msg); };
+  const S = new Function(src + ';return Skillset;')();
+  // every mix of ten skills: carried, with uses, or neither
+  for (let m = 0; m < 3 ** 10; m += 7) {
+    const rows = []; let x = m;
+    for (let i = 0; i < 10; i++) { const k = x % 3; x = (x - k) / 3; rows.push({ on: k === 2, n: k === 1 ? 1 + (i % 3) : 0, html: '<i>' + i + '</i>' }); }
+    for (const open of [false, true]) {
+      S.open = open;
+      const h = S.fold(rows), rest = rows.filter(r => !r.on && !r.n), keep = rows.filter(r => r.on || r.n);
+      const all = rows.every(r => (h.match(new RegExp(r.html.replace(/[/]/g, '\\/'), 'g')) || []).length === 1);
+      want(all, 'all ' + m, 'a skill is dropped or drawn twice');
+      if (rest.length < 2) { want(h === rows.map(r => r.html).join(''), 'whole ' + m, 'a lone skill with no uses is folded'); continue; }
+      const d = h.indexOf('<details');
+      want(d > 0 || keep.length === 0, 'first ' + m, 'the folded skills come before the ones that work');
+      want(h.slice(0, d) === keep.map(r => r.html).join('') && h.slice(d).includes(rest.map(r => r.html).join('')), 'split ' + m, 'a carried skill or one with a use is folded, or one with none is left out');
+      want(h.includes('<summary>＋ ' + rest.length + ' more skills with no uses yet</summary>'), 'count ' + m, 'the fold does not count what is behind it');
+      want(h.includes('ontoggle="Skillset.open=this.open"') && (h.includes('id="skillRest" open ') === open), 'open ' + m, 'the fold does not stay as it was left');
+    }
+  }
+  S.open = false;
+  want(S.work(1) === '1 needs work' && S.work(4) === '4 need work' && S.work(0) === '0 need work', 'grammar', 'one topic "need work"');
+  want(html.includes('const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{') && html.includes("return {on, n, html:`<div class=\"item ${on?'equipped':''}\"")
+    && html.includes('${Skillset.work(shaky)}') && html.includes('weak? Skillset.work(weak) :') && html.includes("${weak?Skillset.work(weak):keys.length+' topics'}")
+    && !/\+' need work'/.test(html) && !html.includes('${shaky} need work'), 'wired', 'Gear does not fold its skills, or a count still reads "1 need work"');
+  want(html.includes('details.skillRest>summary{list-style:none;') && !/Game\.s\.skillRest|g\.skillRest/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -29005,6 +29037,7 @@ console.log(`  victory spoils checked     ${pad(haulNotes.toLocaleString(), 10)}
 console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)}  (a closed realm on the map names its first three topics and counts the rest; opened, it names them all, each once, in order)`);
 console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 10)}  (a long foe nameplate wraps in its own half of the bars, and the health beside it stays whole and on the screen)`);
 console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)}  (each piece in the Smithy says what it adds over what is worn, and the dear ones wait behind a fold)`);
+console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

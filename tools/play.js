@@ -282,6 +282,7 @@ const SUITES = [
   require('./play/topics'),      // a closed realm on the map names three topics
   require('./play/nameplate'),   // a long foe nameplate keeps the health on a phone's screen
   require('./play/ware'),        // the Smithy compares each piece with what is worn
+  require('./play/skillset'),    // Gear folds the skills with no use yet
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];
