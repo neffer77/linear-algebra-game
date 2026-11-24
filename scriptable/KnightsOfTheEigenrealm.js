@@ -9321,6 +9321,24 @@ const Revenge = {
    least. Then it starts again from nothing. A miss takes nothing out. The
    daily, the arena, the dungeon and the rites keep their own rewards. It
    lasts the sitting: nothing is saved. */
+/* The sitting. The map keeps a tally of this sitting's campaign: the
+   victories won, the gold they paid with every bonus counted in, and the
+   longest streak of right answers in any one fight. It shows once there is
+   a victory to count, so a session always shows what it has added up to.
+   Nothing is saved: a new sitting starts the tally again. */
+const Sitting = {
+  wins: 0, gold: 0, best: 0,
+  won(B, gold){
+    if(!B || B.mode!=='campaign') return false;
+    this.wins++; this.gold+=Math.max(0, gold|0); this.best=Math.max(this.best, B.runBest||0);
+    return true;
+  },
+  html(){
+    if(!this.wins) return '';
+    return \`<div class="small center" id="sittingTally" style="margin:0 0 8px;color:var(--dim)">This sitting: <b>\${this.wins}</b> \${this.wins===1?'victory':'victories'} · 🪙 <b>\${this.gold}</b> gold · best streak <b>\${this.best}</b></div>\`;
+  }
+};
+
 /* A comeback. A campaign fight won after the knight's health fell to a
    quarter or less pays a quarter more gold, said on the victory card. Health
    that low is when quitting is most tempting, and this is a reason to stay
@@ -10454,6 +10472,7 @@ const Battle = {
     g.gold+=bGold;
     const cGold=Comeback.gold(this, gold);
     g.gold+=cGold;
+    Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
@@ -15977,7 +15996,7 @@ const UI = {
     const ahead=this.nextFoe(), cur = ahead ? ahead.ri : REALMS.length-1;
     const quarry=Quarry.today();
     // today's quarry heads the campaign, above the road
-    let realms=Quarry.node(quarry)+this.realmPath(cur);
+    let realms=Sitting.html()+Quarry.node(quarry)+this.realmPath(cur);
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
