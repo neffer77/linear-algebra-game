@@ -854,6 +854,10 @@ The game is built so that losing teaches you as much as winning.
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
   sitting, so each sitting gives a reason to pick one road over another. Campaign fights only; nothing is saved.
+- **🎶 A ballad.** Every victory card sings the fight in a line of verse under the foe's fall: a win from
+  the brink, a fight with no miss, a killing blow far past need, a long streak, a bold or guarded stance, an
+  omen overhead, or a win that was hard work, whichever is most worth remembering. The words turn with the
+  foe, so the same feat reads fresh next time. It is only words: it pays nothing and nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a

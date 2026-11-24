@@ -4354,6 +4354,70 @@ const skyNotes = (() => {
   return checks;
 })();
 
+/* A ballad. Every victory is sung in a line, and the line is the fight's own:
+   the moment most worth singing is picked in a fixed order, a fall barely
+   dodged first and a plain win last, each kind has verses that name the foe
+   and every number they use, the wording turns with the foe and never with
+   anything else, and the line pays nothing. The wiring is checked where it
+   lives: it is read before a level-up mends the knight, and drawn under the
+   foe's fall on the card. */
+const balladNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Ballad = {'), html.indexOf('/* The sky. Each sitting every realm'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('ballad', key, msg); };
+  let st = 'even', sky = null;
+  const Stance = { of: () => st }, Sky = { on: () => sky };
+  const Bd = new Function('Stance', 'Sky', src + ';return Ballad;')(Stance, Sky);
+  const KINDS = ['brink', 'flawless', 'overkill', 'streak', 'bold', 'guarded', 'omen', 'grit', 'plain'];
+  want(Object.keys(Bd.VERSES).join() === KINDS.join(), 'kinds', Object.keys(Bd.VERSES).join());
+  for (const k of KINDS) {
+    const vs = Bd.VERSES[k];
+    want(vs.length === 3 && new Set(vs).size === 3, 'three ' + k, 'a kind of verse wants three ways to say it');
+    for (const v of vs) {
+      want(v.includes('{f}'), 'foe ' + k, 'a verse does not name the foe: ' + v);
+      want(k !== 'streak' || v.includes('{n}'), 'count ' + v, 'a streak verse does not say how long');
+      want(k !== 'omen' || v.includes('{o}'), 'sky ' + v, 'an omen verse does not name the sky');
+      want(!/[—–]/.test(v) && v.length < 110, 'plain ' + v, 'a verse is too long or has a dash');
+    }
+  }
+  const foes = ['Bramble Goblin', 'Slime of Equal Length', 'the Determinant Drake', 'Ogre', '', 'Lich of Limits'];
+  const order = (o) => o.brink ? 'brink' : o.flaw ? 'flawless' : o.over ? 'overkill' : o.streak ? 'streak'
+    : o.st === 'bold' || o.st === 'guarded' ? o.st : o.sky ? 'omen' : o.grit ? 'grit' : 'plain';
+  for (const hp of [0, 1, 25, 26, 60, 100]) for (const missed of [0, 1, 2, 3, 7]) for (const runBest of [0, 4, 5, 12])
+  for (const over of [0, 10, 49, 50, 400]) for (const stance of ['even', 'bold', 'guarded']) for (const omen of [null, { nm: 'A gold moon' }])
+  for (const nm of foes) {
+    st = stance; sky = omen;
+    const B = { foe: { nm }, emax: 100, missed, runBest };
+    const key = JSON.stringify({ hp, missed, runBest, over, stance, omen: !!omen, nm });
+    const want_k = order({ brink: hp > 0 && hp <= 25, flaw: missed === 0, over: over >= 50, streak: runBest >= 5, st: stance, sky: !!omen, grit: missed >= 3 });
+    const song = Bd.of(B, over, hp, 100);
+    want(song.k === want_k, 'kind ' + key, song.k + ' over ' + want_k);
+    want(!/\{[fnmo]\}/.test(song.text) && song.text.toLowerCase().includes((nm || 'the foe').toLowerCase()), 'filled ' + key, song.text);
+    want(song.k !== 'streak' || song.text.includes(String(runBest)), 'n ' + key, song.text);
+    want(song.k !== 'grit' || !Bd.pick('grit', nm).includes('{m}') || song.text.includes(String(missed)), 'm ' + key, song.text);
+    want(song.k !== 'omen' || song.text.includes('A gold moon'), 'o ' + key, song.text);
+    want(song.text.charAt(0) === song.text.charAt(0).toUpperCase(), 'cap ' + key, song.text);
+    want(Bd.of(B, over, hp, 100).text === song.text, 'steady ' + key, 'the same fight sings two ways');
+    const l = Bd.line(song);
+    want(l.includes('id="ballad"') && l.includes(`data-k="${song.k}"`) && l.includes(song.text), 'line ' + key, l);
+  }
+  want(Bd.line(null) === '' && Bd.of(null, 0, 1, 1).k === 'plain' && Bd.kind({}, 0, 1, 1) === 'plain', 'none', 'no fight still sings');
+  // the foe turns the words: across foes every verse of a kind comes up
+  for (const k of KINDS) {
+    const seen = new Set();
+    for (let i = 0; i < 60; i++) seen.add(Bd.pick(k, 'Foe ' + i));
+    want(seen.size === 3, 'turns ' + k, `${seen.size} of 3 verses come up`);
+  }
+  // only words: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'the ballad does more than sing');
+  // the wiring
+  want(html.includes("    const march=March.won(this);\n    // the fight sung in a line, read before a level-up restores the knight's health\n    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned="), 'read', 'the ballad is not read before the level-up');
+  want(html.includes("falls before your blade.</div>\n          ${Ballad.line(song)}\n"), 'card', 'the card does not sing');
+  want(html.split('Ballad.of(').length === 2 && html.split('Ballad.line(').length === 2, 'once', 'the ballad is sung more than once');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -28069,6 +28133,7 @@ console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
+console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
