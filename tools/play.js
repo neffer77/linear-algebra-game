@@ -59,6 +59,7 @@ const SUITES = [
   require('./play/firsts'),      // the first S on a foe pays its gold once more
   require('./play/overkill'),    // a killing blow past the foe's last health pays gold
   require('./play/quarry'),      // one beaten foe a day pays its full gold again
+  require('./play/parry'),       // five right in a row turn away the next miss's blow
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

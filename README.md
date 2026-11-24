@@ -731,6 +731,11 @@ The game is built so that losing teaches you as much as winning.
   single tap. While a war path runs it says what that win would pay, and a knight walking on
   below half health is told so, with a rest by the fire offered first, as the map does. Fighting
   the same foe again and going back to the map are still there. Nothing is saved.
+- **🛡️ Parry.** Five right answers in a row earn a parry, shown beside the streak ("streak 5 ·
+  🛡️ parry ready"). The next blow a miss would land is turned away and costs no health, and the
+  explanation says so. The miss still breaks the streak, so the next parry is earned from nothing;
+  one is held at a time, and it comes again at ten, fifteen and on. A wind-up's blow is its own and
+  is not parried, and the daily and the rites keep their own rules. Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3281,6 +3286,7 @@ Inside `index.html` the code is organised as:
 | `Grade` first S | the first S on a foe pays its gold once more, worked from the grade the clear held before the win; never twice; the campaign only; the card's line and its count |
 | `Overkill` | the part of the blow past the foe's last health, never below nothing; its share of the foe's whole health pays up to half the foe's gold; none for a blow that only just fells it; the card's line |
 | `Quarry` | one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win; full gold; the card, the head of the campaign and the foe's own place |
+| `Parry` | earned at five, ten, fifteen and on and never otherwise, one at a time, never in the daily or a rite; turns away one blow and is spent; shown beside the streak, said on the scene and in the explanation, told once a fight |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3396,6 +3402,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `firsts` | a B pays no bonus; the first S says its bonus and the card counts it into the gold; a second S pays none; a foe cleared before grades earns it on its first S; nothing is saved |
 | `overkill` | a blow that only just fells the foe pays nothing; a quarter past says OVERKILL on the scene and pays an eighth of the foe's gold on the card, counted in; a blow far past pays half and no more; the next fight starts with none; nothing is saved |
 | `quarry` | no quarry before a foe is beaten; the map names it at the head of the campaign and marks its own place only; another beaten foe pays 45%; the quarry says so on the card and pays its full gold, counted in, every win today; it stays put once beaten; nothing is saved |
+| `parry` | four in a row earn nothing; five earn a parry shown beside the streak; the next miss costs no health and says it was parried; the streak starts again; the miss after lands; ten in a row hold one parry, not two; a new fight starts with none; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
