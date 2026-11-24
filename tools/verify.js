@@ -4677,14 +4677,16 @@ const folioNotes = (() => {
   let el = null; const document = { getElementById: id => id === 'folioPic' ? el : null };
   const Game = { s: { cleared: {} } };
   const F = new Function('Bestiary', 'Weak', 'document', 'Game', src + ';return Folio;')(Bestiary, Weak, document, Game);
-  for (const nm of names) for (const mode of ['campaign', 'daily', 'arena', 'dungeon', undefined]) for (const first of [true, false]) for (const n of [1, 7, 32]) {
+  for (const nm of names) for (const mode of ['campaign', 'daily', 'arena', 'dungeon', undefined]) for (const first of [true, false]) for (const n of [1, 7, 8, 16, 24, 31, 32]) {
     count = { beaten: n, total: 32 };
     const p = F.of({ mode, foe: { nm } }, first), on = mode === 'campaign' && first;
     want(on ? p && p.nm === nm && p.lore === LORE[nm] && p.n === n && p.of === 32 : p === null, 'of ' + nm + mode + first, JSON.stringify(p));
+    if (on) want(p.prize === ({ 8: 60, 16: 150, 24: 250, 32: 500 }[n] || 0), 'prize ' + n, JSON.stringify(p));
     const l = F.line(p);
     if (!on) { want(l === '', 'quiet ' + nm + mode + first, l); continue; }
     want(l.includes('id="folioWon"') && l.includes(`📖 A new page in the Bestiary · ${n} of 32`) && l.includes(LORE[nm]) && (l.match(/<div/g) || []).length === (l.match(/<\/div>/g) || []).length, 'line ' + nm + n, l);
     want(nm === 'Meadow Slime' ? l.includes('🎯 Weak point: vectors') : !l.includes('🎯'), 'weak ' + nm, l);
+    want(p.prize ? l.includes(`🏅 ${n === 32 ? 'The Bestiary complete' : n + ' pages filled'}: the Order pays 🪙 ${p.prize}.`) : !l.includes('🏅'), 'purse said ' + n, l);
     want(p.f && p.f.nm === nm && l.includes('<canvas id="folioPic" width="96" height="96"'), 'likeness ' + nm, l);
     shots.length = 0; el = null;
     want(F.paint(p) === false && shots.length === 0, 'no canvas ' + nm, 'painted with no canvas on the card');
@@ -4704,8 +4706,11 @@ const folioNotes = (() => {
   want(html.includes("<span class=\"pips\" title=\"Second phase\">🔥 Phase II</span>':'')+Folio.tag(this);   // and a foe still to be written in the Bestiary\n") && (html.match(/Folio\.tag\(/g) || []).length === 1, 'tag wired', 'an unbeaten foe wears no mark on its nameplate');
   want(F.of(null, true) === null && F.of({ mode: 'campaign' }, true) === null && F.of({ mode: 'campaign', foe: { nm: 'No such foe' } }, true) === null && F.line(null) === '', 'none', 'a page for no foe, or a foe with no lore');
   // the page is read once the clear is marked, so the count it says includes the foe just beaten
-  const w = html.indexOf('  win(){\n    if(this.over) return;'), mark = html.indexOf('    g.cleared[key]=Grade.keep(had, Grade.of(marks));', w), at = html.indexOf('    const folio=Folio.of(this, first);   // a first fall opens the foe\'s Bestiary page\n    Game.save();\n', w);
+  const w = html.indexOf('  win(){\n    if(this.over) return;'), mark = html.indexOf('    g.cleared[key]=Grade.keep(had, Grade.of(marks));', w), at = html.indexOf('    const folio=Folio.of(this, first);   // a first fall opens the foe\'s Bestiary page\n    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n    Game.save();\n', w);
   want(w > 0 && mark > w && at > mark && html.slice(w, at).includes("const had=g.cleared[key], first=!had;"), 'after the clear', 'the page is read before the win is marked, so it miscounts');
+  // the purse is paid once, on the win that fills the page, and before the save
+  want(html.includes("    const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page\n    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n")
+    && (html.match(/folio\.prize/g) || []).length === 2, 'purse paid', 'a filled eighth of the Bestiary pays nothing, or pays twice');
   want(html.includes("          ${Ballad.line(song)}\n          ${Folio.line(folio)}\n") && (html.match(/Folio\.(of|line)\(/g) || []).length === 2, 'wired', 'the victory card does not open the new page');
   want(html.includes("      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));\n      Folio.paint(folio);   // and the new page's likeness\n") && (html.match(/Folio\.paint\(/g) || []).length === 1, 'painted', 'the new page is shown with no likeness');
   return checks;
@@ -27103,7 +27108,7 @@ console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)} 
 console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10)}  (a realm's name and a line of its land across the screen at its first fights, until a foe of it falls; never for a boss, never outside the campaign)`);
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
 console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)}  (three gold stars circling a beaten foe's head, found where drawFoe lays it over, at the foe's own size)`);
-console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe not yet beaten marked new on its nameplate; its first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds; campaign only)`);
+console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe not yet beaten marked new on its nameplate; its first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds, a purse every eighth page; campaign only)`);
 console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);

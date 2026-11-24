@@ -95,6 +95,15 @@ module.exports = {
     c = await finish(t);
     t.ok('the next new foe is the second page of the book, with its own lore', /· 2 of 32/.test(c.page || '') && /thorns tip to tail/.test(c.page || ''), JSON.stringify(c));
 
+    // the eighth page filled pays the Order's purse, said on the card
+    await t.ev(() => { for (let ri = 0; ri < 2; ri++) for (let fi = 0; fi < 4; fi++) if (!(ri === 1 && fi === 3)) Game.s.cleared[ri + ':' + fi] = true; });
+    await fight(t, 1, 3, true);
+    const gold0 = await t.ev(() => Game.s.gold);
+    c = await finish(t);
+    const gold1 = await t.ev(() => Game.s.gold);
+    t.ok('the eighth page filled: the Order pays its purse, said on the card and in the purse', /· 8 of 32/.test(c.page || '') && /🏅 8 pages filled: the Order pays 🪙 60\./.test(c.page || '') && gold1 - gold0 >= 60, JSON.stringify([c.page, gold0, gold1]));
+    await t.ev(() => { for (let ri = 0; ri < 2; ri++) for (let fi = 0; fi < 4; fi++) delete Game.s.cleared[ri + ':' + fi]; });
+
     await t.ev(() => { [Bounty.bump, Bounty.claim, Quarry.of] = window.__keep; Battle.flee(); UI.go('s-map'); });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
   }
