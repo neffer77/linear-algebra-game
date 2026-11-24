@@ -9162,6 +9162,33 @@ const Coup = {
   }
 };
 
+/* Straight on. A campaign victory's first button is the next fight on the
+   road, named with its health and blow, so one more is a single tap rather
+   than a trip through the map. While a war path runs it says what that win
+   would pay, and a knight walking on below half health is told so, with a
+   rest by the fire offered first, as the map does. It reads only which foes
+   are beaten, and nothing is saved. */
+const NextFight = {
+  // the next fight on the road, unless it is the one just won (fighting it again has its own button)
+  of(ri, fi){ const nx=UI.nextFoe(); return nx && !(nx.ri===ri && nx.fi===fi) ? nx : null; },
+  html(nx){
+    if(!nx) return '';
+    const f=nx.f, n=WarPath.n;
+    const path=n>=1 ? \` Win it for <b>+\${WarPath.pct(n+1)}%</b> gold on your war path.\` : '';
+    const low=Game.lowFor(f);
+    return \`<div class="sub" id="nextFight" style="margin:2px 0 6px">Next on the road: <b>\${f.boss?'👑 ':''}\${f.nm}</b> · ❤️ \${f.hp} · ⚔️ \${f.atk}.\${path}</div>\`
+      +(low?\`<div class="sub" id="nextLow" style="color:var(--red);margin-bottom:6px">You are at ❤️ \${low.hp} of \${low.max} · a miss costs about \${low.hit}</div>\`
+           +(low.afford?\`<button class="btn" id="nextRest" onclick="NextFight.rest(this)">🔥 Rest first · 🪙 \${low.cost}</button>\`:''):'')
+      +\`<button class="btn gold" id="nextGo" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight \${f.nm}</button>\`;
+  },
+  // a night's camp from the victory screen: the warning and the offer go once it is paid
+  rest(btn){
+    if(!Game.rest()) return false;
+    btn.remove(); const l=document.getElementById('nextLow'); if(l) l.remove();
+    return true;
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -10169,6 +10196,7 @@ const Battle = {
 
     setTimeout(()=>{
       UI.go('s-result');
+      const nx=this.mode==='campaign' ? NextFight.of(this.ri, this.fi) : null;
       document.getElementById('resultBody').innerHTML=\`
         <div class="center crest">🏆</div>
         <div class="panel center">
@@ -10191,7 +10219,8 @@ const Battle = {
           \${this.learnedHtml()}
         </div>
         \${this.foe.boss&&first?Saga.card(this.ri):''}
-        <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
+        \${NextFight.html(nx)}
+        <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
