@@ -21,6 +21,7 @@ const fight = (t, mode) => t.ev(mode => {
   delete Game.s.cleared['0:' + bi];
   Elite.force = null;
   const odds = Elite.CHANCE; Elite.CHANCE = 0;
+  WarPath.n = 0;                         // each fight's gold at the plain rate, not a run of wins
   if (mode === 'plain') Battle.begin(0, 0); else Battle.begin(0, bi);
   Elite.CHANCE = odds;
   Game.s.maxHp = Game.s.hp = 99999;
@@ -37,15 +38,16 @@ const fight = (t, mode) => t.ev(mode => {
 }, mode);
 /* Answer the standing question, right or wrong, with a blow of the size given; record what the foe struck with. */
 const answer = (t, right, dmg = 20) => t.ev(([right, dmg]) => {
-  const cs = Combat.strike, fh = Combat.foeHit;
+  const cs = Combat.strike, fh = Combat.foeHit, wb = Weak.bonus;
   let bonus = null, atk = null;
+  Weak.bonus = () => 1;                  // a question that lands on the boss's weak point is not a stagger
   Combat.strike = (w, sp, c, cr, rg, b) => { bonus = b; return dmg; };
   Combat.foeHit = a => { atk = a; return 7; };
   Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0;
   const c = Battle.cur;
   const weak = Weak.bonus(Battle);   // a question on the boss's weak point adds its own ×1.5, which is not the phase's
   Battle.answer(null, right ? c.a : '✗');
-  Combat.strike = cs; Combat.foeHit = fh;
+  Combat.strike = cs; Combat.foeHit = fh; Weak.bonus = wb;
   Battle.updateBars();
   return { ehp: Battle.ehp, phase: Battle.phase, charge: Battle.chargeMax, bonus: bonus === null ? null : bonus / weak, atk, run: Battle.phaseRun,
            staggered: Battle.staggered, said: (Talk.turn || {}).text || null,
