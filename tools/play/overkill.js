@@ -89,8 +89,12 @@ module.exports = {
     g = await win(t, 10, 10 + g.emax * 5);
     t.ok('a blow far past the foe pays half its gold and no more', g.line !== null && g.line.includes('+' + Math.round(g.gold / 2) + ' gold'), JSON.stringify(g));
 
-    g = await win(t, 40, 40);
-    t.ok('the next fight starts with no overkill', g.line === null, JSON.stringify(g));
+    await fight(t, 0);
+    const carried = await t.ev(() => Battle.overkill);
+    t.eq('the next fight starts with no overkill', carried, 0);
+    await answer(t, true);
+    g = await finish(t, 40, 40);
+    t.ok('and a blow that only just fells its foe pays none of the last one\'s', g.line === null, JSON.stringify(g));
 
     t.eq('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()), keys);
     await t.ev(() => { [Bounty.bump, Bounty.claim] = window.__bounty; UI.go('s-title'); });
