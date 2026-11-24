@@ -7511,6 +7511,41 @@ const Dents = {
   }
 };
 
+/* ---------- Dazed ----------
+   A beaten foe lies where it fell with three little stars circling its head
+   until the victory card comes up. drawFoe lays a fallen foe over by FALL
+   radians about its feet, so the head is found by turning the sprite's
+   crown, HEAD up, by the same angle at the foe's own size. Nothing is
+   saved. */
+const Daze = {
+  FALL:0.9, HEAD:100, N:3, RX:24, RY:8, LIFT:22, SPIN:3,
+  head(s){ return { x: this.HEAD*s*Math.sin(this.FALL), y: -this.HEAD*s*Math.cos(this.FALL) }; },
+  stars(t, s){
+    const h=this.head(s), out=[];
+    for(let i=0;i<this.N;i++){
+      const a=(t||0)*this.SPIN + i*Math.PI*2/this.N;
+      out.push({ x: h.x + Math.cos(a)*this.RX, y: h.y - this.LIFT + Math.sin(a)*this.RY, front: Math.sin(a)>0 });
+    }
+    return out;
+  },
+  draw(x, y, s, t){
+    const st=this.stars(t, s);
+    cx.save();
+    for(const p of st){
+      cx.globalAlpha=p.front ? 1 : .55;
+      cx.beginPath();
+      for(let k=0;k<10;k++){
+        const r=k%2 ? 2.6 : 6.5, a=-Math.PI/2 + k*Math.PI/5;
+        const px=x+p.x+Math.cos(a)*r, py=y+p.y+Math.sin(a)*r;
+        k ? cx.lineTo(px,py) : cx.moveTo(px,py);
+      }
+      cx.closePath(); cx.fillStyle='#ffd166'; cx.fill();
+    }
+    cx.restore();
+    return st.length;
+  }
+};
+
 /* ---------- Scars ----------
    A foe wears its wounds. Each quarter of its health lost opens a crack
    across it: one past three quarters, two past half, three past a quarter.
@@ -7552,7 +7587,7 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){
   cx.save();
   cx.translate(x - lunge*70, y);
   if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet
-  if(dead){ cx.rotate(0.9); cx.globalAlpha=.5; }
+  if(dead){ cx.rotate(Daze.FALL); cx.globalAlpha=.5; }
   cx.scale(s,s);                     // sprites are authored facing left, toward the knight
   const c = hurt>0 ? '#ffffff' : col;
   const bob = Math.sin(Anim.t*2.2)*4;
@@ -8193,6 +8228,7 @@ const Anim = {
       }
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                               eLunge, Anim.eh, B.over==='win', Scars.of(B)));
+      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head
     }
     // ---- impact decoration, over the sprites ----
     cx.save();

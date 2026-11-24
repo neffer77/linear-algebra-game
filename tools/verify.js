@@ -4618,6 +4618,42 @@ const dentsNotes = (() => {
   want((html.match(/Dents\.of\(/g) || []).length === 1 && (html.match(/Dents\.beat\(/g) || []).length === 1, 'once', 'dents drawn somewhere else too');
   return checks;
 })();
+const dazeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Daze = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Scars ----------', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('daze', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const D = new Function('cx', src + ';return Daze;')(cx);
+  // the head of a foe laid over by FALL, where drawFoe lays it: its crown turned about the feet
+  for (const s of [1.28, 1.55, 1, 0.5]) {
+    const h = D.head(s), a = D.FALL, want0 = { x: -(-D.HEAD * s) * Math.sin(a), y: (-D.HEAD * s) * Math.cos(a) };
+    want(Math.abs(h.x - want0.x) < 1e-9 && Math.abs(h.y - want0.y) < 1e-9 && h.x > 0 && h.y < 0, 'head ' + s, JSON.stringify([h, want0]));
+    for (let tt = 0; tt < 4; tt += 0.05) {
+      const st = D.stars(tt, s);
+      want(st.length === 3, 'three ' + s + tt.toFixed(2), String(st.length));
+      const cxm = st.reduce((v, p) => v + p.x, 0) / 3, cym = st.reduce((v, p) => v + p.y, 0) / 3;
+      want(Math.abs(cxm - h.x) < 1e-9 && Math.abs(cym - (h.y - D.LIFT)) < 1e-9, 'round the head ' + s + tt.toFixed(2), JSON.stringify([cxm, cym, h]));
+      want(st.every(p => Math.abs(Math.hypot((p.x - h.x) / D.RX, (p.y - h.y + D.LIFT) / D.RY) - 1) < 1e-9), 'on the ring ' + tt.toFixed(2), JSON.stringify(st));
+      want(st.some(p => p.front) || st.some(p => !p.front), 'sides ' + tt.toFixed(2), '');
+    }
+    const a0 = D.stars(0, s)[0], a1 = D.stars(0.3, s)[0];
+    want(Math.hypot(a0.x - a1.x, a0.y - a1.y) > 1, 'circling ' + s, 'the stars stand still');
+  }
+  want(D.FALL === 0.9 && html.includes("  if(dead){ cx.rotate(Daze.FALL); cx.globalAlpha=.5; }"), 'fall', 'the stars do not follow the angle a foe falls at');
+  log = [];
+  const n = D.draw(605, 300, 1.28, 1.2);
+  want(n === 3 && log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept', 'the canvas state leaks');
+  want(log.filter(l => l[0] === 'fill').length === 3 && log.filter(l => l[0] === 'moveTo').length === 3 && log.filter(l => l[0] === 'lineTo').length === 27, 'stars', 'not three five-pointed stars');
+  want(log.filter(l => l[0] === '=fillStyle').every(l => l[1] === '#ffd166'), 'gold', 'the stars are not gold');
+  const pts = log.filter(l => l[0] === 'moveTo' || l[0] === 'lineTo'), h = D.head(1.28);
+  want(pts.every(l => Math.abs(l[1] - (605 + h.x)) < D.RX + 8 && Math.abs(l[2] - (300 + h.y - D.LIFT)) < D.RY + 8), 'placed', JSON.stringify(pts.slice(0, 3)));
+  want(html.includes("      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head\n")
+    && html.includes("withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28,") && (html.match(/Daze\.draw\(/g) || []).length === 1, 'wired', 'a beaten foe is not dazed, or dazed somewhere else');
+  return checks;
+})();
 const scarsNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Scars = {');
@@ -28708,6 +28744,7 @@ console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
 console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10)}  (a realm's name and a line of its land across the screen at its first fights, until a foe of it falls; never for a boss, never outside the campaign)`);
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
+console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)}  (three gold stars circling a beaten foe's head, found where drawFoe lays it over, at the foe's own size)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
