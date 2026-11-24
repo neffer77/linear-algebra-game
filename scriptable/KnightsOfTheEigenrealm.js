@@ -10292,6 +10292,34 @@ const March = {
   line(on, nm){ return on ? \`<div id="marchWon" style="color:#c792ea;font-weight:800;margin-top:6px">🥾 Realm march: every foe of \${nm} beaten with no fall between, for a sure chest with an epic find at the least.</div>\` : ''; }
 };
 
+/* The hearth. The title keeps a day streak, the days in a row the knight has
+   come back, and now the streak pays: the first campaign victory of a sitting
+   pays a tenth more gold for each day in a row, up to seven, so a week of
+   coming back pays seven tenths more. The victory card says what it paid and
+   counts it in, and the title says what tomorrow's would pay. It reads the
+   streak the game already keeps, so nothing new is saved, and it pays only
+   gold. */
+const Hearth = {
+  STEP: 0.1, CAP: 7,
+  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, Math.min(this.CAP, d)); },
+  pct(d){ return Math.round(this.STEP*Math.max(0, Math.min(this.CAP, d|0))*100); },
+  // the first campaign victory of a sitting, read before the sitting counts it
+  gold(B, g, gold){
+    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;
+    return Math.max(0, Math.round((gold|0)*this.STEP*this.days(g)));
+  },
+  line(n, g){
+    return n>0 ? \`<div id="hearthLine" style="color:#ff9c3d;font-weight:800;margin-top:6px">🔥 Day \${g.streak.days} in a row: your first victory this sitting pays \${this.pct(this.days(g))}% more gold, +\${n}.</div>\` : '';
+  },
+  // the title's word on what the streak pays now, and tomorrow
+  tip(days){
+    const d=days|0;
+    if(d<=0 || this.STEP<=0) return '';
+    const now=this.pct(d), next=this.pct(d+1);
+    return \`Your first victory each sitting pays +\${now}% gold. \${next>now ? \`Come back tomorrow for +\${next}%.\` : 'The most the fire pays: keep it lit.'}\`;
+  }
+};
+
 /* A level-up boon. When a campaign win lifts the knight a level, the victory
    card offers a choice of two boons for the next campaign win: a fat purse,
    which pays half again that win's gold, or a lucky find, which drops a sure
@@ -11428,11 +11456,14 @@ const Battle = {
     // a kept oath pays half again; a broken one costs a quarter
     const vow=Oath.kept(this), vGold=Oath.gold(this, gold);
     g.gold=Math.max(0, g.gold+vGold);
-    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);
+    // the first victory of a sitting pays a tenth more gold for each day in a row, up to seven
+    const eGold=Hearth.gold(this, g, gold);
+    g.gold+=eGold;
+    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold);
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
     const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones
-    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold, this);   // a dicer: double or nothing on the purse
+    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, this);   // a dicer: double or nothing on the purse
     // the first victory of a sitting pays its experience twice
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
@@ -11486,6 +11517,7 @@ const Battle = {
           \${Comeback.line(cGold)}
           \${Sitting.line(mile)}
           \${Sitting.freshLine(fXp)}
+          \${Hearth.line(eGold, g)}
           \${Gild.line(this.gildGold)}
           \${Oath.line(vGold)}
           \${Greedy.line(this)}
@@ -11525,9 +11557,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold+vGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
@@ -41610,7 +41642,7 @@ const Cheats = {
     document.getElementById('streakRow').innerHTML = st.days>0
       ? \`<div class="streakbox"><div class="n">\${st.days}</div>
          <div><div style="font-weight:800;font-size:14px">day\${st.days===1?'':'s'} in a row</div>
-         <div class="small">\${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div></div></div>\`
+         <div class="small">\${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div><div class="small" id="hearthTip" style="color:#ff9c3d">\${Hearth.tip(st.days)}</div></div></div>\`
       : '';
     if(days && days>1) setTimeout(()=>Celebrate.banner('🔥 '+days+' DAY STREAK','welcome back','#ff9c3d',
       ()=>{Sfx.milestone(); Haptic.win();}), 400);
