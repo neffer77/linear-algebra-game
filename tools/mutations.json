@@ -2,67 +2,67 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "every fight greeted",
+      "name": "the stars at the feet",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
+      "find": "  head(s){ return { x: this.HEAD*s*Math.sin(this.FALL), y: -this.HEAD*s*Math.cos(this.FALL) }; },",
+      "replace": "  head(s){ return { x: 0, y: 0 }; },",
       "run": "verify"
     },
     {
-      "name": "a boss greeted twice",
+      "name": "the stars where the head stood",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "find": "  head(s){ return { x: this.HEAD*s*Math.sin(this.FALL), y: -this.HEAD*s*Math.cos(this.FALL) }; },",
+      "replace": "  head(s){ return { x: 0, y: -this.HEAD*s }; },",
       "run": "verify"
     },
     {
-      "name": "the daily greeted",
+      "name": "the stars stand still",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "find": "      const a=(t||0)*this.SPIN + i*Math.PI*2/this.N;",
+      "replace": "      const a=i*Math.PI*2/this.N;",
       "run": "verify"
     },
     {
-      "name": "another realm's win counts",
+      "name": "two stars",
       "file": "index.html",
-      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
-      "replace": "    return !Object.keys(c).some(k=>c[k]);",
+      "find": "  FALL:0.9, HEAD:100, N:3,",
+      "replace": "  FALL:0.9, HEAD:100, N:2,",
       "run": "verify"
     },
     {
-      "name": "realm 1 counts for realm 10",
+      "name": "a fall the stars miss",
       "file": "index.html",
-      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
-      "replace": "    return !Object.keys(c).some(k=>k.startsWith(String(ri)) && c[k]);",
+      "find": "  if(dead){ cx.rotate(Daze.FALL); cx.globalAlpha=.5; }",
+      "replace": "  if(dead){ cx.rotate(1.2); cx.globalAlpha=.5; }",
       "run": "verify"
     },
     {
-      "name": "the wrong colour",
+      "name": "the canvas state leaks",
       "file": "index.html",
-      "find": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], B.realm.col, ()=>Sfx.milestone());",
-      "replace": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], 'var(--gold)', ()=>Sfx.milestone());",
+      "find": "    const st=this.stars(t, s);\n    cx.save();",
+      "replace": "    const st=this.stars(t, s);\n",
       "run": "verify"
     },
     {
-      "name": "never greeted",
+      "name": "never dazed",
       "file": "index.html",
-      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
+      "find": "      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "never greeted, seen in play",
+      "name": "never dazed, seen in play",
       "file": "index.html",
-      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
+      "find": "      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head\n",
       "replace": "",
-      "run": "play:waymark"
+      "run": "play:scars"
     },
     {
-      "name": "every fight greeted, seen in play",
+      "name": "dazed while still fighting, seen in play",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
-      "run": "play:waymark"
+      "find": "      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);",
+      "replace": "      Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);",
+      "run": "play:scars"
     }
   ]
 }

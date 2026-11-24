@@ -61,6 +61,15 @@ module.exports = {
       JSON.stringify([near.length, Math.min(...near), Math.max(...near), half.length]));
     const won = await at(t, 0.1, 'win');
     t.ok('a fight that is over draws none', won.cuts.length === 0 || won.cuts.join() === '0', JSON.stringify(won));
+    // a beaten foe lies dazed, three stars circling its head; a fight still on has none
+    const daze = async (over) => {
+      await t.ev((over) => { Battle.over = over; window.__dz = []; const f = Daze.draw; window.__dzFn = f;
+        Daze.draw = (x, y, s, tt) => { const r = f.call(Daze, x, y, s, tt); window.__dz.push(r); return r; }; }, over);
+      await sleep(500);
+      return t.ev(() => { Daze.draw = window.__dzFn; return window.__dz; });
+    };
+    const dazed = await daze('win'), awake = await daze(false);
+    t.ok('a beaten foe lies with three stars circling its head, and a foe still fighting has none', dazed.length > 3 && dazed.every(n => n === 3) && awake.length === 0, JSON.stringify([dazed.length, awake.length]));
     // the knight's plate: a dent for each quarter lost, gone as health comes back
     const dent = async (share) => {
       await t.ev((share) => { Battle.over = false; Game.s.maxHp = 400; Game.s.hp = Math.round(400 * share);
