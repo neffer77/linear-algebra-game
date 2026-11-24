@@ -9296,6 +9296,27 @@ const Revenge = {
   line(nm, n){ return n>0 ? `<div id="revengeWon" style="color:#ff8a80;font-weight:800;margin-top:6px">⚔️ Revenge on ${nm}: the ${n} gold lost in the retreat is won back.</div>` : ''; }
 };
 
+/* The satchel. Every right answer in a campaign fight drops a spoil in the
+   satchel, fight after fight, shown beside the streak. At twenty-five it is
+   full, and the next victory opens it: a sure chest, and a rare find at the
+   least. Then it starts again from nothing. A miss takes nothing out. The
+   daily, the arena, the dungeon and the rites keep their own rewards. It
+   lasts the sitting: nothing is saved. */
+const Satchel = {
+  AT: 25, n: 0,
+  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
+  add(B){
+    if(!this.can(B) || this.n>=this.AT) return false;
+    this.n++;
+    if(this.n===this.AT) Anim.float(220, H-370, 'SATCHEL FULL', '#e6c27a', true);
+    return true;
+  },
+  full(){ return this.n>=this.AT; },
+  spend(){ if(!this.full()) return false; this.n=0; return true; },
+  tag(B){ return this.can(B) ? `  ·  🎒 ${this.full()?'full':this.n+'/'+this.AT}` : ''; },
+  line(on){ return on ? `<div id="satchelLine" style="color:#e6c27a;font-weight:800;margin-top:6px">🎒 Your satchel was full: twenty-five right answers open a chest with a rare find at the least.</div>` : ''; }
+};
+
 const SecondWind = {
   MUL: 2,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -9426,7 +9447,7 @@ const Battle = {
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
       (this.mode==='daily' ? `🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}  ·  ${Daily.score} pts  ·  ` : '') +
-      `Combo ×${Combat.comboMul(this.combo).toFixed(2)}  ·  streak ${this.combo}`+Parry.tag(this);
+      `Combo ×${Combat.comboMul(this.combo).toFixed(2)}  ·  streak ${this.combo}`+Parry.tag(this)+Satchel.tag(this);
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
@@ -9951,6 +9972,7 @@ const Battle = {
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
       this.runBest=Math.max(this.runBest||0,this.combo);
       Parry.earn(this);
+      Satchel.add(this);
       if(owed && this.cur.redo){
         this.recovered=Recover.heal(owed);
         if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);
@@ -10341,9 +10363,9 @@ const Battle = {
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
-    const sweep=Sweep.on(this);
-    const drop = R.chance(this.foe.boss || this.foe.elite ? 1 : Sweep.odds(this, .5))
-      ? Loot.roll({boss:this.foe.boss, sweep, tier:Math.min(6, this.ri+2)}) : null;
+    const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
+    const drop = R.chance(this.foe.boss || this.foe.elite || satchel ? 1 : Sweep.odds(this, .5))
+      ? Loot.roll({boss:this.foe.boss, sweep, satchel, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? `<span style="color:${RARITY[drop.rar].col}">${drop.ic} ${drop.nm}</span>` : null;
     // boss unlocks the next realm
     let unlocked=null;
@@ -10365,6 +10387,7 @@ const Battle = {
           ${Revenge.line(this.foe.nm, rGold)}
           ${Quarry.line(quarry && !this.foe.elite)}
           ${Sweep.line(sweep)}
+          ${Satchel.line(satchel)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11849,6 +11872,7 @@ const Loot = {
     const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);
     let rar = this.rollRarity(luck);
     if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';     // a boss, or a clean sweep, always gives something
+    if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';   // a full satchel, a rare find at the least
     const pool = this.gearPool(ctx.tier);
 
     // The high tiers hand over gear whenever any is still unowned.

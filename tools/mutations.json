@@ -1,75 +1,75 @@
 {
-  "change": "Revenge: the foe that felled you holds your lost gold until you beat it",
+  "change": "Satchel: twenty-five right answers open a chest with a rare find",
   "mutations": [
     {
-      "name": "falls to one foe do not add up",
+      "name": "the satchel fills in every mode",
       "file": "index.html",
-      "find": "this.owed[key]=(this.owed[key]||0)+gold;",
-      "replace": "this.owed[key]=gold;",
+      "find": "can(B){ return !!(B && B.mode==='campaign' && !B.rite); },\n  add(B){",
+      "replace": "can(B){ return !!(B && !B.rite); },\n  add(B){",
       "run": "verify"
     },
     {
-      "name": "a fall that lost nothing holds something",
+      "name": "the satchel holds more than twenty-five",
       "file": "index.html",
-      "find": "mark(key, gold){ if(gold>0) this.owed",
-      "replace": "mark(key, gold){ if(gold>=0) this.owed",
+      "find": "if(!this.can(B) || this.n>=this.AT) return false;",
+      "replace": "if(!this.can(B)) return false;",
       "run": "verify"
     },
     {
-      "name": "a win pays back but does not clear it",
+      "name": "the satchel opens before it is full",
       "file": "index.html",
-      "find": "const n=this.owed[key]||0; delete this.owed[key]; return n;",
-      "replace": "const n=this.owed[key]||0; return n;",
+      "find": "spend(){ if(!this.full()) return false; this.n=0; return true; },",
+      "replace": "spend(){ if(this.n<1) return false; this.n=0; return true; },",
       "run": "verify"
     },
     {
-      "name": "a win pays back nothing",
+      "name": "an opened satchel is not emptied",
       "file": "index.html",
-      "find": "const n=this.owed[key]||0; delete this.owed[key]; return n;",
-      "replace": "delete this.owed[key]; return 0;",
+      "find": "spend(){ if(!this.full()) return false; this.n=0; return true; },",
+      "replace": "spend(){ if(!this.full()) return false; return true; },",
       "run": "verify"
     },
     {
-      "name": "a fall holds nothing",
+      "name": "a full satchel finds an uncommon",
       "file": "index.html",
-      "find": "const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;",
-      "replace": "const held=0;",
+      "find": "if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';",
+      "replace": "if(ctx.satchel && rar==='common') rar='uncommon';",
       "run": "verify"
     },
     {
-      "name": "the gold won back is not counted on the card",
+      "name": "the scene never says the satchel is full",
       "file": "index.html",
-      "find": "gold+sGold+oGold+rGold, 900);",
-      "replace": "gold+sGold+oGold, 900);",
-      "run": "verify"
-    },
-    {
-      "name": "the map does not mark the foe",
-      "file": "index.html",
-      "find": "${Revenge.tag(Revenge.of(ri+':'+fi))}",
+      "find": "if(this.n===this.AT) Anim.float(220, H-370, 'SATCHEL FULL', '#e6c27a', true);",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the gold is won back but not paid",
+      "name": "the streak does not show the satchel",
       "file": "index.html",
-      "find": "    const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;",
-      "replace": "    const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;",
-      "run": "play:revenge"
+      "find": "+Parry.tag(this)+Satchel.tag(this);",
+      "replace": "+Parry.tag(this);",
+      "run": "verify"
     },
     {
-      "name": "any foe pays back what another holds",
+      "name": "a right answer adds nothing to the satchel",
       "file": "index.html",
-      "find": "const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;",
-      "replace": "const rGold=this.mode==='campaign' ? Revenge.claim(Object.keys(Revenge.owed)[0]) : 0;",
-      "run": "play:revenge"
+      "find": "      Parry.earn(this);\n      Satchel.add(this);\n",
+      "replace": "      Parry.earn(this);\n",
+      "run": "play:satchel"
     },
     {
-      "name": "the map marks every foe once any holds gold",
+      "name": "a full satchel opens no chest",
       "file": "index.html",
-      "find": "${Revenge.tag(Revenge.of(ri+':'+fi))}",
-      "replace": "${Revenge.tag(Object.values(Revenge.owed)[0]||0)}",
-      "run": "play:revenge"
+      "find": "this.foe.elite || satchel ? 1 :",
+      "replace": "this.foe.elite ? 1 :",
+      "run": "play:satchel"
+    },
+    {
+      "name": "the card says nothing of the satchel",
+      "file": "index.html",
+      "find": "          ${Satchel.line(satchel)}\n",
+      "replace": "",
+      "run": "play:satchel"
     }
   ]
 }

@@ -3331,7 +3331,7 @@ const parryNotes = (() => {
   want(html.includes('this.parry=false; this.parryTold=false; this.parried=false;'), 'start', 'a fight starts with the last fight\'s parry');
   want(html.includes('this.lastRiposte=false; this.lastCoup=false; this.parried=false;'), 'reset', 'a parry is said again on the next answer');
   want(html.includes('Parry.line(!inRite && this.parried)+'), 'said', 'the explanation does not say the parry');
-  want(html.includes('streak ${this.combo}`+Parry.tag(this);'), 'shown', 'the parry is not shown beside the streak');
+  want(html.includes('streak ${this.combo}`+Parry.tag(this)'), 'shown', 'the parry is not shown beside the streak');
   return checks;
 })();
 
@@ -3374,7 +3374,7 @@ const sweepNotes = (() => {
   want(rarer(both) > rarer(boss), 'boss', `a boss swept found ${rarer(both)} rare things to a boss's ${rarer(boss)}`);
   want(sw.legendary > plain.legendary, 'legend', `a sweep found ${sw.legendary} legendaries to a plain win's ${plain.legendary}`);
   want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
-  want(html.includes("R.chance(this.foe.boss || this.foe.elite ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, tier:'), 'drop', 'a sweep does not drop a sure chest');
+  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, tier:'), 'drop', 'a sweep does not drop a sure chest');
   want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
   return checks;
 })();
@@ -3424,6 +3424,69 @@ const revengeNotes = (() => {
   want(html.includes('gold+sGold+oGold+rGold, 900)'), 'counted', 'the card does not count the gold won back');
   want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
   want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
+  return checks;
+})();
+
+/* The satchel: every right answer in a campaign fight adds a spoil, fight
+   after fight, and twenty-five fill it; the next victory opens it for a sure
+   chest with a rare find at the least, and it starts again. Worked over long
+   runs of answers across every mode: only the campaign's count, never a
+   rite's; it never holds more than twenty-five; it is spent only when full,
+   and then is empty; the streak shows it in the campaign only; and over the
+   whole spread of the chest's draw a full satchel never finds a common or an
+   uncommon. The fight's wiring is checked where the game uses it. */
+const satchelNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Satchel = {'), html.indexOf('const SecondWind = {'));
+  const floats = [];
+  const S = new Function('Anim', 'H', src + ';return Satchel;')({ float: (x, y, t) => floats.push(t) }, 600);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('satchel', key, msg); };
+  const modes = ['campaign', 'arena', 'dungeon', 'daily'];
+  let seed = 11;   // mulberry32
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n); };
+  let n = 0, opened = 0;
+  S.n = 0;
+  for (let step = 0; step < 4000; step++) {
+    const B = { mode: modes[rnd(4)], rite: rnd(5) ? null : { steps: [] } };
+    const on = B.mode === 'campaign' && !B.rite;
+    if (rnd(6)) {   // a right answer
+      const added = S.add(B), wanted = on && n < 25;
+      want(added === wanted, `add ${step}`, `${added} in ${B.mode}${B.rite ? ' rite' : ''} at ${n}`);
+      if (wanted) n++;
+    } else {        // a victory
+      const spent = S.spend();
+      want(spent === (n >= 25), `spend ${step}`, `spent ${spent} at ${n}`);
+      if (spent) { n = 0; opened++; }
+    }
+    want(S.n === n && S.n <= 25 && S.full() === (n >= 25), `count ${step}`, `${S.n}, not ${n}`);
+    want(S.tag(B) === (on ? `  ·  🎒 ${n >= 25 ? 'full' : n + '/25'}` : ''), `tag ${step}`, S.tag(B));
+  }
+  want(opened > 10, 'opened', `the satchel opened only ${opened} times`);
+  want(floats.filter(t => t === 'SATCHEL FULL').length >= opened, 'float', 'the scene does not say the satchel is full');
+  want(S.line(true).includes('id="satchelLine"') && S.line(false) === '', 'line', 'the card does not say the satchel');
+  // the chest's draw with a full satchel, worked over an even spread of the dice
+  const lsrc = html.slice(html.indexOf('const Loot = {'), html.indexOf('/* The reveal.'));
+  const tally = (ctx) => {
+    let k = 0;
+    const M = Object.assign(Object.create(Math), { random: () => ((k++ * 0.6180339887) % 1) });
+    const R = { pick: a => a[0], chance: p => M.random() < p };
+    const L = new Function('Math', 'R', 'Game', 'WEAPONS', 'ARMORS', 'Sweep', lsrc + ';return Loot;')(M, R, { s: { owned: {}, items: {} } }, [], [], { LUCK: 1.6 });
+    const c = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+    for (let i = 0; i < 3000; i++) c[L.roll(Object.assign({ tier: 3 }, ctx)).rar]++;
+    return c;
+  };
+  for (const ctx of [{ satchel: true }, { satchel: true, sweep: true }, { satchel: true, boss: true }]) {
+    const c = tally(ctx);
+    want(c.common === 0 && c.uncommon === 0 && c.rare > 0, `rare ${JSON.stringify(ctx)}`, JSON.stringify(c));
+  }
+  const plain = tally({});
+  want(plain.uncommon > 0 && plain.common > 0, 'plain', 'a plain chest never finds a common or an uncommon');
+  want(html.includes('      Parry.earn(this);\n      Satchel.add(this);'), 'added', 'a right answer does not fill the satchel');
+  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes('this.foe.elite || satchel ? 1 :') && html.includes('sweep, satchel, tier:'), 'drop', 'a full satchel does not open for a sure chest');
+  want(html.includes("if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a full satchel can find something plain');
+  want(html.includes('${Satchel.line(satchel)}') && html.includes('+Parry.tag(this)+Satchel.tag(this);'), 'said', 'the satchel is not shown beside the streak or on the card');
   return checks;
 })();
 
@@ -25045,6 +25108,7 @@ console.log(`  today's quarry checked     ${pad(quarryNotes.toLocaleString(), 10
 console.log(`  parries checked            ${pad(parryNotes.toLocaleString(), 10)}  (a parry at five, ten, fifteen and on, never otherwise, one at a time, never in the daily or a rite; one blow turned away; shown beside the streak and said on the scene and in the explanation; told once a fight)`);
 console.log(`  clean sweeps checked       ${pad(sweepNotes.toLocaleString(), 10)}  (a win with no miss in the campaign only; a sure chest, never a plain one, with rarer finds than a plain win and a boss's odds tipped further)`);
 console.log(`  revenges checked           ${pad(revengeNotes.toLocaleString(), 10)}  (each foe holds the gold lost to it and no other's, falls adding up; a win over it pays that back once and clears it; said on the defeat, the map and the victory card)`);
+console.log(`  satchels checked           ${pad(satchelNotes.toLocaleString(), 10)}  (filled by the campaign's right answers only, never past twenty-five; spent only when full; shown beside the streak; a full one opens a sure chest with a rare find at the least)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
