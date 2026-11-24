@@ -1,7 +1,8 @@
-/* Scars.
+/* Scars and dents.
  *
  * A foe wears its wounds: a crack opens across it for each quarter of its
- * health lost, and a fight that is over draws none. These checks open a
+ * health lost, and a fight that is over draws none. The knight wears theirs
+ * too, a dent in the plate for each quarter of their health lost. These checks open a
  * real fight on a phone, set the foe's health to each quarter, read what
  * the frame cut, and count the pixels the cracks change against an
  * unhurt foe drawn still. Nothing new is saved.
@@ -42,7 +43,7 @@ const still = t => t.ev(() => {
 
 module.exports = {
   name: 'scars',
-  title: 'Scars · a crack opens across the foe for each quarter of its health lost',
+  title: 'Scars and dents · the foe cracks and the knight\'s plate dents for each quarter of health lost',
   viewport: { width: 390, height: 844 },
   async run(t) {
     await t.newKnight('Ada');
@@ -60,6 +61,17 @@ module.exports = {
     t.ok('and they show: one crack changes the foe as drawn, three change it more', seen[0] === 0 && seen[1] > 100 && seen[2] > seen[1] + 100, JSON.stringify(seen));
     const won = await at(t, 0.1, 'win');
     t.ok('a fight that is over draws none', won.cuts.length === 0 || won.cuts.join() === '0', JSON.stringify(won));
+    // the knight's plate: a dent for each quarter lost, gone as health comes back
+    const dent = async (share) => {
+      await t.ev((share) => { Battle.over = false; Game.s.maxHp = 400; Game.s.hp = Math.round(400 * share);
+        window.__dn = []; const f = Dents.beat; window.__dnFn = f;
+        Dents.beat = (n, dark) => { const r = f.call(Dents, n, dark); window.__dn.push(r); return r; }; }, share);
+      await sleep(500);
+      return t.ev(() => { Dents.beat = window.__dnFn; return [...new Set(window.__dn)]; });
+    };
+    const dents = [await dent(1), await dent(0.6), await dent(0.4), await dent(0.2), await dent(1)];
+    t.ok("the knight's plate dents once a quarter is lost, then twice, then three times, and mends as health comes back",
+      dents.map(d => d.join()).join(' ') === '0 1 2 3 0', JSON.stringify(dents));
     await t.ev(() => { Battle.over = false; Battle.flee(); UI.go('s-map'); });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys);
   }

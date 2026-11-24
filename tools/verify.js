@@ -4579,9 +4579,43 @@ const poseNotes = (() => {
   want(hops.has(0) && hops.has(9) && hops.size > 5, 'hops', 'the knight does not hop: ' + [...hops].join());
   want(P.of(null, 1) === null && P.of({ over: 'win' }).hop === 0, 'none', 'a pose with no fight');
   const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
-  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
+  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose,dents){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
     && k.includes("  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);"), 'drawn', 'the knight is not drawn in the pose');
-  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));"), 'wired', 'the fight does not pose its knight');
+  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose, Dents.of(Game.s)));"), 'wired', 'the fight does not pose its knight');
+  return checks;
+})();
+const dentsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Dents = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Scars ----------', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('dents', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const D = new Function('cx', src + ';return Dents;')(cx);
+  for (let maxHp = 1; maxHp <= 600; maxHp += 11) for (let hp = -2; hp <= maxHp; hp++) {
+    const n = D.of({ hp, maxHp });
+    const k = hp / maxHp, w = k > 0.75 ? 0 : k > 0.5 ? 1 : k > 0.25 ? 2 : 3;
+    want(n === w, 'dents ' + hp + '/' + maxHp, n + ' not ' + w);
+  }
+  want(D.of(null) === 0 && D.of({ hp: 1 }) === 0 && D.of({ hp: 1, maxHp: 0 }) === 0, 'none', 'dents with no knight or no health');
+  want(D.AT.length === 3 && D.AT.every(([x, y, r]) => Math.abs(x) <= 20 && y < -30 && y > -118 && r >= 5 && r <= 8), 'on the plate', JSON.stringify(D.AT));
+  want(D.AT[1][1] < -100 && D.AT[0][1] > -80 && D.AT[2][1] > -80, 'helm second', 'the helm is not the second dent');
+  for (const dark of ['#5a4f43', '#c05c5c']) for (const n of [-1, 0, 1, 2, 3, 4, 7]) {
+    log = [];
+    const got = D.beat(n, dark), m = Math.max(0, Math.min(n, 3));
+    const arcs = log.filter(l => l[0] === 'arc'), strokes = log.filter(l => l[0] === 'stroke').length;
+    want(got === m && arcs.length === m * 2 && strokes === m * 2, 'beat ' + dark + n, JSON.stringify({ got, strokes }));
+    if (!m) { want(log.length === 0, 'blank ' + n, 'drew nothing yet touched the canvas'); continue; }
+    want(log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept ' + n, 'the canvas state leaks');
+    want(arcs.every((a, i) => { const [x, y, r] = D.AT[i >> 1]; return i % 2 ? a[1] === x + 1 && a[2] === y + 1.5 && a[3] === r : a[1] === x && a[2] === y && a[3] === r; }), 'placed ' + n, JSON.stringify(arcs));
+    want(log.filter(l => l[0] === '=strokeStyle' && l[1] === dark).length === m, 'the plate dark ' + n, 'a dent not in the plate\'s own dark');
+  }
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('\n}\n', html.indexOf('function drawKnight(')));
+  want(k.startsWith('function drawKnight(x,y,s,lunge,hurt,dead,pose,dents){') && k.includes("  Honours.circlet(hon.crowns);\n  Dents.beat(dents, dark);   // the plate shows the blows taken\n")
+    && k.indexOf('Dents.beat(') > k.indexOf("const dark = hurt>0") && k.indexOf('Dents.beat(') < k.lastIndexOf('cx.restore();'), 'drawn', 'the knight is not dented in its own frame');
+  want(html.includes("drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose, Dents.of(Game.s)));"), 'wired', 'the fight does not dent its knight');
+  want((html.match(/Dents\.of\(/g) || []).length === 1 && (html.match(/Dents\.beat\(/g) || []).length === 1, 'once', 'dents drawn somewhere else too');
   return checks;
 })();
 const scarsNotes = (() => {
@@ -26893,6 +26927,7 @@ console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)} 
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, none once the fight is over)`);
+console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
