@@ -2701,7 +2701,7 @@ const gradeNotes = (() => {
   const mk = win.indexOf('const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);');
   want(mk > 0 && mk < win.indexOf('Game.gainXp(xp)'), 'win', 'the grade is not taken from the health left as the foe falls, before a level-up');
   want(win.indexOf('Grade.marks(') > win.indexOf("if(this.mode==='dungeon')"), 'win', 'the arena or a dungeon room is graded');
-  want(win.includes('${Grade.card(marks)}\n          <div class="small">Longest streak this battle: ${this.runBest||0}</div>'), 'win', 'the victory panel does not show the grade above the battle\'s own streak');
+  want(win.includes('${Grade.card(marks, had)}\n          <div class="small">Longest streak this battle: ${this.runBest||0}</div>'), 'win', 'the victory panel does not show the grade above the battle\'s own streak');
   want(!win.includes('${g.stats.best}'), 'win', 'the streak line still shows the save\'s best');
   want(win.includes("else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE'"), 'win', 'an S has no banner, or one on top of a level-up');
   want(!/(Game\.s|g|this\.s)\.(grade|grades|runBest)\b/.test(html), 'save', 'a grade is saved');
@@ -3058,6 +3058,59 @@ const secondWindNotes = (() => {
   want(battle.includes('this.lastSlam=SecondWind.hold(this, Game.s.hp, '), 'slam', 'a slam is not held');
   want(battle.includes('* SecondWind.bonus(this);') && battle.includes('this.lastStand=SecondWind.take(this);'), 'strike', 'a last stand does not strike harder');
   want(/this\.winded=false; this\.windNow=false; this\.standing=false; this\.lastStand=false;/.test(battle), 'start', 'a second wind carries from one fight to the next');
+  return checks;
+})();
+
+/* Best grades: a foe's best grade is kept in its clear (a letter where true
+   was), never lowered by a worse win, said on the victory card when it rises
+   or stands above this win, tagged on the map, and a realm whose every foe is
+   at S is crowned. An old clear of true is no grade yet. */
+const bestGradeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Grade = {'), html.indexOf('const Battle = {'));
+  const G = new Function(src + ';return Grade;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('bestgrade', key, msg); };
+  const L = ['C', 'B', 'A', 'S'];
+  const olds = [undefined, true, false, 1, 'X', ...L];
+  for (const had of olds) {
+    const b = L.includes(had) ? had : null;
+    want(G.best(had) === b, `best of ${had}`, `reads ${G.best(had)}`);
+    for (const l of L) {
+      const kept = G.keep(had, l);
+      const k = b && L.indexOf(b) >= L.indexOf(l) ? b : l;
+      want(kept === k, `${l} over ${had}`, `keeps ${kept}, not ${k}`);
+      const line = G.bestLine(had, l);
+      if (!b || b === l) want(line === '', `the line for ${l} over ${had}`, `is ${line}`);
+      else if (L.indexOf(l) > L.indexOf(b)) want(line.includes(`up from ${b}`) && line.includes('data-up="1"') && (line.match(/id="gradeBest"/g) || []).length === 1, `${l} over ${b}`, `is not said as a new best: ${line}`);
+      else want(line.includes(`still ${b}`) && line.includes('data-up="0"'), `${l} under ${b}`, `does not keep the best in view: ${line}`);
+      const m = [0, 1, 2].map(i => ({ id: 'm' + i, ic: '', nm: '', to: '', ok: i < L.indexOf(l) }));
+      want(G.card(m, had).includes(G.bestLine(had, G.of(m))), `the card for ${l} over ${had}`, 'leaves out the best grade');
+    }
+    const tg = G.tag(had);
+    want(b ? tg.includes(`best ${b}`) && tg.includes(`data-best="${b}"`) : tg === '', `the map tag for ${had}`, `is ${tg}`);
+  }
+  // crowns: every way a realm of one to five foes can stand
+  for (let n = 1; n <= 5; n++) {
+    const each = [undefined, true, ...L];
+    const total = Math.pow(each.length, n);
+    for (let i = 0; i < total; i++) {
+      const c = {}; let x = i, all = true;
+      for (let fi = 0; fi < n; fi++) { const v = each[x % each.length]; x = Math.floor(x / each.length); if (v !== undefined) c['2:' + fi] = v; if (v !== 'S') all = false; }
+      c['1:0'] = 'C'; c['3:0'] = 'S';
+      if (G.crowned(c, 2, n) !== all) want(false, `realm of ${n}: ${JSON.stringify(c)}`, `is ${all ? 'not ' : ''}crowned`);
+      else checks++;
+    }
+  }
+  want(G.crowned({}, 0, 0) === false && G.crowned(null, 0, 2) === false, 'empty', 'an empty realm is crowned');
+  want(G.crown(true).includes('👑') && G.crown(false) === '', 'crown', 'the crown is drawn wrong');
+  // hooked into the win, the map, and nothing new saved
+  const win = html.slice(html.indexOf('\n  win(){\n    if(this.over) return;'));
+  want(win.includes('const had=g.cleared[key], first=!had;') && win.includes('g.cleared[key]=Grade.keep(had, Grade.of(marks));'), 'win', 'the best grade is not kept in the clear');
+  want(win.indexOf('g.cleared[key]=Grade.keep(had') < win.indexOf('Game.save();'), 'win', 'the best grade is kept after the save');
+  want(win.includes("else if(crowned) Celebrate.banner('REALM CROWNED'"), 'win', 'a crown is not celebrated');
+  want(html.includes("'<span class=\"tag g\">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi])") && html.includes('${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}'), 'map', 'the map does not show best grades and crowns');
+  want(!/Game\.s|localStorage/.test(src.slice(src.indexOf('RANK:'), src.indexOf('crown(on)'))), 'saved', 'the best grade reaches into the save');
   return checks;
 })();
 
@@ -26407,6 +26460,7 @@ console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
+console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
 console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);

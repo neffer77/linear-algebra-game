@@ -1,68 +1,68 @@
 {
-  "change": "Second wind: a blow that would fell you leaves you at 1 health, once a fight",
+  "change": "Best grades: each foe keeps its best grade on the map, and an all-S realm is crowned",
   "mutations": [
     {
-      "name": "every mode gets a second wind",
+      "name": "a worse win lowers the best",
       "file": "index.html",
-      "find": "can(B){ return !!(B && B.mode==='campaign' && !B.rite); },",
-      "replace": "can(B){ return !!(B && !B.rite); },",
+      "find": "keep(had, l){ const b=this.best(had); return b && this.RANK[b]>=this.RANK[l] ? b : l; },",
+      "replace": "keep(had, l){ return l; },",
       "run": "verify"
     },
     {
-      "name": "the wind is never spent",
+      "name": "an old clear reads as a grade",
       "file": "index.html",
-      "find": "    if(B.winded && !B.windNow) return dmg;            // spent earlier in the fight\n",
+      "find": "best(v){ return typeof v==='string' && v in this.RANK ? v : null; },",
+      "replace": "best(v){ return v===true ? 'C' : typeof v==='string' && v in this.RANK ? v : null; },",
+      "run": "verify"
+    },
+    {
+      "name": "a new best is never said",
+      "file": "index.html",
+      "find": "    if(!b || b===l) return '';\n",
+      "replace": "    if(!b || b===l || this.RANK[l]>this.RANK[b]) return '';\n",
+      "run": "verify"
+    },
+    {
+      "name": "one S crowns a realm",
+      "file": "index.html",
+      "find": "crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },",
+      "replace": "crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])==='S') return n>0; return false; },",
+      "run": "verify"
+    },
+    {
+      "name": "the clear keeps true",
+      "file": "index.html",
+      "find": "    g.cleared[key]=Grade.keep(had, Grade.of(marks));\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "it leaves the knight at nothing",
+      "name": "the map shows no best",
       "file": "index.html",
-      "find": "    return hp-1;\n  },\n  // as an answer begins",
-      "replace": "    return hp;\n  },\n  // as an answer begins",
+      "find": "'<span class=\"tag g\">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi])",
+      "replace": "'<span class=\"tag g\">cleared</span>'",
       "run": "verify"
     },
     {
-      "name": "a last stand strikes no harder",
+      "name": "the crown is never drawn",
       "file": "index.html",
-      "find": "bonus(B){ return B && B.lastStand ? this.MUL : 1; },",
-      "replace": "bonus(B){ return 1; },",
+      "find": "crown(on){ return on ?",
+      "replace": "crown(on){ return false ?",
       "run": "verify"
     },
     {
-      "name": "the stand lasts past its answer",
+      "name": "the card leaves out the best",
       "file": "index.html",
-      "find": "take(B){ const s=!!B.standing; B.standing=false; B.windNow=false; return s; },",
-      "replace": "take(B){ const s=!!B.standing; B.windNow=false; return s; },",
+      "find": "${this.next(m)}</div>${this.bestLine(had, g)}",
+      "replace": "${this.next(m)}</div>",
       "run": "verify"
     },
     {
-      "name": "a slam is never held",
+      "name": "a crown is celebrated every win",
       "file": "index.html",
-      "find": "this.lastSlam=SecondWind.hold(this, Game.s.hp, this.spendWard(",
-      "replace": "this.lastSlam=(this.spendWard(",
-      "run": "verify"
-    },
-    {
-      "name": "the wind carries from fight to fight",
-      "file": "index.html",
-      "find": "    this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "a last stand that missed is claimed",
-      "file": "index.html",
-      "find": "if(ok && B.lastStand) return",
-      "replace": "if(B.lastStand) return",
-      "run": "verify"
-    },
-    {
-      "name": "the last stand is never warned of",
-      "file": "index.html",
-      "find": "    if(this.standing){ tg.innerHTML=",
-      "replace": "    if(false){ tg.innerHTML=",
-      "run": "play:secondwind"
+      "find": "const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);",
+      "replace": "const crowned=Grade.crowned(g.cleared, this.ri, nfoes);",
+      "run": "play:bestgrade"
     }
   ]
 }
