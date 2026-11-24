@@ -813,6 +813,11 @@ The game is built so that losing teaches you as much as winning.
   streak line, and a familiar joins the knight: an owl, a fox kit, a drakeling or a wisp. From then on each
   right answer mends a little health (3% of full, 6% once it is grown at sixty), never past full. It never
   strikes the foe, so every question is still asked. Nothing is saved: a new sitting finds a new egg.
+- **🛡️ A rival.** Sir Corvin, a knight of the same order, means to prove himself the better scholar. Once
+  the strongest plain foe of a realm is beaten, every campaign victory there finds him waiting, and the card
+  offers a duel. He fights like that foe, a tenth harder, for twice its gold and half again its experience.
+  Beaten, he yields with a word and leaves that realm be for the sitting; lost to, he waits to be asked again.
+  Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3232,6 +3237,7 @@ Inside `index.html` the code is organised as:
 | `Scout` | the victory card's next foe, scouted: its weak point's rule, then a question on it, as many as wanted; a right answer prepares the next campaign fight against that foe, where the weak point lands ×2, and that fight spends it; counted toward the topic; session-only |
 | `Wayfarer` | about one campaign victory in six, on a topic of the realm already met and only then; scholar, hermit, smith or bard, each giving just the prize it names, the smith's purse growing with the realm; one question, one prize, a miss nothing; counted toward the topic; session-only |
 | `Familiar` | the egg counts right answers in campaign fights only and hatches at exactly the twentieth, into one of four kinds; nothing mended before it; then each right answer mends 3% of full health, at least 1, 6% once grown at sixty, never past full and never a fallen knight; the streak line shows the count or the familiar; never touches the foe; session-only |
+| `Rival` | rides each realm's strongest plain foe, never a boss; waits after a campaign victory only once that foe is beaten; that foe a tenth harder, twice its gold, half again its experience, never a boss; a duel won leaves the realm be for the sitting; asked for, said as it starts, offered and told on the card; session-only |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3365,6 +3371,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `scout` | the victory card offers to scout the next foe by name, on a phone; scouting names its weak point and shows the rule before one question; a miss shows the answer and offers another; a right answer says the knight is prepared; both count toward the topic; the next fight against it says so and lands its weak point ×2; the fight after is plain; nothing is saved |
 | `wayfarer` | a victory can meet a wayfarer, told on the card with its prize, on a phone; the question is on a topic of the realm already met; a right answer is said and gives just that prize; the answer counts; the meeting pays once; a miss shows the answer and gives nothing but counts; with no meeting the card shows none; nothing is saved |
 | `familiar` | the streak line counts the egg toward twenty; the twentieth right answer hatches it with a banner and mends nothing; the streak line shows the familiar and fits a phone; a right answer after it mends 3%; never past full; a miss mends nothing and is not counted; nothing is saved |
+| `rival` | no rival waits before the realm's strongest foe falls; then the card offers the duel by name, below the way on, on a phone; the duel is said as it starts, a tenth harder for twice the gold; won, he yields on the card and offers no duel again in that realm; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
