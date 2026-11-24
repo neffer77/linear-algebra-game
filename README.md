@@ -780,6 +780,10 @@ The game is built so that losing teaches you as much as winning.
   pays a fifth of the foe's gold on the spot with a shower of coins; a miss costs only the gilding,
   and the question asked again after it is never gilded. The victory card says what the fight's
   gilded questions paid. The play suites fight without them unless a suite asks for them.
+- **🗡️ An oath.** Before the first answer of a campaign fight, the power bar offers an oath: swear
+  to win this fight with no miss. Kept, the victory pays half again the gold and a sure chest, an
+  epic find at the least. Broken by a miss ("OATH BROKEN"), it costs a quarter of the fight's gold
+  at the victory. It is a wager on knowing the work, taken when you feel ready. Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3192,6 +3196,7 @@ Inside `index.html` the code is organised as:
 | `Sitting` milestones | a milestone on every fifth campaign victory and no other, over hundreds of wins; the next one named on the map; 1st, 2nd, 3rd, 11th, 12th, 13th, 21st, 22nd and 111th said right; a sure chest of a rare find at the least, wired into the win |
 | `Sitting` welcome back | only the first campaign victory of a sitting, not an arena, daily or dungeon win before it; said with the experience it adds, and nothing for the rest; gained and counted by the win |
 | `Gild` | fresh campaign questions only, never one asked again, about one in eight; a fifth of the foe's gold and at least a coin, paid once into the purse and the fight's count; told above the question, on the card, and wired where a question is asked and answered |
+| `Oath` | sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken, nothing unsworn; wired into the bar, the answer, the win and the card |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3318,6 +3323,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `milestone` | a first, 4th, 6th and 21st victory drop nothing; the 5th and 25th say so on the card, on a phone, for a sure chest of a rare find at the least; the map names the next one; nothing is saved |
 | `fresh` | the first victory of a sitting says so on the card, on a phone, pays its experience twice and counts it; the next pays as usual and says nothing; nothing is saved |
 | `gild` | a gilded question says so with its gold, on a phone; a right answer pays it, a miss and the question asked again pay nothing, the next fresh one pays again; the card says the fight's total; a fight with none says nothing; nothing is saved |
+| `oath` | the bar offers an oath before the first answer and shows it sworn, on a phone; kept, the card says so with a sure epic chest; no oath once an answer is given; a miss breaks it, said on the scene, the bar and the card, with the gold counted as paid; no oath says nothing; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
