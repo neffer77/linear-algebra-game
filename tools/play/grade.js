@@ -24,6 +24,8 @@ const fight = t => t.ev(() => {
   Battle.beastLeft = 0; Battle.wardUp = false; Battle.ehp = 1e6;
   // a full satchel's chest may hold armour, which sets the knight's health anew mid-check
   Satchel.n = 0;
+  // and so may a boon's lucky find, or a fat purse change the gold
+  Boon.open = false; Boon.held = null;
   window.__banners = [];
   return Battle.foe.nm;
 });

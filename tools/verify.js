@@ -3220,7 +3220,7 @@ const overkillNotes = (() => {
   for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
   want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
   const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
   want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
@@ -3374,7 +3374,7 @@ const sweepNotes = (() => {
   want(rarer(both) > rarer(boss), 'boss', `a boss swept found ${rarer(both)} rare things to a boss's ${rarer(boss)}`);
   want(sw.legendary > plain.legendary, 'legend', `a sweep found ${sw.legendary} legendaries to a plain win's ${plain.legendary}`);
   want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
-  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, tier:'), 'drop', 'a sweep does not drop a sure chest');
+  want(html.includes("R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, satchel, tier:'), 'drop', 'a sweep does not drop a sure chest');
   want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
   return checks;
 })();
@@ -3421,7 +3421,7 @@ const revengeNotes = (() => {
   want(V.line('Goblin', 12).includes('id="revengeWon"') && V.line('Goblin', 12).includes('12 gold') && V.line('Goblin', 0) === '', 'line', 'the card does not say the revenge');
   want(html.includes("const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;"), 'held', 'a fall in the campaign does not hold the gold lost');
   want(html.includes("const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;"), 'paid', 'a win does not pay the gold back, or not in the campaign only');
-  want(html.includes('gold+sGold+oGold+rGold, 900)'), 'counted', 'the card does not count the gold won back');
+  want(html.includes('gold+sGold+oGold+rGold+bGold, 900)'), 'counted', 'the card does not count the gold won back');
   want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
   want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
   return checks;
@@ -3484,9 +3484,60 @@ const satchelNotes = (() => {
   const plain = tally({});
   want(plain.uncommon > 0 && plain.common > 0, 'plain', 'a plain chest never finds a common or an uncommon');
   want(html.includes('      Parry.earn(this);\n      Satchel.add(this);'), 'added', 'a right answer does not fill the satchel');
-  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes('this.foe.elite || satchel ? 1 :') && html.includes('sweep, satchel, tier:'), 'drop', 'a full satchel does not open for a sure chest');
+  want(html.includes("satchel=this.mode==='campaign' && Satchel.spend();") && html.includes("this.foe.elite || satchel || boon==='find' ? 1 :") && html.includes('sweep, satchel, tier:'), 'drop', 'a full satchel does not open for a sure chest');
   want(html.includes("if(ctx.satchel && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a full satchel can find something plain');
   want(html.includes('${Satchel.line(satchel)}') && html.includes('+Parry.tag(this)+Satchel.tag(this);'), 'said', 'the satchel is not shown beside the streak or on the card');
+  return checks;
+})();
+
+/* A level-up boon: a campaign win that lifts the knight a level offers a
+   choice of two boons for the next campaign win, a fat purse (half again the
+   gold) or a lucky find (a sure chest). Worked over a long run of wins in
+   every mode: an offer opens only on a campaign level-up with no boon held, a
+   pick holds only an open offer's boon, the boon is spent once, on the next
+   campaign win and on no other kind, and the card says each state. */
+const boonNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Boon = {'), html.indexOf('const Satchel = {'));
+  const B0 = new Function(src + ';return Boon;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('boon', key, msg); };
+  const modes = ['campaign', 'arena', 'dungeon', 'daily'];
+  let seed = 23;   // mulberry32
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n); };
+  let open = false, held = null, spent = { purse: 0, find: 0 }, offers = 0;
+  for (let step = 0; step < 6000; step++) {
+    const B = { mode: modes[rnd(4)] }, camp = B.mode === 'campaign';
+    const r = rnd(4);
+    if (r === 0) {   // a pick, of a boon or of nonsense
+      const k = ['purse', 'find', 'gold', ''][rnd(4)];
+      const ok = B0.pick(k), wanted = open && (k === 'purse' || k === 'find');
+      want(ok === wanted, `pick ${step}`, `picked ${k}: ${ok} with the offer ${open ? 'open' : 'shut'}`);
+      if (wanted) { held = k; open = false; }
+    } else {         // a win, perhaps with a level-up
+      const ups = rnd(3) ? 0 : 1 + rnd(2);
+      const got = B0.take(B), wantGot = camp ? held : null;
+      want(got === wantGot, `take ${step}`, `a ${B.mode} win spent ${got}, not ${wantGot}`);
+      if (camp && held) { spent[held]++; held = null; }
+      const gold = 10 + rnd(300);
+      want(B0.gold(got, gold) === (got === 'purse' ? Math.round(gold / 2) : 0), `gold ${step}`, `${got} on ${gold} gold paid ${B0.gold(got, gold)}`);
+      const o = B0.offer(B, ups);
+      if (ups && camp && !held && !open) offers++;
+      if (ups && camp && !held) open = true;
+      want(o === open, `offer ${step}`, `a ${B.mode} win with ${ups} levels: offer ${o}, not ${open}`);
+    }
+    want(B0.open === open && B0.held === held, `state ${step}`, `${B0.open}/${B0.held}, not ${open}/${held}`);
+    const c = B0.card();
+    want(open ? c.includes('id="boonPurse"') && c.includes('id="boonFind"') : held ? c.includes('You hold ' + B0.NAMES[held]) && !c.includes('<button') : c === '', `card ${step}`, c);
+  }
+  want(offers > 100 && spent.purse > 50 && spent.find > 50, 'spread', `${offers} offers, ${JSON.stringify(spent)} spent`);
+  want(B0.line('purse', 37).includes('+37 gold') && B0.line('find', 0).includes('sure chest') && B0.line(null, 0) === '', 'line', 'the card does not say the boon spent');
+  want(html.includes("const boon=Boon.take(this), bGold=Boon.gold(boon, gold);\n    g.gold+=bGold;"), 'paid', 'a fat purse does not pay');
+  want(html.includes("const ups=Game.gainXp(xp);\n    Boon.offer(this, ups);"), 'offered', 'a level-up does not offer a boon');
+  want(html.includes("satchel || boon==='find' ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
+  want(html.includes('${Boon.line(boon, bGold)}') && html.includes("${this.mode==='campaign'?Boon.card():''}"), 'said', 'the card does not show the boon');
+  want(html.includes('gold+sGold+oGold+rGold+bGold, 900)'), 'counted', 'the card does not count the purse');
   return checks;
 })();
 
@@ -25109,6 +25160,7 @@ console.log(`  parries checked            ${pad(parryNotes.toLocaleString(), 10)
 console.log(`  clean sweeps checked       ${pad(sweepNotes.toLocaleString(), 10)}  (a win with no miss in the campaign only; a sure chest, never a plain one, with rarer finds than a plain win and a boss's odds tipped further)`);
 console.log(`  revenges checked           ${pad(revengeNotes.toLocaleString(), 10)}  (each foe holds the gold lost to it and no other's, falls adding up; a win over it pays that back once and clears it; said on the defeat, the map and the victory card)`);
 console.log(`  satchels checked           ${pad(satchelNotes.toLocaleString(), 10)}  (filled by the campaign's right answers only, never past twenty-five; spent only when full; shown beside the streak; a full one opens a sure chest with a rare find at the least)`);
+console.log(`  boons checked              ${pad(boonNotes.toLocaleString(), 10)}  (offered only by a campaign level-up with none held; picked only from an open offer; spent once, on the next campaign win; a fat purse pays half again, a lucky find drops a sure chest)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
