@@ -764,6 +764,10 @@ The game is built so that losing teaches you as much as winning.
   quarter more gold, said on the victory card and counted into the gold shown. Health that low is
   when quitting is most tempting, and this is a reason to stay and answer. It is the fight's alone:
   the next fight starts without it, and nothing is saved.
+- **🗺️ The sitting's tally.** The map keeps a tally of this sitting's campaign above the road:
+  the victories won, the gold they paid with every bonus counted in, and the longest streak of
+  right answers in any one fight ("This sitting: 7 victories · 🪙 912 gold · best streak 14"). It
+  shows once there is a victory to count. Nothing is saved: a new sitting starts it again.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3321,6 +3325,7 @@ Inside `index.html` the code is organised as:
 | `Boon` | offered only by a campaign level-up with none held; picked only from an open offer, and only one of its two; spent once, on the next campaign win and no other kind; a fat purse pays half again the gold, a lucky find drops a sure chest; the card shows the offer, the held boon and the boon spent |
 | `March` | a realm's march pays exactly when its last unbeaten foe falls since the last fall or flight, once a sitting, in the campaign only; a fall or a flight sets every march back; the map counts it until it pays; a march's chest never finds less than epic |
 | `Comeback` | marked when a blow leaves health above 0 and at a quarter or under, never cleared within the fight; paid in the campaign only, a quarter more gold; every blow that lands calls it; a new fight starts without it |
+| `Sitting` | the campaign's victories only; their gold with every bonus, added up exactly; the best streak of any fight, never falling; nothing on the map before the first victory, and one victory said as one |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3443,6 +3448,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `boon` | a win with no level-up offers nothing; a level-up offers two boons and fits a phone; a pick holds it; the next win spends a purse, said and counted in, then it is gone; an offer not taken waits on the next card; a find drops a sure chest; nothing is saved |
 | `march` | a win says nothing of a march; the map counts each foe once; a fall, or a flight from a live fight, sets it back; the last foe of the realm makes the march, said on the card, for a sure chest with an epic find; the card fits a phone; the map stops counting it; a realm pays it once; nothing is saved |
 | `comeback` | a miss to a quarter of health or less, then health back, still makes the win a comeback, said with its gold and counted in; the card fits a phone; the next fight starts without it; a miss that leaves more than a quarter is none; nothing is saved |
+| `sitting` | no tally on the map before a victory; a first victory shows with the gold it paid and its streak, on a phone; a second adds its gold, bonuses and all, and the best streak stays the best; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
