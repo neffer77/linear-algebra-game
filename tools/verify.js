@@ -4133,6 +4133,57 @@ const gauntletNotes = (() => {
   return checks;
 })();
 
+/* A flourish. Every state a fight can be in, against what the bar should
+   offer: only in the campaign, from the eighth right answer in a row, before
+   the answer and while none is held. Spending it ends the streak and readies
+   a blow three times as hard; the blow spends it; a miss loses it. The blow
+   it buys is worth more than the streak it spends, or it would be no choice
+   at all, and less than three of the streak's own blows, or it would be no
+   choice either. Then the wiring where it lives. */
+const flourishNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Flourish = {'), html.indexOf('/* The gauntlet.'));
+  const comb = html.slice(html.indexOf('const Combat = {'), html.indexOf('/* --------------------------------- talk'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('flourish', key, msg); };
+  const floats = [];
+  const F = new Function('Anim', 'Sfx', 'H', src + ';return Flourish;')({ float: (x, y, t) => floats.push(t) }, { good() {} }, 600);
+  const Combat = new Function(comb + ';return Combat;')();
+  want(F.AT === 8 && F.MUL === 3, 'numbers', `a flourish from ${F.AT} in a row, ×${F.MUL}`);
+  want(Combat.comboMul(F.AT) === Combat.comboMul(7), 'cap', 'a streak past seven still adds to the blow, so a flourish spends something that counts');
+  for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const over of [null, 'win']) for (const answered of [false, true])
+    for (const flourish of [false, true]) for (let combo = 0; combo <= 12; combo++) {
+      const B = { mode, over, answered, flourish, combo, bars: 0, pws: 0, updateBars() { this.bars++; }, renderPowers() { this.pws++; } }, key = JSON.stringify({ mode, over, answered, flourish, combo });
+      const can = mode === 'campaign' && !over && !answered && !flourish && combo >= 8;
+      want(F.can(B) === can, 'can ' + key, `offered ${F.can(B)}`);
+      want(F.label(B) === (flourish ? '💫 Flourish ready' : `💫 Flourish · spend ${combo}`), 'label ' + key, F.label(B));
+      want(F.bonus(B) === (flourish ? 3 : 1), 'bonus ' + key, `a blow ×${F.bonus(B)}`);
+      const nf = floats.length, ok = F.ready(B);
+      want(ok === can && (can ? B.flourish && B.combo === 0 && B.bars === 1 && B.pws === 1 && floats[nf] === 'FLOURISH READY'
+        : B.flourish === flourish && B.combo === combo && B.bars === 0 && B.pws === 0 && floats.length === nf), 'ready ' + key, JSON.stringify(B));
+      if (can) {
+        want(F.bonus(B) === 3, 'readied ' + key, 'a readied flourish does not land harder');
+        const n2 = floats.length;
+        want(F.spend(B) === true && !B.flourish && F.bonus(B) === 1 && floats[n2] === 'FLOURISH ×3', 'spend ' + key, 'the blow does not spend the flourish, or say so');
+        want(F.spend(B) === false && floats.length === n2 + 1, 'once ' + key, 'a flourish is spent twice');
+      }
+    }
+  want(F.can(null) === false && F.bonus(null) === 1 && F.spend(null) === false, 'none', 'no fight at all has a flourish');
+  // worth it on the blow, and not more than the streak's own blows to come
+  for (let combo = F.AT; combo <= 20; combo++) {
+    const kept = Combat.comboMul(combo + 1), spent = Combat.comboMul(1) * F.MUL;
+    want(spent > kept && spent < 3 * kept, 'worth ' + combo, `a flourish lands ×${spent.toFixed(2)} against ×${kept.toFixed(2)} kept`);
+  }
+  // the wiring
+  want(html.includes("this.asked=0;   // questions asked this fight, which a greedy foe counts\n    this.flourish=false;"), 'start', 'a fight starts with the last one\'s flourish');
+  want(html.includes('* (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this)') && html.split('Flourish.bonus(').length === 2, 'blow', 'a right answer does not land a flourish');
+  const ans = html.slice(html.indexOf('* Flourish.bonus(this) * Phase.bonus(this)'));
+  want(/^[^]*?const dmg = Combat\.strike[^]*?\n      Flourish\.spend\(this\);/.test(ans) && ans.indexOf('Flourish.spend(this);') < ans.indexOf('} else'), 'spent', 'the blow does not spend the flourish');
+  want(html.includes("    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n    if(!ok) this.flourish=false;"), 'miss', 'a miss does not lose the flourish');
+  want(html.includes("if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));"), 'bar', 'the bar does not offer the flourish');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -27845,6 +27896,7 @@ console.log(`  rivals checked             ${pad(rivalNotes.toLocaleString(), 10)
 console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}  (a campaign miss is a slip, one to a topic, eight at most; a wounded knight with a slip is offered a camp on the latest; a right answer mends half the wounds and puts the slip behind; one answer, counted, paid once)`);
 console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 10)}  (a scrap for a campaign win at A or better, the map whole at the third, X on a realm opened and fought in and not the one just won where there is another, nothing found while it waits, the hoard of its boss's gold paid once there)`);
 console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 10)}  (offered only for a realm all beaten and not run this sitting, stepped on only by the foe it waits on, broken off by any other fight, a fall or a flight, and paying the realm's every first-clear purse once at the last)`);
+console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
