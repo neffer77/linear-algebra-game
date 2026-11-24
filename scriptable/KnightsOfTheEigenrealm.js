@@ -9091,6 +9091,9 @@ const Grade = {
     return \`<div id="gradeBest" class="small" data-up="\${up?1:0}" style="margin-top:4px\${up?';color:var(--gold);font-weight:800':''}">\${up
       ? \`⬆️ A new best on this foe, up from \${b}.\` : \`Your best on this foe is still \${b}.\`}</div>\`;
   },
+  // the first S on a foe pays its gold once more, so going back for the top grade is worth the trip
+  sBonus(had, l, foe){ return l==='S' && this.best(had)!=='S' ? foe.gold : 0; },
+  sLine(n){ return n ? \`<div id="firstS" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ Your first S on this foe: +\${n} bonus gold.</div>\` : ''; },
   tag(v){ const b=this.best(v); return b ? \`<span class="tag" data-best="\${b}" style="color:\${this.COL[b]}">best \${b}</span>\` : ''; },
   // every foe of a realm beaten at S: the realm wears a crown on the map
   crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },
@@ -10239,6 +10242,8 @@ const Battle = {
     const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);
     // the foe's best grade is kept in its clear, and a realm all at S is crowned
     g.cleared[key]=Grade.keep(had, Grade.of(marks));
+    const sGold=this.mode==='campaign' ? Grade.sBonus(had, Grade.of(marks), this.foe) : 0;
+    g.gold+=sGold;
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
 
@@ -10261,6 +10266,7 @@ const Battle = {
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${WarPath.line()}
+          \${Grade.sLine(sGold)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10282,9 +10288,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
