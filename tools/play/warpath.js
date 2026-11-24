@@ -56,6 +56,8 @@ module.exports = {
     await t.newKnight('Ada');
     const keys = await t.ev(() => Object.keys(Game.s).sort().join());
     const base = await t.ev(() => REALMS[0].foes[0].gold);
+    // today's quarry pays a beaten foe its full gold, which these sums leave out
+    await t.ev(() => { window.__quarry = Quarry.of; Quarry.of = () => null; });
     await t.ev(() => { WarPath.n = 0; delete Game.s.cleared['0:0']; });
 
     let r = await win(t);
@@ -102,6 +104,6 @@ module.exports = {
 
     t.eq('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()), keys);
     t.ok('and the path is not in the save', !(await t.ev(() => JSON.stringify(Game.s))).includes('arPath'));
-    await t.ev(() => UI.go('s-title'));
+    await t.ev(() => { Quarry.of = window.__quarry; UI.go('s-title'); });
   }
 };
