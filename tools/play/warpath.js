@@ -68,7 +68,7 @@ module.exports = {
     r = await win(t);
     t.eq('a second in a row pays a tenth more', r.gold, Math.round(base * 0.45 * 1.1));
     t.eq('the victory says how long the path runs and what the next pays', r.line, '🔥 War path: 2 victories in a row, +10% gold. Win the next for +20%.');
-    t.ok('above the rewards', r.text.indexOf('Victory!') < r.text.indexOf('War path') && r.text.indexOf('War path') < r.text.indexOf('experience'), r.text.slice(0, 300));
+    t.ok('in the bonuses, under the totals', r.text.indexOf('Victory!') < r.text.indexOf('experience') && r.text.indexOf('experience') < r.text.indexOf('War path'), r.text.slice(0, 300));
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));
 

@@ -4658,6 +4658,65 @@ const levelBarNotes = (() => {
     && (html.match(/LevelBar\.(html|fill)\(/g) || []).length === 2, 'wired', 'the victory card shows no level bar, or it never fills');
   return checks;
 })();
+const haulNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Haul = {');
+  const src = html.slice(start, html.indexOf('/* Letters from home.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('haul', key, msg); };
+  // a small stand-in for the page: rows with a height, a list that holds them
+  const made = [];
+  const node = (tag, cls) => {
+    const n = { tagName: tag, children: [], style: {}, attrs: {}, parent: null, offsetTop: 0, offsetHeight: 30, textContent: '',
+      classList: { set: new Set(cls ? [cls] : []), add(c) { this.set.add(c); }, remove(c) { this.set.delete(c); }, contains(c) { return this.set.has(c); } },
+      setAttribute(k, v) { this.attrs[k] = v; },
+      insertBefore(c, ref) { c.parent = this; const i = this.children.indexOf(ref); this.children.splice(i < 0 ? 0 : i, 0, c); },
+      after(c) { c.after_ = this; this.next = c; },
+      remove() { this.removed = true; },
+      set innerHTML(v) { this.children = []; this.html = v; }, get innerHTML() { return this.html || ''; } };
+    Object.defineProperty(n, 'className', { set(v) { n.classList.set = new Set(v.split(' ')); }, get() { return [...n.classList.set].join(' '); } });
+    return n;
+  };
+  const document = { createElement: tag => { const n = node(tag.toUpperCase()); made.push(n); return n; } };
+  const H = new Function('document', src + ';return Haul;')(document);
+  const list = k => { const el = node('DIV', 'haul'); for (let i = 0; i < k; i++) { const r = node('DIV'); r.offsetTop = 20 + i * 34; el.children.push(r); } return el; };
+  // the totals lead as chips, and the find is a chip of its own only when there is one
+  const c0 = H.chips(null), c1 = H.chips('<span>🗡️ Vector Saber</span>');
+  want(c0.includes('<span id="rGold">0</span>') && c0.includes('<span id="rXp">0</span>') && !c0.includes('rLoot') && c1.includes('id="rLoot"') && c1.includes('Looted <span>🗡️ Vector Saber</span>'), 'chips', 'the totals or the find are not shown as chips');
+  // no bonus: the list is emptied so it takes no room
+  const e0 = list(0); e0.innerHTML = '\n   \n'; want(H.fold(e0) === 0 && e0.innerHTML === '' && !e0.classList.contains('folded'), 'none', 'an empty bonus list keeps its room');
+  want(H.fold(null) === 0, 'no list', 'a card with no list fails');
+  // a few bonuses: titled and shown whole; one past the few is shown too, never folded alone
+  for (const k of [1, 2, 3, 4]) {
+    const el = list(k); const hid = H.fold(el);
+    want(hid === 0 && !el.classList.contains('folded') && !el.next && el.children[0].classList.contains('haulHead')
+      && el.children[0].textContent === (k === 1 ? 'A bonus' : 'Bonuses · ' + k) && H.rows(el).length === k, 'shown ' + k, 'a short bonus list is folded or untitled');
+  }
+  // a big win: the first few shown, the rest folded behind one opener that says how many
+  for (const k of [5, 8, 14, 24]) {
+    const el = list(k); const hid = H.fold(el), b = el.next;
+    const third = H.rows(el)[H.SHOW - 1];
+    want(hid === k - H.SHOW && el.classList.contains('folded') && b && b.id === 'haulOpen' && b.textContent === '＋ ' + (k - H.SHOW) + ' more bonuses'
+      && b.attrs.role === 'button' && b.tabIndex === 0 && el.style.maxHeight === (third.offsetTop + third.offsetHeight + 18) + 'px', 'folded ' + k, 'a long bonus list is not folded to its first few, or the opener miscounts');
+    // the opener shows them all, by a tap or a key, and goes
+    if (k === 8) b.onclick(); else { let stopped = false; b.onkeydown({ key: k === 5 ? 'Enter' : ' ', preventDefault() { stopped = true; } }); want(stopped, 'key ' + k, 'the opener key scrolls the page'); }
+    want(!el.classList.contains('folded') && el.style.maxHeight === '' && b.removed, 'opened ' + k, 'the opener does not show the rest');
+    // folding clips the list and hides nothing: every line is still in it
+    want(H.rows(el).length === k, 'kept ' + k, 'folding drops a bonus line');
+  }
+  const k9 = list(9); k9.next = null; H.fold(k9); let other = false; k9.next.onkeydown({ key: 'a', preventDefault() { other = true; } });
+  want(!other && k9.classList.contains('folded'), 'other key', 'any key opens the list');
+  // the list's style: the fold is a clip with a fade, never a hiding that would drop lines from the page's text
+  want(html.includes('.haul.folded{overflow:hidden;') && !/\.haul[^{]*\{[^}]*display:none/.test(html.replace('.haul:empty{display:none}', '')), 'clip', 'the folded bonuses are hidden, not clipped');
+  // wired: the chips once, at the top; the list round every bonus line, then the new page; folded once painted
+  const w = html.indexOf('  win(){\n    if(this.over) return;'), end = html.indexOf('\n  lose(){', w), win = html.slice(w, end);
+  const at = s => win.indexOf(s);
+  want(at('${Ballad.line(song)}\n          ${Haul.chips(loot)}\n') > 0 && (html.match(/Haul\.chips\(/g) || []).length === 1 && (html.match(/id="rGold"/g) || []).length === 1 && (html.match(/id="rXp"/g) || []).length === 1, 'chips wired', 'the totals do not lead the card');
+  const open = at('<div id="haul" class="haul">\n          ${Phase.flawless(this)?'), shut = at("an elite felled: the full reward and a sure chest.</div>`:''}\n          </div>\n          ${Folio.line(folio)}\n".replace('an elite', 'An elite'));
+  want(open > at('${LevelBar.html(lvl)}') && shut > open && ['WarPath.line(', 'Grade.sLine(', 'Overkill.line(', 'Sweep.line(', 'Boon.line(', 'Sitting.freshLine(', 'Gild.line(', 'Greedy.line(', 'Honours.line('].every(f => { const i = at(f); return i > open && i < shut; }), 'list wired', 'a bonus line sits outside the list');
+  want(win.includes("      LevelBar.fill(lvl);   // and the way to the next level fills\n      Haul.fold(document.getElementById('haul'));   // and the bonuses list, folded past the first few\n") && (html.match(/Haul\.fold\(/g) || []).length === 1, 'fold wired', 'the bonus list is never folded');
+  return checks;
+})();
 const folioNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Folio = {');
@@ -4711,7 +4770,7 @@ const folioNotes = (() => {
   // the purse is paid once, on the win that fills the page, and before the save
   want(html.includes("    const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page\n    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n")
     && (html.match(/folio\.prize/g) || []).length === 2, 'purse paid', 'a filled eighth of the Bestiary pays nothing, or pays twice');
-  want(html.includes("          ${Ballad.line(song)}\n          ${Folio.line(folio)}\n") && (html.match(/Folio\.(of|line)\(/g) || []).length === 2, 'wired', 'the victory card does not open the new page');
+  want(html.includes("          </div>\n          ${Folio.line(folio)}\n          ${this.mode==='campaign'?Boon.card():''}\n") && (html.match(/Folio\.(of|line)\(/g) || []).length === 2, 'wired', 'the victory card does not open the new page under the bonuses');
   want(html.includes("      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));\n      Folio.paint(folio);   // and the new page's likeness\n") && (html.match(/Folio\.paint\(/g) || []).length === 1, 'painted', 'the new page is shown with no likeness');
   return checks;
 })();
@@ -28844,6 +28903,7 @@ console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}
 console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)}  (three gold stars circling a beaten foe's head, found where drawFoe lays it over, at the foe's own size)`);
 console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe not yet beaten marked new on its nameplate; its first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds, a purse every eighth page; campaign only)`);
 console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
+console.log(`  victory spoils checked     ${pad(haulNotes.toLocaleString(), 10)}  (the totals as chips at the top, the bonuses one list under them, folded past the first few and opened in place)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

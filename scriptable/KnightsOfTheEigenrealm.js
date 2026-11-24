@@ -230,6 +230,18 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 #comboTxt.hot{color:var(--gold);font-weight:900;text-shadow:0 0 10px rgba(242,193,78,.6)}
 #comboTxt.blaze{color:#ff9c3d;font-weight:900;text-shadow:0 0 14px rgba(255,120,40,.8)}
 .xpwrap{flex:none;width:52px}
+/* the victory card's spoils: the totals as a row of chips, the bonuses as a tidy list */
+.spoils{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0 4px}
+.spoils>div{flex:1 1 0;min-width:96px;background:#1a1430;border:1px solid var(--edge);border-radius:12px;padding:8px 6px;line-height:1.25;font-weight:800}
+.spoils b{display:block;font-size:22px;font-family:var(--serif)}
+.spoils span.k{display:block;font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.spoils>div.wide{flex-basis:100%;font-size:15px}
+.haul{margin:10px 0 2px;text-align:left;position:relative}
+.haul:empty{display:none}
+.haul .haulHead{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px 2px}
+.haul>div:not(.haulHead):not(.haulOpen){font-size:13px!important;font-weight:600!important;line-height:1.35;margin:0 0 4px!important;padding:6px 9px;border-radius:9px;background:#1a1430;border-left:3px solid currentColor}
+.haul.folded{overflow:hidden;-webkit-mask-image:linear-gradient(#000 calc(100% - 34px),transparent);mask-image:linear-gradient(#000 calc(100% - 34px),transparent)}
+.haulOpen{font-size:13px;font-weight:700;color:var(--gold);text-align:center;padding:8px;cursor:pointer;border-radius:9px;border:1px dashed var(--edge);margin:2px 0 6px}
 .xptrack{height:5px;border-radius:4px;background:#140f24;border:1px solid var(--edge);overflow:hidden}
 .xptrack div{height:100%;background:linear-gradient(90deg,#5aa9e6,#a06bd6);transition:width .5s ease}
 .pref{display:flex;align-items:center;gap:10px;padding:11px;border-radius:12px;margin:6px 0;
@@ -9341,6 +9353,46 @@ const LevelBar = {
   }
 };
 
+/* The victory card's spoils. A big win can earn a dozen bonuses, each said in a
+   sentence of its own; stacked bold and centred above the totals, they buried what
+   was won, a long scroll on a phone. Now the totals lead as a row of chips, and the
+   bonuses sit under them as one tidy list under a small heading. Past the first few,
+   the list is folded to its first rows with a line that opens the rest. The fold only
+   clips the list, so every line is still there to read and nothing is saved. */
+const Haul = {
+  SHOW:3,
+  // the gold, the experience and the find, each a chip of its own
+  chips(loot){
+    return \`<div class="spoils" id="spoils">\`
+      + \`<div class="coin"><b>+<span id="rGold">0</span></b><span class="k">🪙 gold</span></div>\`
+      + \`<div style="color:var(--blue)"><b>+<span id="rXp">0</span></b><span class="k">✨ experience</span></div>\`
+      + (loot?\`<div id="rLoot" class="wide" style="color:var(--purple)">Looted \${loot}</div>\`:'')
+      + \`</div>\`;
+  },
+  // the rows of bonus lines inside a list, not counting its heading or its opener
+  rows(el){ return el ? [...el.children].filter(c=>c.tagName==='DIV' && !c.classList.contains('haulHead') && !c.classList.contains('haulOpen')) : []; },
+  // title the list, and fold it past the first few rows; returns how many were folded
+  fold(el){
+    const rows=this.rows(el);
+    if(!rows.length){ if(el) el.innerHTML=''; return 0; }
+    const h=document.createElement('div'); h.className='haulHead';
+    h.textContent=rows.length===1?'A bonus':'Bonuses · '+rows.length;
+    el.insertBefore(h, el.firstChild);
+    const hid=rows.length-this.SHOW;
+    if(hid<2) return 0;   // one more line is shown, not folded behind a button
+    const last=rows[this.SHOW-1];
+    el.style.maxHeight=(last.offsetTop+last.offsetHeight+18)+'px';
+    el.classList.add('folded');
+    const b=document.createElement('div'); b.id='haulOpen'; b.className='haulOpen';
+    b.setAttribute('role','button'); b.tabIndex=0;
+    b.textContent='＋ '+hid+' more bonuses';
+    const open=()=>{ el.classList.remove('folded'); el.style.maxHeight=''; b.remove(); };
+    b.onclick=open; b.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
+    el.after(b);
+    return hid;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -11909,7 +11961,13 @@ const Battle = {
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           \${Ballad.line(song)}
-          \${Folio.line(folio)}
+          \${Haul.chips(loot)}
+          <div style="font-size:15px;font-weight:800;line-height:1.7">
+            \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
+            \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
+          </div>
+          \${LevelBar.html(lvl)}
+          <div id="haul" class="haul">
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${WarPath.line()}
           \${Grade.sLine(sGold)}
@@ -11934,15 +11992,8 @@ const Battle = {
           \${Sky.line(this)}
           \${Honours.line(hon)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
-          <hr>
-          <div style="font-size:16px;font-weight:800;line-height:1.9">
-            <div class="coin">+<span id="rGold">0</span> gold</div>
-            <div style="color:var(--blue)">+<span id="rXp">0</span> experience</div>
-            \${loot?\`<div id="rLoot" style="color:var(--purple)">Looted \${loot}</div>\`:''}
-            \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
-            \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
           </div>
-          \${LevelBar.html(lvl)}
+          \${Folio.line(folio)}
           \${this.mode==='campaign'?Boon.card():''}
           <hr>
           \${Grade.card(marks, had)}
@@ -11966,6 +12017,7 @@ const Battle = {
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills
+      Haul.fold(document.getElementById('haul'));   // and the bonuses list, folded past the first few
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
