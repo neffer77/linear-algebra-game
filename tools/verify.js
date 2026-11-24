@@ -3895,12 +3895,55 @@ const greedyNotes = (() => {
   }
   want(G.intro({ nm: 'Imp' }).includes('greedy Imp') && G.intro({ nm: 'Imp' }).includes('within 6 questions'), 'intro', G.intro({ nm: 'Imp' }));
   want(G.fled('Imp').includes('greedy Imp slips away') && G.fled('Imp').includes('costs you nothing'), 'fled', G.fled('Imp'));
-  want(html.includes("this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));"), 'begin', 'a campaign fight does not roll for a greedy foe after the elite');
+  want(html.includes(": Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));"), 'begin', 'a campaign fight does not roll for a greedy foe after the elite');
   want(html.includes("  nextQuestion(){\n    if(this.over) return;\n    if(Greedy.gone(this)){ this.escape(); return; }\n    this.asked=(this.asked||0)+1;"), 'count', 'a question is not counted, or the greedy foe does not flee');
   want(html.includes("this.asked=0;   // questions asked this fight"), 'reset', 'a fight starts with the last one\'s questions counted');
   want(html.includes("else if(Greedy.on(this)) UI.toast(Greedy.intro(f));") && html.includes("if(Greedy.on(this)){ tg.innerHTML=") && html.includes('${Greedy.line(this)}'), 'said', 'a greedy foe is not told');
   const esc = html.slice(html.indexOf('\n  escape(){'), html.indexOf('\n  flee(){'));
   want(esc.includes("this.over='escape'") && esc.includes("UI.go('s-map')") && !/WarPath|March|hp|gold|Game\.save/.test(esc), 'escape', 'a greedy foe\'s flight costs something');
+  return checks;
+})();
+
+/* A heroic rematch. Every foe made heroic keeps its name, health and art,
+   pays twice the gold and half again the experience and hits a quarter
+   harder, and the foe it came from is untouched; only a campaign fight with
+   a heroic foe is heroic, and only a campaign victory card offers one. The
+   wiring is checked where it lives: only a beaten foe asked for as heroic
+   comes heroic, never an elite or greedy one as well, its riddles are asked
+   at the hardest, and the scene and the card say so. */
+const heroicNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Heroic = {'), html.indexOf('/* An oath.'));
+  const H = new Function(src + ';return Heroic;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('heroic', key, msg); };
+  let seed = 77;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  for (let step = 0; step < 6000; step++) {
+    const foe = { nm: 'Foe ' + step, art: 'imp', hp: 30 + rnd(300), atk: 2 + rnd(30), gold: rnd(400), xp: rnd(120), boss: rnd(6) === 0 };
+    const was = JSON.stringify(foe), f = H.make(foe);
+    want(f.heroic === true && f.nm === foe.nm && f.hp === foe.hp && f.art === foe.art && f.boss === foe.boss &&
+      f.gold === Math.round(foe.gold * 2) && f.xp === Math.round(foe.xp * 1.5) && f.atk === Math.round(foe.atk * 1.25),
+      `make ${step}`, JSON.stringify([foe, f]));
+    want(JSON.stringify(foe) === was, `kept ${step}`, 'the realm\'s own foe was changed');
+  }
+  const modes = ['campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let step = 0; step < 3000; step++) {
+    const B = { mode: modes[rnd(5)], ri: rnd(7), fi: rnd(7), foe: { nm: 'Imp', heroic: rnd(2) === 0 } };
+    const on = B.mode === 'campaign' && B.foe.heroic;
+    want(H.on(B) === on, `on ${step}`, `a ${B.mode} fight heroic: ${H.on(B)}`);
+    const b = H.button(B);
+    want(B.mode === 'campaign' ? b.includes('id="heroicGo"') && b.includes(`Battle.begin(${B.ri},${B.fi},true)`) && b.includes('double gold') : b === '', `button ${step}`, b);
+    const l = H.line(B);
+    want(on ? l.includes('id="heroicWon"') && l.includes('heroic victory over Imp') : l === '', `line ${step}`, l);
+  }
+  want(!H.on(null) && H.button(null) === '' && H.line(null) === '', 'none', 'no fight was heroic');
+  want(H.intro({ nm: 'Imp' }).includes('heroic rematch with Imp') && H.intro({ nm: 'Imp' }).includes('double the gold'), 'intro', H.intro({ nm: 'Imp' }));
+  want(html.includes("this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])\n      : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));"), 'begin', 'a heroic foe is not made only when asked for and beaten, or is made elite or greedy too');
+  want(html.includes("const base = (this.mode==='arena' || Heroic.on(this) ? 3"), 'hard', 'a heroic fight\'s riddles are not asked at the hardest');
+  want(html.includes("else if(Heroic.on(this)) UI.toast(Heroic.intro(f));") && html.includes("(this.foe.heroic?'⚔️ Heroic ':'')") && html.includes('${Heroic.line(this)}') && html.includes('${Heroic.button(this)}'), 'said', 'a heroic rematch is not offered or told');
   return checks;
 })();
 
@@ -25591,6 +25634,7 @@ console.log(`  gilded questions checked   ${pad(gildNotes.toLocaleString(), 10)}
 console.log(`  oaths checked              ${pad(oathNotes.toLocaleString(), 10)}  (sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken)`);
 console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10)}  (only a beaten plain foe, about one in ten, its gold tripled and all else kept; flees once six questions are asked while it stands, in the campaign; a flight costs nothing)`);
 console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10)}  (each rarity rises one step and the legendary offers none; only a campaign find with a topic offers one; a find made at a rarity is of it, and a rolled find keeps its context; offered once, counted toward the topic, a miss keeps the find)`);
+console.log(`  heroic rematches checked   ${pad(heroicNotes.toLocaleString(), 10)}  (twice the gold, half again the experience, a quarter harder blows and all else kept; only a campaign fight, only a beaten foe asked for, never elite or greedy as well; the hardest riddles)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
