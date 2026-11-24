@@ -1,96 +1,110 @@
 {
-  "change": "Honours: a star on the shield for every boss beaten, a circlet for a realm at S, a shining blade from the third boss",
+  "change": "Dicer: on the fourth victory of a sitting, double or nothing on the fight's purse for one right answer",
   "mutations": [
     {
-      "name": "a plain foe sets a star",
+      "name": "the dicer at the third victory",
       "file": "index.html",
-      "find": "      if(r.foes.some((f, fi)=>f.boss && c[ri+':'+fi])) stars++;",
-      "replace": "      if(r.foes.some((f, fi)=>c[ri+':'+fi])) stars++;",
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
+      "replace": "    if(!(wins>0 && wins%this.EVERY===3) || this.played===wins || !(purse>0)) return null;",
       "run": "verify"
     },
     {
-      "name": "a realm crowned sets no circlet",
+      "name": "a dicer throws twice at a meeting",
       "file": "index.html",
-      "find": "      if(Grade.crowned(c, ri, r.foes.length)) crowns++;\n",
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
+      "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT) || !(purse>0)) return null;",
+      "run": "verify"
+    },
+    {
+      "name": "a dicer with an empty purse",
+      "file": "index.html",
+      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
+      "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins) return null;",
+      "run": "verify"
+    },
+    {
+      "name": "any topic but the fight's",
+      "file": "index.html",
+      "find": "    return ks.includes(k) ? k : ks[0] || null;",
+      "replace": "    return ks[0] || null;",
+      "run": "verify"
+    },
+    {
+      "name": "a miss costs nothing",
+      "file": "index.html",
+      "find": "    g.gold += ok ? n : -n;",
+      "replace": "    g.gold += ok ? n : 0;",
+      "run": "verify"
+    },
+    {
+      "name": "a miss sinks the purse below nothing",
+      "file": "index.html",
+      "find": "    const g=Game.s, n=ok ? stake : Math.min(stake, g.gold);",
+      "replace": "    const g=Game.s, n=stake;",
+      "run": "verify"
+    },
+    {
+      "name": "the tally does not see the throw",
+      "file": "index.html",
+      "find": "    Sitting.gold = Math.max(0, Sitting.gold + (ok ? n : -n));",
+      "replace": "    Sitting.gold = Math.max(0, Sitting.gold);",
+      "run": "verify"
+    },
+    {
+      "name": "a right answer pays double",
+      "file": "index.html",
+      "find": "    g.gold += ok ? n : -n;",
+      "replace": "    g.gold += ok ? 2*n : -n;",
+      "run": "verify"
+    },
+    {
+      "name": "the throw is not counted toward its topic",
+      "file": "index.html",
+      "find": "    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way\n    const n=this.settle(ok, d.stake);",
+      "replace": "    const n=this.settle(ok, d.stake);",
+      "run": "verify"
+    },
+    {
+      "name": "a throw can be answered twice",
+      "file": "index.html",
+      "find": "    this.cur=null;     // one throw to a meeting",
+      "replace": "    // one throw to a meeting",
+      "run": "verify"
+    },
+    {
+      "name": "the meeting outlasts the throw",
+      "file": "index.html",
+      "find": "    this.played=d.at;   // the cup is thrown: this meeting is over whatever comes of it",
+      "replace": "    // the cup is thrown",
+      "run": "verify"
+    },
+    {
+      "name": "no dicer on the card",
+      "file": "index.html",
+      "find": "        ${Dicer.html(dc)}\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the blade shines from the first boss",
+      "name": "the dicer stakes the fight's gold only",
       "file": "index.html",
-      "find": "  GLOW: 3,",
-      "replace": "  GLOW: 1,",
+      "find": "    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold, this);",
+      "replace": "    const dc=counted && Dicer.meet(Sitting.wins, gold, this);",
       "run": "verify"
     },
     {
-      "name": "a new star goes unsaid",
+      "name": "a right throw keeps the purse as it was [play]",
       "file": "index.html",
-      "find": "    if(b.stars>a.stars) out.push({ k:'star', n:b.stars });\n",
+      "find": "    g.gold += ok ? n : -n;",
+      "replace": "    g.gold += ok ? 0 : -n;",
+      "run": "play:dicer"
+    },
+    {
+      "name": "the dicer never comes [play]",
+      "file": "index.html",
+      "find": "        ${Dicer.html(dc)}\n",
       "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the blade's shine is said every win",
-      "file": "index.html",
-      "find": "    if(b.glow && !a.glow) out.push({ k:'glow', n:b.stars });",
-      "replace": "    if(b.glow) out.push({ k:'glow', n:b.stars });",
-      "run": "verify"
-    },
-    {
-      "name": "the star miscounts the realms",
-      "file": "index.html",
-      "find": "${h.n} of ${REALMS.length} realms' bosses beaten.",
-      "replace": "${h.n} of ${REALMS.length-1} realms' bosses beaten.",
-      "run": "verify"
-    },
-    {
-      "name": "a star falls off the shield",
-      "file": "index.html",
-      "find": "x=Math.cos(a)*11, y=-3+Math.sin(a)*11;",
-      "replace": "x=Math.cos(a)*17, y=-3+Math.sin(a)*17;",
-      "run": "verify"
-    },
-    {
-      "name": "one star too many is drawn",
-      "file": "index.html",
-      "find": "    for(let i=0; i<n; i++){\n      const a=-Math.PI/2",
-      "replace": "    for(let i=0; i<=n; i++){\n      const a=-Math.PI/2",
-      "run": "verify"
-    },
-    {
-      "name": "the honours before the win are never read",
-      "file": "index.html",
-      "find": "    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the shield wears no stars",
-      "file": "index.html",
-      "find": "  Honours.stars(hon.stars);\n",
-      "replace": "",
-      "run": "play:honours"
-    },
-    {
-      "name": "the card says nothing",
-      "file": "index.html",
-      "find": "          ${Honours.line(hon)}\n",
-      "replace": "",
-      "run": "play:honours"
-    },
-    {
-      "name": "a fight wears nothing it has won",
-      "file": "index.html",
-      "find": "    this.honours  = Honours.of(Game.s);   // and what they have done, worn where it shows\n",
-      "replace": "    this.honours  = {stars:0, crowns:0, glow:false};   // and what they have done, worn where it shows\n",
-      "run": "play:honours"
-    },
-    {
-      "name": "the honours before the win are read after it is marked",
-      "file": "index.html",
-      "find": "    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n    g.cleared[key]=true; g.stats.wins++;\n",
-      "replace": "    g.cleared[key]=true; g.stats.wins++;\n    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked\n",
-      "run": "verify"
+      "run": "play:dicer"
     }
   ]
 }

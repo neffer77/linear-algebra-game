@@ -9435,6 +9435,87 @@ const Peddler = {
   }
 };
 
+/* A dicer. On the fourth victory of a sitting, and every fifth after it, a
+   dicer at the roadside rattles his cup and offers double or nothing on the
+   fight's purse: one question on the topic the fight ended on, or another of
+   the realm the knight has met, at the hardest they are ready for. Answer it
+   right and the dicer pays the purse again; miss, and he keeps it, and the
+   answer is shown with its working. It is asked for, never forced, and once
+   the cup is thrown that meeting is over. It wagers only gold, which buys
+   convenience, so knowing the mathematics is the only way to beat the dice.
+   Nothing is saved. */
+const Dicer = {
+  AT: 4, EVERY: 5,
+  played: 0, cur: null, q: null,
+  // the topic the fight ended on where the realm's met topics include it
+  topic(B){
+    const ks=Wayfarer.topics(B), k=B && B.cur && B.cur.key;
+    return ks.includes(k) ? k : ks[0] || null;
+  },
+  meet(wins, purse, B){
+    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;
+    const key=this.topic(B); if(!key) return null;
+    return { at: wins, stake: purse, key };
+  },
+  html(d){
+    this.cur=d||null; this.q=null;
+    if(!d) return '';
+    const nm=TOPIC_LABEL[d.key]||d.key;
+    return `<div class="panel" id="dicer" style="text-align:left;margin:6px 0;border-color:#b98cff">
+        <div class="small" id="dicerSays">🎲 A dicer at the roadside rattles his cup. “Double or nothing on your purse, 🪙 ${d.stake}? One question on <b>${nm}</b>. Answer it right and I pay it again. Miss, and it is mine.”</div>
+        <button class="btn" id="dicerGo" style="margin-top:6px" onclick="Dicer.ask()">🎲 Throw for 🪙 ${d.stake}</button>
+        <div id="dicerAsk"></div>
+      </div>`;
+  },
+  ask(){
+    const d=this.cur, el=document.getElementById('dicerAsk'); if(!d || !el || this.q) return;
+    this.played=d.at;   // the cup is thrown: this meeting is over whatever comes of it
+    const go=document.getElementById('dicerGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(d.key, Lesson.diff(d.key, Mastery.adjustDiff(d.key, 2)));
+    el.innerHTML=`<div class="crar" style="margin-top:6px">${q.topic}</div>
+      <div id="dicerQ" style="font-size:16px;text-align:center;line-height:1.5">${q.q}</div>
+      <div id="dicerFig"></div><div id="dicerChoices" style="margin-top:8px"></div><div id="dicerOut"></div>`;
+    Figure.render(q.fig, document.getElementById('dicerFig'));
+    const cb=document.getElementById('dicerChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  // what a throw does to the purse: the stake paid again, or the stake lost, never below nothing
+  settle(ok, stake){
+    const g=Game.s, n=ok ? stake : Math.min(stake, g.gold);
+    g.gold += ok ? n : -n;
+    Sitting.gold = Math.max(0, Sitting.gold + (ok ? n : -n));
+    return n;
+  },
+  answer(btn, c){
+    const q=this.q, d=this.cur; if(!q || !d) return;
+    this.cur=null;     // one throw to a meeting
+    const ok=(c===q.a);
+    document.querySelectorAll('#dicerChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way
+    const n=this.settle(ok, d.stake);
+    let said;
+    if(ok){
+      Sfx.coin(0); Sfx.coin(1); Haptic.hit();
+      said=`<span style="color:#d7b8ff;font-weight:800">🎲 Right! The dicer pays up with a grumble: +🪙 ${n}.</span>`;
+    } else {
+      Sfx.bad();
+      said=`🎲 The dice go his way, −🪙 ${n}. The answer was <b>${q.a}</b>. ${q.ex||''}${q.why[c] ? `<div style="margin-top:4px">${q.why[c]}</div>` : ''}`;
+    }
+    Game.save();
+    document.getElementById('dicerOut').innerHTML=`<div id="dicerDone" class="small" data-ok="${ok?1:0}" style="margin-top:6px">${said}</div>`;
+  }
+};
+
 /* A stance. Before the first answer of a campaign fight the power bar lets
    the knight choose how to fight it, one tap at a time round three stances:
    even, as ever; bold, every blow landing a third harder but the foe's landing
@@ -11335,6 +11416,7 @@ const Battle = {
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
     const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones
+    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold, this);   // a dicer: double or nothing on the purse
     // the first victory of a sitting pays its experience twice
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
@@ -11419,6 +11501,7 @@ const Battle = {
         ${Wayfarer.html(way)}
         ${Campfire.html(this)}
         ${Peddler.html(pd)}
+        ${Dicer.html(dc)}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         ${Rival.offer(this)}
