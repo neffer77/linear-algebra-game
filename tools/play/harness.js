@@ -180,6 +180,11 @@ async function runSuite(browser, suite) {
   page.on('pageerror', e => errors.push(e.message));
   const t = new Play(page, errors);
   t.slips = !!suite.slips;
+  // A gilded question pays gold mid-fight, at random. Suites that count a
+  // fight's gold exactly fight without them; the gild suite asks for them.
+  if (!suite.gild) await page.addInitScript(() => addEventListener('DOMContentLoaded', () => {
+    if (typeof Gild !== 'undefined') Gild.CHANCE = 0;
+  }));
   let crash = null;
   try {
     await page.goto(URL);
