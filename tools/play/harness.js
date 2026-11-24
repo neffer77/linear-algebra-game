@@ -181,13 +181,15 @@ async function runSuite(browser, suite) {
   const t = new Play(page, errors);
   t.slips = !!suite.slips;
   // A gilded question pays gold mid-fight, and a greedy foe pays three times
-  // the gold and flees after six questions, both at random. Suites that count
+  // the gold and flees after six questions, and a wayfarer stops the knight
+  // after a victory, all at random. Suites that count
   // a fight's gold or run long fights fight without them; their own suites
   // ask for them.
   await page.addInitScript(opts => addEventListener('DOMContentLoaded', () => {
     if (!opts.gild && typeof Gild !== 'undefined') Gild.CHANCE = 0;
     if (!opts.greedy && typeof Greedy !== 'undefined') Greedy.CHANCE = 0;
-  }), { gild: !!suite.gild, greedy: !!suite.greedy });
+    if (!opts.wayfarer && typeof Wayfarer !== 'undefined') Wayfarer.CHANCE = 0;
+  }), { gild: !!suite.gild, greedy: !!suite.greedy, wayfarer: !!suite.wayfarer });
   let crash = null;
   try {
     await page.goto(URL);

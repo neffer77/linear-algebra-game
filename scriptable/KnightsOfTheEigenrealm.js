@@ -9245,6 +9245,81 @@ const NextFight = {
   }
 };
 
+/* Wayfarers. Now and then, about one campaign victory in six, someone on the
+   road stops the knight with a question on a topic of the realm already met:
+   a scholar, a hermit, a smith or a bard, each with a small prize, a draught,
+   an insight, a purse or a rune. The card tells the meeting; answering is
+   the knight's choice, a right answer wins the prize, and a miss is shown the
+   answer and costs nothing. Answers count toward the topic. Only topics
+   already met are asked, never new material. Nothing new is saved. */
+const Wayfarer = {
+  CHANCE: 1/6,
+  KINDS: [
+    {id:'scholar', ic:'📜', say:'A wandering scholar blocks the road, chalk in hand. “Solve this,” she says, “and my spare draught is yours.”',
+      prize:()=>'a Healing Draught', give(){ Game.s.items.potion++; }},
+    {id:'hermit', ic:'🕯️', say:'A hermit by a roadside shrine asks one question of every passing knight. Answer well and he presses an insight into your hand.',
+      prize:()=>"a Sage's Insight", give(){ Game.s.items.insight++; }},
+    {id:'smith', ic:'⚒️', say:'A travelling smith is stuck on the working for an order. Help her with it and she pays you in coin.',
+      prize:w=>\`\${Wayfarer.gold(w)} gold\`, give(w){ Game.s.gold+=Wayfarer.gold(w); }},
+    {id:'bard', ic:'🎻', say:'A bard is making a ballad of your victory and needs one line that is also true. Give him the answer and he gives you a rune.',
+      prize:()=>'a Berserker Rune', give(){ Game.s.items.rage++; }}
+  ],
+  cur:null, q:null,
+  gold(w){ return 30 + 15*((w && w.ri)||0); },
+  // the topics of the realm the knight has already met, and can be asked
+  topics(B){
+    const g=Game.s, pool=(B && B.realm && B.realm.pool) || [];
+    return pool.filter(k=>GEN[k] && g && g.topicStats[k] && g.topicStats[k].seen>0);
+  },
+  roll(B){
+    if(!B || B.mode!=='campaign' || !R.chance(this.CHANCE)) return null;
+    const ks=this.topics(B); if(!ks.length) return null;
+    return {kind:R.pick(this.KINDS), key:R.pick(ks), ri:B.ri};
+  },
+  html(w){
+    this.cur=w||null; this.q=null;
+    if(!w) return '';
+    return \`<div class="panel" id="wayfarer" style="text-align:left;margin:6px 0">
+        <div class="small">\${w.kind.ic} \${w.kind.say}</div>
+        <button class="btn" id="wayGo" style="margin-top:6px" onclick="Wayfarer.ask()">\${w.kind.ic} Answer for \${w.kind.prize(w)}</button>
+        <div id="wayAsk"></div>
+      </div>\`;
+  },
+  ask(){
+    const w=this.cur, el=document.getElementById('wayAsk'); if(!w || !el || this.q) return;
+    const go=document.getElementById('wayGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(w.key, Lesson.diff(w.key, Mastery.adjustDiff(w.key, 2)));
+    el.innerHTML=\`<div class="crar" style="margin-top:6px">\${q.topic}</div>
+      <div id="wayQ" style="font-size:16px;text-align:center;line-height:1.5">\${q.q}</div>
+      <div id="wayFig"></div><div id="wayChoices" style="margin-top:8px"></div><div id="wayOut"></div>\`;
+    Figure.render(q.fig, document.getElementById('wayFig'));
+    const cb=document.getElementById('wayChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  answer(btn, c){
+    const q=this.q, w=this.cur; if(!q || !w) return;
+    this.cur=null;     // one question, one prize
+    const ok=(c===q.a);
+    document.querySelectorAll('#wayChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // the road teaches either way
+    if(ok){ w.kind.give(w); Sfx.good(); Haptic.hit(); } else Sfx.bad();
+    Game.save();
+    const say = ok ? \`<span style="color:#7ff0a8;font-weight:800">\${w.kind.ic} Well answered! You are given \${w.kind.prize(w)}.</span>\`
+      : \`\${w.kind.ic} Not this time, and it costs you nothing. The answer was <b>\${q.a}</b>. \${q.ex||''}\${q.why[c] ? \`<div style="margin-top:4px">\${q.why[c]}</div>\` : ''}\`;
+    document.getElementById('wayOut').innerHTML=\`<div id="wayDone" class="small" style="margin-top:6px">\${say}</div>\`;
+  }
+};
+
 /* Scouting. The victory card's next foe can be scouted first: the card shows
    the rule of the topic it cannot stand, then asks one question on it. A
    right answer prepares the knight, and in the next fight against that foe
@@ -10694,6 +10769,8 @@ const Battle = {
     const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile || vow ? 1 : Sweep.odds(this, .5))
       ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, vow, tier:Math.min(6, this.ri+2), key:this.mode==='campaign' && this.cur ? this.cur.key : null, diff:this.curDiff||1}) : null;
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
+    // now and then someone on the road asks a question for a small prize
+    const way=Wayfarer.roll(this);
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -10740,6 +10817,7 @@ const Battle = {
           \${this.learnedHtml()}
         </div>
         \${this.foe.boss&&first?Saga.card(this.ri):''}
+        \${Wayfarer.html(way)}
         \${Scout.html(nx)}
         \${NextFight.html(nx)}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
