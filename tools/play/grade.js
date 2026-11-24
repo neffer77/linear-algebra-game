@@ -50,7 +50,8 @@ const finish = async (t, hp) => {
     window.__restore = () => { Celebrate.banner = cb; };
   }, hp);
   await sleep(1400);
-  await t.ev(() => { const b = document.querySelector('#explain button'); if (b) b.click(); });
+  // the map recomputes the knight's health bar from their level, so the health is set again as the foe falls
+  await t.ev(hp => { Game.s.maxHp = 1000; Game.s.hp = hp; const b = document.querySelector('#explain button'); if (b) b.click(); }, hp);
   for (let i = 0; i < 30 && await t.screen() !== 's-result'; i++) await sleep(250);
   await sleep(500);
   return t.ev(() => {
