@@ -679,9 +679,15 @@ The game is built so that losing teaches you as much as winning.
   as the foe falls. Three marks is an S, two an A, one a B and none a C, with each mark
   ticked or left open under the letter and one line naming the first open mark (Win with
   no answer missed as well for an S). An S that comes without a level-up gets its own
-  banner. The grade is that fight's alone and nothing is saved, so a rematch is a fresh
-  try. The line under it now counts the longest streak of that battle, where it used to
+  banner. The grade is that fight's own, so a rematch is a fresh try; the best one each foe
+  has earned is kept on the map (see Best grades). The line under it now counts the longest streak of that battle, where it used to
   show the best streak of the whole save.
+- **👑 Best grades.** Each foe keeps the best grade it was ever beaten at, tagged on the map
+  beside "cleared". A worse win never lowers it and the victory card says the best still stands;
+  a better one is a new best ("⬆️ A new best on this foe, up from B."). A realm whose every foe is
+  at S wears a crown on the map, with a banner the moment it is earned. The best grade lives in
+  the map's own clear, so nothing new is saved; a foe cleared before grades were kept shows none
+  until its next win, and a save moved by QR code keeps its clears but not their grades.
 - **🔥 War path.** Campaign victories in a row, this sitting, pay more: each one after
   the first pays a tenth more gold, up to half again from the sixth on, which gets its
   own banner. The victory screen says how long the path runs and what the next win pays
@@ -3105,6 +3111,7 @@ Inside `index.html` the code is organised as:
 | `Weak` | each campaign foe's weak point, a topic from its own realm: the chip on its questions, the half-again blow, the line said once a fight, and the Bestiary's line |
 | `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
 | `Grade` | a victory's grade, S to C, from three marks the fight holds: no miss, a streak of five, over half health left; the marks under the letter, and the first open one named; nothing saved |
+| `Grade` best | a foe's best grade kept in its clear in place of true, never lowered; said on the victory card when it rises or still stands above; the map's tag; an all-S realm's crown |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3215,6 +3222,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `phase` | a realm boss rallies once, on the blow that leaves it at half or below, with a banner, its own line and Phase II on its bar; its wind-up comes a turn sooner and its blows a fifth harder; three right in a row stagger it, breaking off a wind-up, and the next right blow lands half again as hard; a miss breaks the streak; a flawless second phase pays a quarter more gold and says so, one with a miss does not; a plain foe and a boss in the arena never rally; nothing is saved |
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
 | `grade` | a clean, hale win with a streak of five is an S with all three marks ticked and its banner; a miss drops it to an A that names the open mark; two open marks is a B, three a C; the streak line counts that battle alone; nothing is saved |
+| `bestgrade` | a first win keeps its grade with no best to compare; a better win is a new best, a worse one keeps the best in view and never lowers it; the map tags each foe; a foe cleared before grades shows none and holds the crown back; beating the last at S crowns the realm, on the map and once as a banner; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |

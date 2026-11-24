@@ -9049,16 +9049,33 @@ const Grade = {
     if(!open) return 'All three marks: the top grade.';
     return `Win with ${open.to} as well for ${this.AN[this.LET[m.filter(x=>x.ok).length+1]]}.`;
   },
-  card(m){
+  card(m, had){
     const g=this.of(m);
     return `<div id="gradeCard" style="margin:8px 0 2px">
       <div class="small" style="color:var(--dim);letter-spacing:1px">BATTLE GRADE</div>
       <div id="gradeLet" data-grade="${g}" style="font-size:46px;font-weight:900;line-height:1.1;color:${this.COL[g]}">${g}</div>
       <div style="display:flex;flex-direction:column;gap:2px;font-size:13px;margin:4px 0">${m.map(x=>
         `<div data-mark="${x.id}" data-ok="${x.ok?1:0}" style="color:${x.ok?'var(--green)':'var(--dim)'}">${x.ok?'✓':'○'} ${x.ic} ${x.nm}</div>`).join('')}</div>
-      <div class="small" id="gradeNext">${this.next(m)}</div>
+      <div class="small" id="gradeNext">${this.next(m)}</div>${this.bestLine(had, g)}
     </div>`;
-  }
+  },
+  /* A foe's best grade is kept where its clear is: the map's cleared[key]
+     holds the letter in place of true, so nothing new is saved. A foe beaten
+     before grades were kept reads as no grade yet, and its next win sets one. */
+  RANK: {C:0, B:1, A:2, S:3},
+  best(v){ return typeof v==='string' && v in this.RANK ? v : null; },
+  keep(had, l){ const b=this.best(had); return b && this.RANK[b]>=this.RANK[l] ? b : l; },
+  bestLine(had, l){
+    const b=this.best(had);
+    if(!b || b===l) return '';
+    const up=this.RANK[l]>this.RANK[b];
+    return `<div id="gradeBest" class="small" data-up="${up?1:0}" style="margin-top:4px${up?';color:var(--gold);font-weight:800':''}">${up
+      ? `⬆️ A new best on this foe, up from ${b}.` : `Your best on this foe is still ${b}.`}</div>`;
+  },
+  tag(v){ const b=this.best(v); return b ? `<span class="tag" data-best="${b}" style="color:${this.COL[b]}">best ${b}</span>` : ''; },
+  // every foe of a realm beaten at S: the realm wears a crown on the map
+  crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },
+  crown(on){ return on ? `<span class="crown" title="Every foe beaten at S" style="margin-left:6px;font-size:12px;color:var(--gold);font-weight:800">👑 all S</span>` : ''; }
 };
 
 /* -------------- war path --------------
@@ -10184,7 +10201,9 @@ const Battle = {
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(true);},1100); return; }
     const g=Game.s;
     const key=this.ri+':'+this.fi;
-    const first=!g.cleared[key];
+    const had=g.cleared[key], first=!had;
+    // whether the realm was crowned is read before this win marks its clear
+    const nfoes=this.realm.foes.length, wasCrowned=Grade.crowned(g.cleared, this.ri, nfoes);
     g.cleared[key]=true; g.stats.wins++;
     Bounty.bump('wins',1);
     if(this.missed===0) Bounty.bump('flaw',1);
@@ -10198,6 +10217,9 @@ const Battle = {
     g.gold+=gold;
     // graded on the health left as the foe falls, before a level-up restores it
     const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);
+    // the foe's best grade is kept in its clear, and a realm all at S is crowned
+    g.cleared[key]=Grade.keep(had, Grade.of(marks));
+    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
@@ -10229,7 +10251,7 @@ const Battle = {
             ${unlocked?`<div style="color:var(--green)">🗺️ ${unlocked} now lies open.</div>`:''}
           </div>
           <hr>
-          ${Grade.card(marks)}
+          ${Grade.card(marks, had)}
           <div class="small">Longest streak this battle: ${this.runBest||0}</div>
           ${this.learnedHtml()}
         </div>
@@ -10246,6 +10268,7 @@ const Battle = {
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
+      else if(crowned) Celebrate.banner('REALM CROWNED', 'every foe of '+this.realm.nm+' beaten at S', 'var(--gold)', ()=>Sfx.milestone());
       else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE', 'No miss, a streak of five, health to spare', 'var(--gold)', ()=>Sfx.milestone());
       Titles.check();
       if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
@@ -15700,7 +15723,7 @@ const UI = {
       realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">${beaten}/${r.foes.length}</span><span class="schev">▸</span></div>
+            <span class="rcount">${beaten}/${r.foes.length}</span>${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
@@ -15709,7 +15732,7 @@ const UI = {
         realms+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
           <div class="ico" style="font-size:24px">${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>':''}${f.boss?'<span class="tag r">boss</span>':''}</div>
+            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}</div>
             <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}</div>
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
