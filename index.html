@@ -9284,6 +9284,21 @@ const Sweep = {
   line(on){ return on ? `<div id="sweepLine" style="color:#ffe08a;font-weight:800;margin-top:6px">✨ Clean sweep: not one miss, so a sure chest with richer odds.</div>` : ''; }
 };
 
+/* Revenge. A campaign foe that fells the knight holds the gold lost in the
+   retreat, and beating that foe wins it back on top of the win's own gold.
+   The defeat says what is owed, the map marks the foe, and the victory card
+   says it was won back. Falls to one foe add up; each foe holds its own. It
+   lasts the sitting: nothing is saved. */
+const Revenge = {
+  owed:{},
+  mark(key, gold){ if(gold>0) this.owed[key]=(this.owed[key]||0)+gold; return this.owed[key]||0; },
+  of(key){ return this.owed[key]||0; },
+  claim(key){ const n=this.owed[key]||0; delete this.owed[key]; return n; },
+  fell(nm, n){ return n>0 ? `<div id="revengeOwed" style="color:#ff8a80;font-weight:800;margin-top:10px">⚔️ ${nm} holds your ${n} gold. Beat it and you win it back.</div>` : ''; },
+  tag(n){ return n>0 ? `<span class="tag" id="revengeTag" style="color:#ff8a80;border-color:#a33">⚔️ holds 🪙 ${n}</span>` : ''; },
+  line(nm, n){ return n>0 ? `<div id="revengeWon" style="color:#ff8a80;font-weight:800;margin-top:6px">⚔️ Revenge on ${nm}: the ${n} gold lost in the retreat is won back.</div>` : ''; }
+};
+
 const SecondWind = {
   MUL: 2,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -10323,6 +10338,8 @@ const Battle = {
     g.gold+=sGold;
     const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);
     g.gold+=oGold;
+    const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;
+    g.gold+=rGold;
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
 
@@ -10348,6 +10365,7 @@ const Battle = {
           ${WarPath.line()}
           ${Grade.sLine(sGold)}
           ${Overkill.line(over, oGold)}
+          ${Revenge.line(this.foe.nm, rGold)}
           ${Quarry.line(quarry && !this.foe.elite)}
           ${Sweep.line(sweep)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
@@ -10371,9 +10389,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
@@ -10395,6 +10413,7 @@ const Battle = {
     const path=WarPath.broke();
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
+    const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;
     Game.save();
     setTimeout(()=>{
       UI.go('s-result');
@@ -10406,6 +10425,7 @@ const Battle = {
           <hr>
           <div style="font-weight:800">−${lost} gold lost in the retreat</div>
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+          ${Revenge.fell(this.foe.nm, held)}
           ${WarPath.ended(path)}
           ${this.learnedHtml()}
         </div>
@@ -15849,7 +15869,7 @@ const UI = {
         realms+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
           <div class="ico" style="font-size:24px">${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}</div>
+            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
             <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}${Quarry.dt(quarry===ri+':'+fi)}</div>
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
