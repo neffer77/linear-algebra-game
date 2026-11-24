@@ -4454,6 +4454,42 @@ const letterNotes = (() => {
   return checks;
 })();
 
+const heraldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Herald = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Elite rematches', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('herald', key, msg); };
+  const shown = [], sounds = [];
+  const Celebrate = { banner(t, s, c, snd) { shown.push({ t, s, c }); if (snd) snd(); } };
+  const Sfx = { slam() { sounds.push('slam'); } }, Haptic = { hit() { sounds.push('hit'); } };
+  const H = new Function('Celebrate', 'Sfx', 'Haptic', src + ';return Herald;')(Celebrate, Sfx, Haptic);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const bosses = [...realms.matchAll(/\{nm:'([^']+)'[^}]*col:\s*'(#[0-9a-f]{6})'[^}]*boss:true\}/gi)].map(m => ({ nm: m[1], col: m[2] }));
+  want(bosses.length === 8 && Object.keys(H.SAY).length === 8, 'count', JSON.stringify([bosses.length, Object.keys(H.SAY).length]));
+  want(bosses.every(b => H.SAY[b.nm]), 'every', 'a realm boss has no herald line: ' + bosses.filter(b => !H.SAY[b.nm]).map(b => b.nm).join(', '));
+  want(new Set(Object.values(H.SAY)).size === 8, 'apart', 'two bosses are announced the same');
+  Object.entries(H.SAY).forEach(([nm, t]) => {
+    want(typeof t === 'string' && t.length > 10 && t.length < 70 && !/[{}<>$.!]/.test(t) && !/—|–/.test(t) && /^[a-z]/.test(t), 'line ' + nm, t);
+  });
+  for (const mode of ['campaign', 'daily', 'dungeon', 'boss', 'arena', undefined])
+    for (const b of [...bosses, { nm: 'Slime', col: '#123456' }, { nm: 'The Vector Wyrm', col: '#39c47a', boss: false }]) {
+      const foe = { nm: b.nm, col: b.col, boss: b.boss !== false && b.nm !== 'Slime' };
+      shown.length = 0; sounds.length = 0;
+      const B = { mode, foe }, on = mode === 'campaign' && foe.boss;
+      want(H.on(B) === on, 'on ' + mode + ' ' + b.nm, H.on(B));
+      const r = H.announce(B);
+      want(r === on && shown.length === (on ? 1 : 0) && sounds.join() === (on ? 'slam,hit' : ''), 'announce ' + mode + ' ' + b.nm, JSON.stringify(shown));
+      if (on) want(shown[0].t === '👑 ' + b.nm.toUpperCase() && shown[0].s === H.SAY[b.nm] && shown[0].c === b.col, 'banner ' + b.nm, JSON.stringify(shown[0]));
+    }
+  shown.length = 0;
+  want(H.on(null) === false && H.on({ mode: 'campaign' }) === false && H.announce({ mode: 'campaign', foe: null }) === false && shown.length === 0, 'none', 'a herald with no foe');
+  // the wiring: once, as the fight opens, after the foe's first words
+  want(html.includes("    Talk.say('meet');\n    Herald.announce(this);   // a realm's boss arrives announced\n")
+    && (html.match(/Herald\.announce\(/g) || []).length === 1, 'wired', 'the fight does not announce its boss once as it opens');
+  return checks;
+})();
+
 /* The sky. A realm's sky is rolled once and kept for the sitting, and with
    no chance at all every sky is plain. Every omen on every fight: what it
    does to the knight's blow, the foe's and the gold, and only in the campaign
@@ -26686,6 +26722,7 @@ console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10
 console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}  (met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, on the fight's last topic where it can be, paying the purse again on a right answer and losing it on a miss, never past an empty purse, once a meeting)`);
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
 console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
+console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
