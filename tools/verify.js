@@ -3904,6 +3904,55 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* A campfire. Only a miss in a campaign fight, never a rite or another
+   mode, is a slip, one to a topic with the latest last and no more than
+   eight; the card offers a camp only to a wounded knight with a slip, on the
+   latest; a right answer mends half the wounds, never past full, and puts
+   that topic's slip behind them, and a miss keeps it. The wiring is checked
+   where it lives: a slip is noted on a miss alone, the camp is offered on
+   the card, and one answer is counted and pays once. */
+const campNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Campfire = {'), html.indexOf('/* A rival. Sir Corvin'));
+  let seed = 37;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const Game = { s: null };
+  const GEN = { a: 1, b: 1, c: 1, d: 1, e: 1, f: 1, g: 1, h: 1, i: 1, j: 1 }, KEYS = [...Object.keys(GEN), 'nosuch'];
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('campfire', key, msg); };
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let run = 0; run < 300; run++) {
+    const C = new Function('Game', 'GEN', 'TOPIC_LABEL', src + ';return Campfire;')(Game, GEN, {});
+    let model = [];
+    for (let step = 0; step < 40; step++) {
+      const B = { mode: modes[rnd(6)], rite: !rnd(8) ? {} : null, cur: { key: KEYS[rnd(KEYS.length)] }, curDiff: 1 + rnd(3) };
+      const counts = B.mode === 'campaign' && !B.rite && !!GEN[B.cur.key];
+      want(C.note(B) === counts, `note ${run} ${step}`, JSON.stringify(B));
+      if (counts) { model = model.filter(s => s.key !== B.cur.key); model.push({ key: B.cur.key, diff: B.curDiff }); if (model.length > 8) model.shift(); }
+      want(JSON.stringify(C.slips) === JSON.stringify(model), `slips ${run} ${step}`, `${JSON.stringify(C.slips)} for ${JSON.stringify(model)}`);
+      const maxHp = 50 + rnd(500), hp = rnd(4) ? rnd(maxHp + 1) : maxHp;
+      Game.s = { maxHp, hp };
+      const V = { mode: modes[rnd(6)] }, on = V.mode === 'campaign' && model.length > 0 && hp > 0 && hp < maxHp;
+      const h = C.html(V);
+      const n = Math.max(1, Math.round((maxHp - hp) * 0.5));
+      want(on ? h.includes('id="camp"') && h.includes('id="campGo"') && h.includes('+' + n) && C.cur === C.slips[C.slips.length - 1] : h === '' && C.cur === null,
+        `html ${run} ${step}`, `${V.mode} ${hp}/${maxHp} ${model.length}: ${h.slice(0, 80)}`);
+      want(!on || (hp + n <= maxHp && n >= 1), `mend ${run} ${step}`, `${hp}/${maxHp} mends ${n}`);
+    }
+  }
+  // the wiring
+  want(html.includes("      ? {key:this.cur.key, diff:this.curDiff} : null;\n    if(!ok) Campfire.note(this);") && html.split('Campfire.note(').length === 2, 'noted', 'a slip is not noted on a miss alone');
+  want(html.includes('${Campfire.html(this)}'), 'card', 'the card does not offer the camp');
+  const ans = src.slice(src.indexOf('  answer('));
+  want(ans.includes('this.cur=null;     // one question, one rest') && ans.includes('Game.recordAnswer(q.key, ok, 1);')
+    && /if\(ok\)\{\s*const n=this\.mend\(\); g\.hp=Math\.min\(g\.maxHp, g\.hp\+n\);\s*this\.slips=this\.slips\.filter\(x=>x\.key!==s\.key\);/.test(ans)
+    && ans.split('this.slips=').length === 2, 'answer', 'a camp pays twice, pays a miss, keeps a slip gone over, or is not counted');
+  want(src.slice(src.indexOf('  ask('), src.indexOf('  answer(')).includes('buildQuestion(s.key, s.diff)'), 'asked', 'a camp asks another topic or difficulty than the slip');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -27613,6 +27662,7 @@ console.log(`  scouting checked           ${pad(scoutNotes.toLocaleString(), 10)
 console.log(`  wayfarers checked          ${pad(wayNotes.toLocaleString(), 10)}  (about one campaign victory in six, on a topic of the realm already met; four kinds, each giving just the prize it names; one answer, one prize, a miss nothing, counted toward the topic)`);
 console.log(`  familiars checked          ${pad(familiarNotes.toLocaleString(), 10)}  (twenty right campaign answers of a sitting hatch one of four kinds; then each right answer mends 3% of full health, 6% once grown at sixty, never past full; shown on the streak line; never touches the foe)`);
 console.log(`  rivals checked             ${pad(rivalNotes.toLocaleString(), 10)}  (Sir Corvin rides each realm's strongest plain foe, waits only once it is beaten, a tenth harder for twice the gold; a duel won leaves the realm be for the sitting; asked for, said, offered and told)`);
+console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}  (a campaign miss is a slip, one to a topic, eight at most; a wounded knight with a slip is offered a camp on the latest; a right answer mends half the wounds and puts the slip behind; one answer, counted, paid once)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

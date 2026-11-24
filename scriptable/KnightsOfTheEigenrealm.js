@@ -9248,6 +9248,79 @@ const NextFight = {
   }
 };
 
+/* A campfire. A campaign miss is a slip to go over later. When the knight
+   is wounded and has a slip waiting, the victory card offers to make camp and
+   go over the latest one by the fire: one fresh question on that topic at the
+   difficulty it was missed at. A right answer mends half the knight's wounds
+   and puts the slip behind them; a miss shows the answer and keeps the slip
+   for the next camp. It turns the rest between fights into spaced review of
+   exactly what went wrong, and it never costs gold. Answers count toward the
+   topic. Nothing is saved: the slips are the sitting's. */
+const Campfire = {
+  MEND: 0.5, MAX: 8,
+  slips:[], cur:null, q:null,
+  // a miss in a campaign fight: the slip, latest last, one to a topic
+  note(B){
+    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;
+    const k=B.cur.key;
+    this.slips=this.slips.filter(s=>s.key!==k);
+    this.slips.push({key:k, diff:B.curDiff||1});
+    if(this.slips.length>this.MAX) this.slips.shift();
+    return true;
+  },
+  ready(){ const g=Game.s; return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },
+  mend(){ const g=Game.s; return Math.max(1, Math.round((g.maxHp-g.hp)*this.MEND)); },
+  html(B){
+    this.cur=null; this.q=null;
+    if(!B || B.mode!=='campaign' || !this.ready()) return '';
+    const s=this.cur=this.slips[this.slips.length-1], nm=TOPIC_LABEL[s.key]||s.key;
+    return \`<div class="panel" id="camp" style="text-align:left;margin:6px 0">
+        <div class="small">🔥 Make camp and go over a slip from earlier, <b>\${nm}</b>. Answer it right and the rest mends half your wounds, ❤️ +\${this.mend()}.</div>
+        <button class="btn" id="campGo" style="margin-top:6px" onclick="Campfire.ask()">🔥 Go over \${nm} by the fire</button>
+        <div id="campAsk"></div>
+      </div>\`;
+  },
+  ask(){
+    const s=this.cur, el=document.getElementById('campAsk'); if(!s || !el || this.q) return;
+    const go=document.getElementById('campGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(s.key, s.diff);
+    el.innerHTML=\`<div id="campQ" style="font-size:16px;text-align:center;line-height:1.5;margin-top:6px">\${q.q}</div>
+      <div id="campFig"></div><div id="campChoices" style="margin-top:8px"></div><div id="campOut"></div>\`;
+    Figure.render(q.fig, document.getElementById('campFig'));
+    const cb=document.getElementById('campChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  answer(btn, c){
+    const q=this.q, s=this.cur; if(!q || !s) return;
+    this.cur=null;     // one question, one rest
+    const ok=(c===q.a), g=Game.s;
+    document.querySelectorAll('#campChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way
+    let said;
+    if(ok){
+      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);
+      this.slips=this.slips.filter(x=>x.key!==s.key);
+      Sfx.good(); Haptic.hit();
+      said=\`<span style="color:#ffb36b;font-weight:800">🔥 Well gone over! The rest mends ❤️ +\${n}, and that slip is behind you.</span>\`;
+    } else {
+      Sfx.bad();
+      said=\`🔥 Not yet. The answer was <b>\${q.a}</b>. \${q.ex||''}\${q.why[c] ? \`<div style="margin-top:4px">\${q.why[c]}</div>\` : ''}<div style="margin-top:4px">It stays for your next camp.</div>\`;
+    }
+    Game.save();
+    document.getElementById('campOut').innerHTML=\`<div id="campDone" class="small" style="margin-top:6px">\${said}</div>\`;
+  }
+};
+
 /* A rival. Sir Corvin, a knight of the same order, rides the same roads and
    means to prove himself the better scholar. Once the strongest plain foe of
    a realm is beaten, every campaign victory there finds him waiting, and the
@@ -10445,6 +10518,7 @@ const Battle = {
     this.lastStand=SecondWind.take(this);
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
+    if(!ok) Campfire.note(this);   // a slip to go over at the next camp
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -10919,6 +10993,7 @@ const Battle = {
         \${NextFight.html(nx)}
         \${Scout.html(nx)}
         \${Wayfarer.html(way)}
+        \${Campfire.html(this)}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         \${Rival.offer(this)}

@@ -1,75 +1,89 @@
 {
-  "change": "A rival: Sir Corvin waits on the road of each realm's strongest foe and offers a duel for double gold",
+  "change": "A campfire: a wounded knight goes over a slip from earlier by the fire, and a right answer mends half the wounds",
   "mutations": [
     {
-      "name": "the rival rides a boss's road",
+      "name": "a slip from the arena is kept",
       "file": "index.html",
-      "find": "fs.forEach((f,i)=>{ if(!f.boss && (best<0 || f.hp>fs[best].hp)) best=i; });",
-      "replace": "fs.forEach((f,i)=>{ if(best<0 || f.hp>fs[best].hp) best=i; });",
+      "find": "    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;",
+      "replace": "    if(!B || !B.cur || !GEN[B.cur.key]) return false;",
       "run": "verify"
     },
     {
-      "name": "the rival waits before his foe is beaten",
+      "name": "a topic is kept twice",
       "file": "index.html",
-      "find": "    return fi>=0 && !!c[B.ri+':'+fi];",
-      "replace": "    return fi>=0;",
+      "find": "    this.slips=this.slips.filter(s=>s.key!==k);\n    this.slips.push",
+      "replace": "    this.slips.push",
       "run": "verify"
     },
     {
-      "name": "the rival waits in the arena too",
+      "name": "slips are kept without end",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || this.on(B) || this.beat[B.ri]) return false;",
-      "replace": "    if(!B || this.on(B) || this.beat[B.ri]) return false;",
+      "find": "    if(this.slips.length>this.MAX) this.slips.shift();\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a beaten rival waits again",
+      "name": "a whole knight is offered a camp",
       "file": "index.html",
-      "find": "  won(B){ if(!this.on(B)) return false; this.beat[B.ri]=true; return true; },",
-      "replace": "  won(B){ return this.on(B); },",
-      "run": "play:rival"
-    },
-    {
-      "name": "the rival pays as his foe does",
-      "file": "index.html",
-      "find": "gold:Math.round(f.gold*this.GOLD),",
-      "replace": "gold:f.gold,",
+      "find": "return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },",
+      "replace": "return this.slips.length>0 && !!g && g.hp>0; },",
       "run": "verify"
     },
     {
-      "name": "the rival hits no harder",
+      "name": "a camp mends all the wounds",
       "file": "index.html",
-      "find": "atk:Math.round(f.atk*this.ATK), boss:false, rival:true});",
-      "replace": "atk:f.atk, boss:false, rival:true});",
-      "run": "play:rival"
+      "find": "  MEND: 0.5, MAX: 8,",
+      "replace": "  MEND: 1, MAX: 8,",
+      "run": "verify"
     },
     {
-      "name": "the card offers no duel",
+      "name": "the camp goes over the oldest slip",
       "file": "index.html",
-      "find": "        ${Rival.offer(this)}\n",
-      "replace": "",
-      "run": "play:rival"
+      "find": "const s=this.cur=this.slips[this.slips.length-1],",
+      "replace": "const s=this.cur=this.slips[0],",
+      "run": "verify"
     },
     {
-      "name": "the duel is the plain foe",
+      "name": "a camp asks at the easiest",
       "file": "index.html",
-      "find": "    if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival\n",
-      "replace": "",
-      "run": "play:rival"
+      "find": "    const q=this.q=buildQuestion(s.key, s.diff);",
+      "replace": "    const q=this.q=buildQuestion(s.key, 1);",
+      "run": "verify"
     },
     {
-      "name": "the duel starts unsaid",
+      "name": "a miss by the fire mends too",
       "file": "index.html",
-      "find": "    else if(Rival.on(this)) UI.toast(Rival.intro());\n",
-      "replace": "",
-      "run": "play:rival"
+      "find": "    if(ok){\n      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);\n      this.slips=",
+      "replace": "    { const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n); }\n    if(ok){\n      this.slips=",
+      "run": "verify"
     },
     {
-      "name": "a won duel is not told",
+      "name": "a slip gone over is kept",
       "file": "index.html",
-      "find": "          ${Rival.line(rival)}\n",
+      "find": "      this.slips=this.slips.filter(x=>x.key!==s.key);\n      Sfx.good();",
+      "replace": "      Sfx.good();",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is never a slip",
+      "file": "index.html",
+      "find": "    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n",
       "replace": "",
-      "run": "play:rival"
+      "run": "play:campfire"
+    },
+    {
+      "name": "the card offers no camp",
+      "file": "index.html",
+      "find": "        ${Campfire.html(this)}\n",
+      "replace": "",
+      "run": "play:campfire"
+    },
+    {
+      "name": "a miss by the fire shows no answer",
+      "file": "index.html",
+      "find": "said=`🔥 Not yet. The answer was <b>${q.a}</b>. ",
+      "replace": "said=`🔥 Not yet. ",
+      "run": "play:campfire"
     }
   ]
 }

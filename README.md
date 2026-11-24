@@ -818,6 +818,11 @@ The game is built so that losing teaches you as much as winning.
   offers a duel. He fights like that foe, a tenth harder, for twice its gold and half again its experience.
   Beaten, he yields with a word and leaves that realm be for the sitting; lost to, he waits to be asked again.
   Nothing is saved.
+- **🔥 A campfire.** A campaign miss is a slip to go over later. When the knight is wounded and has a slip
+  waiting, the victory card offers to make camp and go over the latest one by the fire: one fresh question on
+  that topic at the difficulty it was missed at. A right answer mends half the knight's wounds and puts the
+  slip behind them; a miss shows the answer and keeps the slip for the next camp. It never costs gold.
+  Answers count toward the topic. Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3387,6 +3392,7 @@ Inside `index.html` the code is organised as:
 | `Wayfarer` | about one campaign victory in six, on a topic of the realm already met and only then; scholar, hermit, smith or bard, each giving just the prize it names, the smith's purse growing with the realm; one question, one prize, a miss nothing; counted toward the topic; session-only |
 | `Familiar` | the egg counts right answers in campaign fights only and hatches at exactly the twentieth, into one of four kinds; nothing mended before it; then each right answer mends 3% of full health, at least 1, 6% once grown at sixty, never past full and never a fallen knight; the streak line shows the count or the familiar; never touches the foe; session-only |
 | `Rival` | rides each realm's strongest plain foe, never a boss; waits after a campaign victory only once that foe is beaten; that foe a tenth harder, twice its gold, half again its experience, never a boss; a duel won leaves the realm be for the sitting; asked for, said as it starts, offered and told on the card; session-only |
+| `Campfire` | only a campaign miss, never a rite or another mode, is a slip, one to a topic, latest last, eight at most; a camp is offered only to a wounded knight with a slip, on the latest; a right answer mends half the wounds, never past full, and puts the slip behind; a miss keeps it; asked at the slip's own difficulty; one answer, counted, paid once; session-only |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3521,6 +3527,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `wayfarer` | a victory can meet a wayfarer, told on the card with its prize, on a phone; the question is on a topic of the realm already met; a right answer is said and gives just that prize; the answer counts; the meeting pays once; a miss shows the answer and gives nothing but counts; with no meeting the card shows none; nothing is saved |
 | `familiar` | the streak line counts the egg toward twenty; the twentieth right answer hatches it with a banner and mends nothing; the streak line shows the familiar and fits a phone; a right answer after it mends 3%; never past full; a miss mends nothing and is not counted; nothing is saved |
 | `rival` | no rival waits before the realm's strongest foe falls; then the card offers the duel by name, below the way on, on a phone; the duel is said as it starts, a tenth harder for twice the gold; won, he yields on the card and offers no duel again in that realm; nothing is saved |
+| `campfire` | a miss is kept as a slip; a wounded knight is offered a camp on it, with what it mends, on a phone; one question; a miss by the fire shows the answer and keeps the slip; the next wounded victory offers it again; a right answer mends half the wounds and puts the slip behind; with no slip, or at full health, no camp; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
