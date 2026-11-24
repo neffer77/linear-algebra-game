@@ -9260,11 +9260,13 @@ const Bestiary = {
    many of the realms' foes the book now holds. Read from the clears, so it
    needs nothing saved of its own. */
 const Folio = {
+  // every eighth page filled, the Order pays a purse; the whole book, the most
+  MARKS:{8:60, 16:150, 24:250, 32:500},
   of(B, first){
     if(!B || B.mode!=='campaign' || !first || !B.foe) return null;
     const lore=Bestiary.LORE[B.foe.nm]; if(!lore) return null;
     const c=Bestiary.count();
-    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total};
+    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total, prize:this.MARKS[c.beaten]||0};
   },
   line(p){
     if(!p) return '';
@@ -9274,6 +9276,7 @@ const Folio = {
       <div style="color:var(--gold);font-weight:800">📖 A new page in the Bestiary · ${p.n} of ${p.of}</div>
       <div style="font-size:13px;font-style:italic;margin-top:3px">${p.lore}</div>
       ${p.weak?`<div style="font-size:13px;margin-top:3px;color:#7ff0a8">${p.weak}</div>`:''}
+      ${p.prize?`<div id="folioPrize" style="color:var(--gold);font-weight:800;margin-top:4px">🏅 ${p.n>=p.of?'The Bestiary complete':p.n+' pages filled'}: the Order pays 🪙 ${p.prize}.</div>`:''}
       </div>
     </div>`;
   },
@@ -11875,6 +11878,7 @@ const Battle = {
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
     const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now
     const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page
+    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse
     Game.save();
 
     setTimeout(()=>{

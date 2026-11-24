@@ -2,46 +2,32 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "every foe new",
+      "name": "no purse",
       "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "find": "    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "new outside the campaign",
+      "name": "no purse, seen in play",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';",
-      "replace": "    if(!B || !B.foe || B.ri==null || B.fi==null) return '';",
-      "run": "verify"
-    },
-    {
-      "name": "the wrong foe's clear",
-      "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' :",
-      "replace": "    return c[B.ri+':0'] ? '' :",
-      "run": "verify"
-    },
-    {
-      "name": "never marked",
-      "file": "index.html",
-      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
-      "replace": ";\n",
-      "run": "verify"
-    },
-    {
-      "name": "never marked, seen in play",
-      "file": "index.html",
-      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
-      "replace": ";\n",
+      "find": "    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse\n",
+      "replace": "",
       "run": "play:folio"
     },
     {
-      "name": "every foe new, seen in play",
+      "name": "a purse at the wrong page",
       "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "run": "play:folio"
+      "find": "  MARKS:{8:60, 16:150, 24:250, 32:500},",
+      "replace": "  MARKS:{7:60, 16:150, 24:250, 32:500},",
+      "run": "verify"
+    },
+    {
+      "name": "the purse unsaid",
+      "file": "index.html",
+      "find": "      ${p.prize?`<div id=\"folioPrize\"",
+      "replace": "      ${false?`<div id=\"folioPrize\"",
+      "run": "verify"
     }
   ]
 }
