@@ -4237,6 +4237,61 @@ const stanceNotes = (() => {
   return checks;
 })();
 
+/* A peddler. Every count of a sitting's victories against whether the
+   peddler waits: at the third and every fifth after, midway between the
+   milestones, and never at one already sold at. What is offered for every
+   pack: whichever of draught, insight and rune is carried fewest, the first
+   of them on a tie, at half the shop's price and so always cheaper than the
+   shop. A sale only once a meeting, only with the gold, and only of what the
+   shop sells; the card says so. Then the wiring. */
+const peddlerNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A stance. Before the first answer'));
+  const items = html.slice(html.indexOf('const ITEMS = {'), html.indexOf('};', html.indexOf('const ITEMS = {')) + 2);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('peddler', key, msg); };
+  const ITEMS = new Function(items + ';return ITEMS;')();
+  const Game = { s: { gold: 0, items: {} }, saves: 0, save() { this.saves++; } };
+  const P = new Function('Game', 'ITEMS', 'Sfx', 'Haptic', src + ';return Peddler;')(Game, ITEMS, { coin() {} }, { tap() {} });
+  want(P.KINDS.join() === 'potion,insight,rage' && P.KINDS.every(k => ITEMS[k]), 'kinds', P.KINDS.join());
+  for (let w = 0; w <= 40; w++) {
+    P.sold = 0; Game.s.items = {};
+    const at = w > 0 && w % 5 === 3, p = P.meet(w);
+    want(!!p === at, 'when ' + w, `a peddler at win ${w}: ${!!p}`);
+    want(!at || (w - 3) % 5 === 0 && w % 5 !== 0, 'midway ' + w, 'a peddler on a milestone');
+    if (p) { P.sold = w; want(P.meet(w) === null, 'sold ' + w, 'a peddler sells twice at one meeting'); }
+  }
+  const counts = [0, 1, 2, 5];
+  for (const a of counts) for (const b of counts) for (const c of counts) {
+    P.sold = 0; Game.s.items = { potion: a, insight: b, rage: c };
+    const p = P.meet(3), least = Math.min(a, b, c), id = a === least ? 'potion' : b === least ? 'insight' : 'rage';
+    const key = JSON.stringify(Game.s.items);
+    want(p && p.id === id && p.at === 3, 'pick ' + key, JSON.stringify(p));
+    want(p && p.cost === Math.round(ITEMS[id].cost / 2) && p.cost < ITEMS[id].cost && p.cost > 0, 'price ' + key, JSON.stringify(p));
+    for (const gold of [0, p.cost - 1, p.cost, p.cost + 50]) {
+      P.sold = 0; Game.s.gold = gold; Game.saves = 0;
+      const had = Game.s.items[id], card = P.html(p);
+      const can = gold >= p.cost;
+      want(card.includes(`${ITEMS[id].ic} ${ITEMS[id].nm}, half what the shop asks.`) && card.includes('id="peddlerBuy"')
+        && card.includes('disabled') !== can && card.includes(`Buy · 🪙 ${p.cost}`) === can, 'card ' + key + gold, card);
+      const btn = { disabled: false, textContent: '', classList: { remove() {} } };
+      const ok = P.buy(btn, id, p.cost, 3);
+      want(ok === can && Game.s.gold === (can ? gold - p.cost : gold) && Game.s.items[id] === had + (can ? 1 : 0) && Game.saves === (can ? 1 : 0)
+        && btn.disabled === can, 'buy ' + key + gold, JSON.stringify({ ok, gold: Game.s.gold, items: Game.s.items }));
+      if (can) {
+        want(P.buy(btn, id, p.cost, 3) === false && Game.s.items[id] === had + 1, 'once ' + key + gold, 'one meeting sells twice');
+        want(P.meet(3) === null, 'gone ' + key + gold, 'the peddler stays after the sale');
+      }
+    }
+  }
+  P.sold = 0; Game.s.gold = 999;
+  want(P.buy(null, 'nonsense', 1, 3) === false && P.html(null) === '', 'none', 'the peddler sells what the shop does not');
+  // the wiring
+  want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
+  want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -26217,6 +26272,7 @@ console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 
 console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 10)}  (offered only for a realm all beaten and not run this sitting, stepped on only by the foe it waits on, broken off by any other fight, a fall or a flight, and paying the realm's every first-clear purse once at the last)`);
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
+console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
