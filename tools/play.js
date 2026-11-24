@@ -49,8 +49,9 @@ const SUITES = [
   require('./play/saga'),        // a chapter of the story told as each realm's boss falls
   require('./play/grade'),       // a victory graded S to C on three marks the fight holds
   require('./play/warpath'),     // victories in a row this sitting pay more gold
-  require('./play/recover'),
-  require('./play/riposte'),     // a right answer as the foe winds up lands half again as hard     // land the question like the one you missed for half the blow back
+  require('./play/recover'),     // land the question like the one you missed for half the blow back
+  require('./play/riposte'),     // a right answer as the foe winds up lands half again as hard
+  require('./play/coup'),        // a right answer finishes a foe on its last 15% of health
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
