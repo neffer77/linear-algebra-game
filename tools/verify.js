@@ -3229,6 +3229,61 @@ const overkillNotes = (() => {
   return checks;
 })();
 
+/* Today's quarry: one beaten foe a day, never a boss, pays its full gold
+   again. Worked over made-up campaigns of every shape and two years of days:
+   the quarry is always a beaten foe that is not a boss, the one whose draw for
+   the day is lowest; there is none until a foe is beaten; every beaten foe
+   comes up over a year; clearing a new foe moves the quarry only onto that
+   foe; and the win pays it full gold, read from the clears before the win. */
+const quarryNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Quarry = {'), html.indexOf('const Grade = {'));
+  const Q = new Function(src + ';return Quarry;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('quarry', key, msg); };
+  const days = [];
+  for (let y = 2026; y <= 2027; y++) for (let m = 1; m <= 12; m++) for (let d = 1; d <= 28; d += 3) days.push(`${y}-${m}-${d}`);
+  let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (const sizes of [[1], [3], [4, 4], [5, 4, 6], [4, 4, 4, 4, 4, 4, 4, 4]]) {
+    const realms = sizes.map(n => ({ nm: 'R' + n, foes: Array.from({ length: n }, (_, i) => ({ nm: 'F' + i, gold: 10 + i, boss: i === n - 1 })) }));
+    const keys = []; realms.forEach((r, ri) => r.foes.forEach((f, fi) => keys.push([ri + ':' + fi, f.boss])));
+    want(Q.of({}, days[0], realms) === null, `none ${sizes}`, 'a quarry before any foe is beaten');
+    for (let t = 0; t < 12; t++) {
+      const cleared = {};
+      keys.forEach(([k]) => { if (rnd() < 0.6) cleared[k] = rnd() < 0.5 ? true : 'B'; });
+      const pool = keys.filter(([k, boss]) => cleared[k] && !boss).map(([k]) => k);
+      const seen = new Set();
+      for (const day of days) {
+        const q = Q.of(cleared, day, realms);
+        if (!pool.length) { want(q === null, `bosses only ${sizes} ${day}`, `${q} is a quarry`); continue; }
+        want(pool.includes(q), `pool ${sizes} ${day}`, `${q} is not a beaten foe that is not a boss`);
+        want(pool.every(k => Q.draw(day, k) >= Q.draw(day, q)), `lowest ${sizes} ${day}`, `${q} does not draw lowest`);
+        seen.add(q);
+        // clearing one more foe moves the quarry only onto that foe
+        const more = keys.find(([k, boss]) => !cleared[k] && !boss);
+        if (more) {
+          const q2 = Q.of({ ...cleared, [more[0]]: true }, day, realms);
+          want(q2 === q || q2 === more[0], `moves ${sizes} ${day}`, `clearing ${more[0]} moved the quarry from ${q} to ${q2}`);
+        }
+      }
+      if (pool.length) want(seen.size === pool.length, `year ${sizes} ${t}`, `only ${seen.size} of ${pool.length} beaten foes came up as the quarry`);
+    }
+    const n = Q.node('0:0', realms);
+    want(n.includes('id="quarryNode"') && n.includes("Today's quarry: F0") && n.includes('full 🪙 10') && n.includes('Battle.begin(0,0)'), `node ${sizes}`, n);
+  }
+  want(Q.node(null, []) === '' && Q.tag(false) === '' && Q.dt(false) === '' && Q.line(false) === '', 'off', 'something is said with no quarry');
+  want(Q.tag(true).includes("today's quarry") && Q.dt(true).includes('full gold today') && Q.line(true).includes('id="quarryWon"'), 'on', 'the quarry is not said');
+  const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
+  const read = win.indexOf("const quarry=this.mode==='campaign' && !first && Quarry.of(g.cleared, dayKey(new Date()))===key;");
+  want(read > 0 && read < win.indexOf('g.cleared[key]=true;'), 'read', 'the quarry is not read from the clears before the win, or not in the campaign only');
+  want(win.includes('const full=first || !!this.foe.elite || quarry;'), 'full', 'the quarry does not pay its full gold');
+  want(win.includes('${Quarry.line(quarry && !this.foe.elite)}'), 'card', 'the victory card does not say the quarry');
+  const map = html.slice(html.indexOf('  renderMap(){'), html.indexOf("realms+='</details>';"));
+  want(map.includes('let realms=Quarry.node(quarry)+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
+  want(map.includes("${Quarry.tag(quarry===ri+':'+fi)}") && map.includes("${Quarry.dt(quarry===ri+':'+fi)}"), 'mapnode', 'the quarry\'s own place on the map is not marked');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -24843,6 +24898,7 @@ console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
 console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10)}  (the first win at S on a foe pays its gold once more and says so, worked for every grade a clear can hold, never twice, in the campaign only)`);
+console.log(`  today's quarry checked     ${pad(quarryNotes.toLocaleString(), 10)}  (one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win, full gold, said on the card and the map)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
