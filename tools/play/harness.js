@@ -180,11 +180,14 @@ async function runSuite(browser, suite) {
   page.on('pageerror', e => errors.push(e.message));
   const t = new Play(page, errors);
   t.slips = !!suite.slips;
-  // A gilded question pays gold mid-fight, at random. Suites that count a
-  // fight's gold exactly fight without them; the gild suite asks for them.
-  if (!suite.gild) await page.addInitScript(() => addEventListener('DOMContentLoaded', () => {
-    if (typeof Gild !== 'undefined') Gild.CHANCE = 0;
-  }));
+  // A gilded question pays gold mid-fight, and a greedy foe pays three times
+  // the gold and flees after six questions, both at random. Suites that count
+  // a fight's gold or run long fights fight without them; their own suites
+  // ask for them.
+  await page.addInitScript(opts => addEventListener('DOMContentLoaded', () => {
+    if (!opts.gild && typeof Gild !== 'undefined') Gild.CHANCE = 0;
+    if (!opts.greedy && typeof Greedy !== 'undefined') Greedy.CHANCE = 0;
+  }), { gild: !!suite.gild, greedy: !!suite.greedy });
   let crash = null;
   try {
     await page.goto(URL);
