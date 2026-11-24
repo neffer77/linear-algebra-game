@@ -1,75 +1,75 @@
 {
-  "change": "Realm march: every foe of a realm beaten with no fall between drops an epic chest",
+  "change": "Comeback: a win from a quarter of your health or less pays a quarter more gold",
   "mutations": [
     {
-      "name": "a march counts in every mode",
+      "name": "a knight on 0 health marks a comeback",
       "file": "index.html",
-      "find": "if(!B || B.mode!=='campaign' || !B.realm) return false;",
-      "replace": "if(!B || !B.realm) return false;",
+      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
+      "replace": "  note(B){ const g=Game.s; if(B && g && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
       "run": "verify"
     },
     {
-      "name": "a realm pays its march twice",
+      "name": "a comeback marks at half health",
       "file": "index.html",
-      "find": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length) return false;",
-      "replace": "    if(Object.keys(d).length < B.realm.foes.length) return false;",
+      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
+      "replace": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*0.5) B.low=true; return !!(B && B.low); },",
       "run": "verify"
     },
     {
-      "name": "a march pays one foe short",
+      "name": "a blow above a quarter clears the mark",
       "file": "index.html",
-      "find": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length) return false;",
-      "replace": "    if(this.paid[r] || Object.keys(d).length < B.realm.foes.length-1) return false;",
+      "find": "  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },",
+      "replace": "  note(B){ const g=Game.s; if(B && g) B.low = g.hp>0 && g.hp <= g.maxHp*this.AT; return !!(B && B.low); },",
       "run": "verify"
     },
     {
-      "name": "a break sets no march back",
+      "name": "a comeback pays in every mode",
       "file": "index.html",
-      "find": "broke(){ this.done={}; },",
-      "replace": "broke(){ },",
+      "find": "on(B){ return !!(B && B.mode==='campaign' && B.low); },",
+      "replace": "on(B){ return !!(B && B.low); },",
       "run": "verify"
     },
     {
-      "name": "a break lets a realm pay again",
+      "name": "a comeback pays half again",
       "file": "index.html",
-      "find": "broke(){ this.done={}; },",
-      "replace": "broke(){ this.done={}; this.paid={}; },",
+      "find": "gold(B, gold){ return this.on(B) ? Math.round(gold*this.MUL) : 0; },",
+      "replace": "gold(B, gold){ return this.on(B) ? Math.round(gold*0.5) : 0; },",
       "run": "verify"
     },
     {
-      "name": "a march finds less than epic",
+      "name": "a slam does not mark a comeback",
       "file": "index.html",
-      "find": "    if(ctx.march && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least\n",
-      "replace": "",
+      "find": "      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);\n",
+      "replace": "      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n",
       "run": "verify"
     },
     {
-      "name": "the map counts a march already paid",
+      "name": "a fight starts with the last one's comeback",
       "file": "index.html",
-      "find": "return !this.paid[ri] && c>0 && c<n ?",
-      "replace": "return c>0 && c<n ?",
-      "run": "verify"
+      "find": "this.overkill=0; this.low=false;",
+      "replace": "this.overkill=0;",
+      "run": "play:comeback"
     },
     {
-      "name": "a fall does not end the march",
+      "name": "a miss's blow does not mark a comeback",
       "file": "index.html",
-      "find": "const path=WarPath.broke(); March.broke();",
-      "replace": "const path=WarPath.broke();",
-      "run": "play:march"
+      "find": "      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);\n",
+      "replace": "      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n",
+      "run": "play:comeback"
     },
     {
-      "name": "a flight from a live fight does not end the march",
+      "name": "a comeback pays no gold",
       "file": "index.html",
-      "find": "    if(live && this.mode==='campaign') March.broke();\n",
-      "replace": "",
-      "run": "play:march"
+      "find": "const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;",
+      "replace": "const cGold=Comeback.gold(this, gold);",
+      "run": "play:comeback"
     },
     {
-      "name": "a march drops no sure chest",
+      "name": "the card leaves the comeback out of the gold it counts",
       "file": "index.html",
-      "find": "|| boon==='find' || march ? 1 :",
-      "replace": "|| boon==='find' ? 1 :",
-      "run": "play:march"
+      "find": "gold+sGold+oGold+rGold+bGold+cGold, 900);",
+      "replace": "gold+sGold+oGold+rGold+bGold, 900);",
+      "run": "play:comeback"
     }
   ]
 }
