@@ -4584,6 +4584,41 @@ const poseNotes = (() => {
   want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));"), 'wired', 'the fight does not pose its knight');
   return checks;
 })();
+const scarsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Scars = {');
+  const src = html.slice(start, html.indexOf('/* --- enemies --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('scars', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const S = new Function('cx', src + ';return Scars;')(cx);
+  for (let emax = 1; emax <= 400; emax += 7) for (let ehp = -3; ehp <= emax; ehp++) {
+    const n = S.of({ foe: {}, ehp, emax });
+    const k = ehp / emax, w = k > 0.75 ? 0 : k > 0.5 ? 1 : k > 0.25 ? 2 : 3;
+    want(n === w, 'cuts ' + ehp + '/' + emax, n + ' not ' + w);
+  }
+  for (const over of ['win', 'lose', 'flee']) want(S.of({ foe: {}, ehp: 1, emax: 100, over }) === 0, 'over ' + over, 'a fight that is over is scarred');
+  want(S.of(null) === 0 && S.of({ ehp: 1, emax: 100 }) === 0 && S.of({ foe: {}, ehp: 1, emax: 0 }) === 0 && S.of({ foe: {}, ehp: 1 }) === 0, 'none', 'scars with no foe or no health');
+  for (const art of ['slime', 'goblin', 'skeleton', 'golem', 'wisp', 'harpy', 'dragon', 'lich', 'knightfoe']) for (const n of [-1, 0, 1, 2, 3, 4, 9]) {
+    log = [];
+    const got = S.cut(n, art), m = Math.max(0, Math.min(n, 3));
+    const strokes = log.filter(l => l[0] === 'stroke').length, moves = log.filter(l => l[0] === 'moveTo');
+    want(got === m && strokes === m * 2 && moves.length === m, 'cut ' + art + ' ' + n, JSON.stringify({ got, strokes }));
+    if (!m) { want(log.length === 0, 'blank ' + art + ' ' + n, 'drew nothing yet touched the canvas'); continue; }
+    const dy = art === 'slime' ? 28 : 0;
+    want(log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept ' + art + n, 'the canvas state leaks');
+    want(moves.every((l, i) => l[1] === S.CUTS[i][0][0] && l[2] === S.CUTS[i][0][1] + dy), 'placed ' + art + n, JSON.stringify(moves));
+    const lines = log.filter(l => l[0] === 'lineTo');
+    want(lines.length === m * 3 && lines.every(l => l[2] < 0 && Math.abs(l[1]) < 30), 'on the body ' + art + n, JSON.stringify(lines));
+    want(log.some(l => l[0] === '=strokeStyle' && l[1] === '#1a1622') && log.some(l => l[0] === '=lineWidth' && l[1] === 4), 'dark ' + art + n, 'the cracks are not dark');
+  }
+  const f = html.slice(html.indexOf('function drawFoe('), html.indexOf('\n}\n', html.indexOf('function drawFoe(')) + 3);
+  want(f.startsWith('function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){') && f.endsWith("  if(scars) Scars.cut(scars, art);   // its wounds, riding with it\n  cx.restore();\n}\n"), 'drawn', 'drawFoe does not cut its scars inside its own frame');
+  want(html.includes("eLunge, Anim.eh, B.over==='win', Scars.of(B)));"), 'wired', 'the fight does not scar its foe');
+  want((html.match(/Scars\.of\(/g) || []).length === 1 && (html.match(/Scars\.cut\(/g) || []).length === 1, 'once', 'scars drawn somewhere else too');
+  return checks;
+})();
 
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -26857,6 +26892,7 @@ console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
+console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, none once the fight is over)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
