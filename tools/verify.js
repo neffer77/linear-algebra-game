@@ -4518,6 +4518,21 @@ const armsNotes = (() => {
     want(A.blade(g) === A.BLADES[w.id] && A.plate(g) === A.PLATES[r.id], 'worn ' + w.id + r.id, 'what is worn is not what is drawn');
   }
   want(A.blade(null) === A.BLADES.w2 && A.plate(undefined) === A.PLATES.a3 && A.blade({ weapon: 'zz' }) === A.BLADES.w2 && A.plate({}) === A.PLATES.a3, 'none', 'a knight with nothing worn is not drawn plainly');
+  // at the Smithy: every blade at its own length in its own steels, every plate in its own colours
+  for (const w of W) {
+    const b = A.BLADES[w.id], v = A.bladeSvg(w.id), L = Math.round(b.len * 0.4);
+    want(A.len(w.id) === L && v.includes(`data-len="${L}"`) && v.includes(`12,${32 - L}`) && [b.top, b.mid, b.low, b.guard].every(c => v.includes(`"${c}"`))
+      && v.includes(`id="armsee-${w.id}"`) && v.includes(`url(#armsee-${w.id})`) && v.includes('aria-hidden="true"') && v.startsWith('<svg') && v.endsWith('</svg>'), 'smithy ' + w.id, v);
+  }
+  sold.forEach((w, i) => { if (i) want(A.len(w.id) > A.len(sold[i - 1].id), 'smithy longer ' + w.id, 'a better blade is shown no longer at the Smithy'); });
+  for (const r of R) {
+    const p = A.PLATES[r.id], v = A.plateSvg(r.id);
+    want(v.includes(`data-skin="${p.skin}"`) && v.includes(`fill="${p.skin}" stroke="${p.dark}" stroke-width="2"`) && v.includes(`<path d="M12 6 L12 29" stroke="${p.dark}"`) && v.includes('aria-hidden="true"'), 'smithy ' + r.id, v);
+  }
+  want(A.bladeSvg('zz') === '' && A.plateSvg('zz') === '' && A.len('zz') === 0, 'smithy none', 'a piece with no look is drawn');
+  const shop = html.slice(html.indexOf('  renderShop(){'), html.indexOf("    out.push('</div><div class=\"panel\"><h2>🛡️ Armour</h2>');"));
+  const shop2 = html.slice(html.indexOf("    out.push('</div><div class=\"panel\"><h2>🛡️ Armour</h2>');"), html.indexOf("The Keep's workrooms"));
+  want(shop.includes('<div class="ic">${Arms.bladeSvg(w.id)||w.ic}</div>') && shop2.includes('<div class="ic">${Arms.plateSvg(a.id)||a.ic}</div>'), 'smithy wired', 'the Smithy does not show the gear as it is drawn');
   // the wiring: the knight drawn in the fight reads what is worn, the blade's length sets its tip
   const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
   want(k.includes("const plate = Arms.plate(Game.s), blade = Arms.blade(Game.s);") && k.includes("const skin = hurt>0 ? '#ff8b8b' : plate.skin;") && k.includes("const dark = hurt>0 ? '#c05c5c' : plate.dark;"), 'plate wired', 'the plate drawn is not the armour worn');
@@ -28551,7 +28566,7 @@ console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
 console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
 console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
-console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is)`);
+console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
