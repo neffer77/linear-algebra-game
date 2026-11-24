@@ -4618,6 +4618,46 @@ const dentsNotes = (() => {
   want((html.match(/Dents\.of\(/g) || []).length === 1 && (html.match(/Dents\.beat\(/g) || []).length === 1, 'once', 'dents drawn somewhere else too');
   return checks;
 })();
+const levelBarNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const LevelBar = {');
+  const src = html.slice(start, html.indexOf('/* Letters from home.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('levelbar', key, msg); };
+  let el = null; const timers = [];
+  const document = { getElementById: id => id === 'lvlFill' ? el : null };
+  const setTimeout = (f, ms) => timers.push([f, ms]);
+  const L = new Function('document', 'setTimeout', src + ';return LevelBar;')(document, setTimeout);
+  // the bar's measure is the game's own: what a level needs, by the same rule gainXp levels on
+  want(html.includes('  xpNeeded(){ return 60 + (this.s.lvl-1)*45; },') && src.includes('need:60+(g.lvl-1)*45'), 'the same need', 'the bar measures a level differently from the game');
+  const gain = (g, n) => { g = Object.assign({}, g); g.xp += n; let ups = 0; while (g.xp >= 60 + (g.lvl - 1) * 45) { g.xp -= 60 + (g.lvl - 1) * 45; g.lvl++; ups++; } return [g, ups]; };
+  for (let lvl = 1; lvl <= 30; lvl += 1) for (const xp of [0, 1, 30, 59, 100, 400]) for (const n of [0, 5, 12, 40, 90, 300, 2000]) {
+    const need = 60 + (lvl - 1) * 45; if (xp >= need) continue;
+    const g0 = { lvl, xp }, [g1, ups] = gain(g0, n);
+    const a = L.read(g0), b = L.read(g1), p = L.of(a, b);
+    want(a.need === need && b.need === 60 + (g1.lvl - 1) * 45, 'read ' + lvl + ':' + xp, JSON.stringify([a, b]));
+    want(p.lvl === g1.lvl && p.left === b.need - g1.xp && p.left > 0, 'left ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    want(p.from === (ups ? 0 : Math.round(xp / need * 100)) && p.to === Math.round(g1.xp / b.need * 100) && p.from >= 0 && p.to <= 100, 'span ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    want(ups || p.to >= p.from, 'fills forward ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    const h = L.html(p);
+    want(h.includes(`🛡️ Level ${g1.lvl} · ${p.left} more experience to level ${g1.lvl + 1}`) && h.includes(`id="lvlFill" style="width:${p.from}%;`) && (h.match(/<div/g) || []).length === (h.match(/<\/div>/g) || []).length, 'html ' + lvl, h);
+  }
+  want(L.of(null, { lvl: 1 }) === null && L.of({ lvl: 1 }, null) === null && L.read(null) === null && L.html(null) === '' && L.pct(5, 0) === 0 && L.pct(-3, 10) === 0 && L.pct(30, 10) === 100, 'none', 'a bar for nothing');
+  el = null; timers.length = 0;
+  want(L.fill({ to: 40 }) === false && timers.length === 0 && L.fill(null) === false, 'no bar', 'filled with no bar on the card');
+  el = { style: { width: '10%' } };
+  want(L.fill({ to: 40 }) === true && timers.length === 1 && el.style.width === '10%', 'waits', 'the bar jumps before the card is seen');
+  timers[0][0]();
+  want(el.style.width === '40%' && timers[0][1] > 0 && timers[0][1] < 600, 'fills', JSON.stringify([el.style.width, timers[0][1]]));
+  // read before the experience is gained and after, and shown under the experience paid
+  const w = html.indexOf('  win(){\n    if(this.over) return;');
+  const at0 = html.indexOf('    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n    const ups=Game.gainXp(xp+fXp);\n', w);
+  const at1 = html.indexOf('    const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now\n    const folio=', w);
+  want(at0 > w && at1 > at0 && (html.match(/LevelBar\.read\(/g) || []).length === 2 && at1 < html.indexOf("      UI.go('s-result');", w), 'read either side', 'the bar is not read either side of the experience a win pays');
+  want(html.includes("now lies open.</div>`:''}\n          </div>\n          ${LevelBar.html(lvl)}\n") && html.includes("      LevelBar.fill(lvl);   // and the way to the next level fills\n")
+    && (html.match(/LevelBar\.(html|fill)\(/g) || []).length === 2, 'wired', 'the victory card shows no level bar, or it never fills');
+  return checks;
+})();
 const folioNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Folio = {');
@@ -28787,6 +28827,7 @@ console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
 console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)}  (three gold stars circling a beaten foe's head, found where drawFoe lays it over, at the foe's own size)`);
 console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe's first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds; campaign only)`);
+console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

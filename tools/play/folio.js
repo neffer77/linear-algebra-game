@@ -3,7 +3,8 @@
  * The first time a campaign foe is beaten, the victory card opens its page
  * in the Bestiary: its line of lore, where its weak point lies, and how many
  * of the realms' foes the book now holds. Beaten again, the card says
- * nothing of it. These checks win real fights with real answers on a phone.
+ * nothing of it. Under the experience a win pays, a bar fills toward the next
+ * level. These checks win real fights with real answers on a phone.
  * Nothing new is saved.
  */
 'use strict';
@@ -47,7 +48,10 @@ const finish = async t => {
     const pic = document.getElementById('folioPic');
     let inked = 0;
     if (pic) { const d = pic.getContext('2d').getImageData(0, 0, pic.width, pic.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 40) inked++; }
-    return { page: el ? el.innerText : null, inked, inside: !el || (r.left >= -1 && r.right <= innerWidth + 1),
+    const bar = document.getElementById('lvlBar'), fill = document.getElementById('lvlFill');
+    const need = Game.xpNeeded();
+    return { bar: bar ? bar.innerText : null, width: fill ? fill.style.width : null, lvl: Game.s.lvl, xp: Game.s.xp, need,
+      page: el ? el.innerText : null, inked, inside: !el || (r.left >= -1 && r.right <= innerWidth + 1),
       wide: document.getElementById('resultBody').scrollWidth <= innerWidth + 1, screen: document.querySelector('.screen.on').id };
   });
   await t.ev(() => { if (document.getElementById('chest').classList.contains('on')) document.getElementById('cbtn').click(); else if (Chest.pending) Chest.close(); });
@@ -57,7 +61,7 @@ const finish = async t => {
 
 module.exports = {
   name: 'folio',
-  title: "Folio · a foe's first fall opens its page in the Bestiary on the victory card",
+  title: "Folio · a foe's first fall opens its page in the Bestiary on the victory card, and the level bar fills",
   viewport: { width: 390, height: 844 },
   async run(t) {
     await t.newKnight('Ada');
@@ -77,6 +81,8 @@ module.exports = {
     await fight(t, 0, 0, false);
     c = await finish(t);
     t.ok('beaten again, the card opens no page', c.page === null, JSON.stringify(c));
+    t.ok('under the experience, a bar fills to where the knight stands on the way to the next level',
+      c.bar && c.bar.includes(`Level ${c.lvl} · ${c.need - c.xp} more experience to level ${c.lvl + 1}`) && c.width === Math.round(c.xp / c.need * 100) + '%', JSON.stringify(c));
 
     await fight(t, 0, 1, true);
     c = await finish(t);
