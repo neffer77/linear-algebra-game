@@ -9233,6 +9233,57 @@ const NextFight = {
   }
 };
 
+/* A treasure map. A campaign victory graded A or better turns up a scrap of
+   a treasure map, said on the victory card. Three scraps make the map whole,
+   and X marks one of the realms the knight has opened and fought in, an old
+   one rather than the one just won where there is a choice. The map heads
+   that realm with the mark, and the next campaign victory there, over any of
+   its foes, digs up a hoard worth that realm's boss's gold; then the scraps
+   begin again. No scrap turns up while a map is whole. It rewards fighting
+   well, and it sends the knight back to old ground, whose topics are the
+   ones most worth keeping fresh. Nothing is saved. */
+const Treasure = {
+  NEED: 3,
+  n: 0, at: null,
+  // the realms the knight can reach and has beaten a foe in
+  open(g){
+    return REALMS.map((r,ri)=>ri).filter(ri=>{
+      const prev=REALMS[ri-1], key=prev ? (ri-1)+':'+(prev.foes.length-1) : null;
+      return (ri===0 || !!g.cleared[key]) && REALMS[ri].foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);
+    });
+  },
+  // where X falls: any of those but the realm just won in, unless it is the only one
+  mark(g, here){
+    const all=this.open(g), away=all.filter(ri=>ri!==here), pick=away.length ? away : all;
+    return pick.length ? R.pick(pick) : null;
+  },
+  hoard(ri){ const f=REALMS[ri] && REALMS[ri].foes; return f ? f[f.length-1].gold : 0; },
+  // after a campaign victory and its grade: the hoard dug up, a scrap found, or nothing
+  won(B, grade){
+    const g=Game.s;
+    if(!B || B.mode!=='campaign' || !g) return null;
+    if(this.at!==null){
+      if(B.ri!==this.at) return null;
+      const ri=this.at, gold=this.hoard(ri);
+      this.at=null; this.n=0; g.gold+=gold;
+      return {dug:ri, gold};
+    }
+    if(grade!=='S' && grade!=='A') return null;
+    if(++this.n<this.NEED) return {scrap:this.n};
+    const at=this.mark(g, B.ri);
+    if(at===null){ this.n=this.NEED-1; return null; }
+    this.at=at;
+    return {whole:at};
+  },
+  tag(ri){ return this.at===ri ? '<span class="tag treasureTag">❌ treasure</span>' : ''; },
+  line(t){
+    if(!t) return '';
+    if(t.dug!=null) return `<div id="treasureWon" style="color:#ffd479;font-weight:800;margin-top:6px">🗺️ X marked the spot: you dig up the hoard of ${REALMS[t.dug].nm}, +${t.gold} gold.</div>`;
+    if(t.whole!=null) return `<div id="treasureWhole" style="color:#ffd479;font-weight:800;margin-top:6px">🗺️ The map is whole! X marks ${REALMS[t.whole].nm}: win any fight there to dig up its hoard of 🪙 ${this.hoard(t.whole)}.</div>`;
+    return `<div id="treasureScrap" class="small" style="margin-top:6px">🗺️ A scrap of a treasure map, ${t.scrap}/${this.NEED}. Win at A or better to find the rest.</div>`;
+  }
+};
+
 /* A campfire. A campaign miss is a slip to go over later. When the knight
    is wounded and has a slip waiting, the victory card offers to make camp and
    go over the latest one by the fire: one fresh question on that topic at the
@@ -10928,6 +10979,9 @@ const Battle = {
     // now and then someone on the road asks a question for a small prize
     const way=Wayfarer.roll(this);
     const rival=Rival.won(this);
+    // a scrap of a treasure map for a win at A or better, or the hoard dug up where X marks
+    const tr=Treasure.won(this, Grade.of(marks));
+    if(tr && tr.gold && counted) Sitting.gold+=tr.gold;
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -10959,6 +11013,7 @@ const Battle = {
           ${Greedy.line(this)}
           ${Heroic.line(this)}
           ${Rival.line(rival)}
+          ${Treasure.line(tr)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -16551,7 +16606,7 @@ const UI = {
       realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
+            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
