@@ -58,6 +58,7 @@ const SUITES = [
   require('./play/gradetitles'), // Exemplar, Crowned and Paragon, from the best grades on the map
   require('./play/firsts'),      // the first S on a foe pays its gold once more
   require('./play/overkill'),    // a killing blow past the foe's last health pays gold
+  require('./play/quarry'),      // one beaten foe a day pays its full gold again
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back

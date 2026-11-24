@@ -1,75 +1,75 @@
 {
-  "change": "Overkill: a killing blow past the foe's last health pays gold",
+  "change": "Today's quarry: one beaten foe a day pays its full gold again",
   "mutations": [
     {
-      "name": "overkill never below nothing",
+      "name": "a boss can be the quarry",
       "file": "index.html",
-      "find": "return Math.max(0, Math.round(hit-was));",
-      "replace": "return Math.round(hit-was);",
+      "find": "if(f.boss || !cleared[key]) return;",
+      "replace": "if(!cleared[key]) return;",
       "run": "verify"
     },
     {
-      "name": "overkill is what lies past the health",
+      "name": "an unbeaten foe can be the quarry",
       "file": "index.html",
-      "find": "Math.round(hit-was)); },",
-      "replace": "Math.round(hit)); },",
+      "find": "if(f.boss || !cleared[key]) return;",
+      "replace": "if(f.boss) return;",
       "run": "verify"
     },
     {
-      "name": "overkill pays its share of the health",
+      "name": "the first beaten foe is the quarry",
       "file": "index.html",
-      "find": "Math.min(1, over/emax)",
-      "replace": "Math.min(1, over/emax/2)",
+      "find": "if(d<low){ low=d; best=key; }",
+      "replace": "if(best===null){ low=d; best=key; }",
       "run": "verify"
     },
     {
-      "name": "overkill is capped at the whole health",
+      "name": "the quarry ignores the day",
       "file": "index.html",
-      "find": "Math.min(1, over/emax)) : 0;",
-      "replace": "(over/emax)) : 0;",
+      "find": "for(const c of 'quarry '+day+' '+key)",
+      "replace": "for(const c of 'quarry '+key)",
       "run": "verify"
     },
     {
-      "name": "overkill pays half the gold at most",
+      "name": "the quarry is read after the win",
       "file": "index.html",
-      "find": "  CAP: 0.5,",
-      "replace": "  CAP: 0.75,",
+      "find": "const quarry=this.mode==='campaign' && !first && Quarry.of(g.cleared, dayKey(new Date()))===key;",
+      "replace": "const quarry=this.mode==='campaign' && Quarry.of(g.cleared, dayKey(new Date()))===key;",
       "run": "verify"
     },
     {
-      "name": "a foe with no health pays no overkill",
+      "name": "the quarry pays no more",
       "file": "index.html",
-      "find": "return emax>0 ? Math.round(gold*this.CAP*Math.min(1, over/emax)) : 0;",
-      "replace": "return Math.round(gold*this.CAP*Math.min(1, over/emax));",
+      "find": "const full=first || !!this.foe.elite || quarry;",
+      "replace": "const full=first || !!this.foe.elite;",
       "run": "verify"
     },
     {
-      "name": "the card says nothing for nothing",
+      "name": "the card does not say the quarry",
       "file": "index.html",
-      "find": "line(over, n){ return n ?",
-      "replace": "line(over, n){ return 1 ?",
-      "run": "verify"
-    },
-    {
-      "name": "overkill is the campaign's",
-      "file": "index.html",
-      "find": "const over=this.mode==='campaign' ? this.overkill||0 : 0",
-      "replace": "const over=this.overkill||0",
-      "run": "verify"
-    },
-    {
-      "name": "the overkill gold is counted on the card",
-      "file": "index.html",
-      "find": "gold+sGold+oGold, 900",
-      "replace": "gold+sGold, 900",
-      "run": "play:overkill"
-    },
-    {
-      "name": "each fight starts with no overkill",
-      "file": "index.html",
-      "find": "this.overkill=0;",
+      "find": "${Quarry.line(quarry && !this.foe.elite)}",
       "replace": "",
-      "run": "play:overkill"
+      "run": "verify"
+    },
+    {
+      "name": "the map does not mark the quarry's place",
+      "file": "index.html",
+      "find": "${Quarry.tag(quarry===ri+':'+fi)}",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the map's top does not name the quarry",
+      "file": "index.html",
+      "find": "      ${Quarry.node(Quarry.today())}\n",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "every beaten foe's place is marked",
+      "file": "index.html",
+      "find": "${Quarry.tag(quarry===ri+':'+fi)}",
+      "replace": "${Quarry.tag(done && !f.boss)}",
+      "run": "play:quarry"
     }
   ]
 }

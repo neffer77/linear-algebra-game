@@ -698,6 +698,11 @@ The game is built so that losing teaches you as much as winning.
   "OVERKILL +18" on the scene and the victory card says what it paid ("💥 Overkill: 18 past its
   last health, +6 gold."), counted into the gold shown. A big crit or a staked strike to finish a
   fight is now worth something; a blow that only just fells the foe pays nothing. Nothing new is saved.
+- **🎯 Today's quarry.** Each day one foe you have already beaten, never a boss, is marked on the
+  map, at the top and on its own place, and a win over it today pays its full gold, as the first
+  win did, where another beaten foe pays a little under half. The victory card says so. It is a
+  reason to go back to an old foe, and a different one each day. Nothing is saved: the day and
+  the foes beaten decide it, and beating a new foe moves the quarry only onto that foe.
 - **🔥 War path.** Campaign victories in a row, this sitting, pay more: each one after
   the first pays a tenth more gold, up to half again from the sixth on, which gets its
   own banner. The victory screen says how long the path runs and what the next win pays
@@ -3126,6 +3131,7 @@ Inside `index.html` the code is organised as:
 | `Grade` best | a foe's best grade kept in its clear in place of true, never lowered; said on the victory card when it rises or still stands above; the map's tag; an all-S realm's crown |
 | `Grade` first S | the first S on a foe pays its gold once more, worked from the grade the clear held before the win; never twice; the campaign only; the card's line and its count |
 | `Overkill` | the part of the blow past the foe's last health, never below nothing; its share of the foe's whole health pays up to half the foe's gold; none for a blow that only just fells it; the card's line |
+| `Quarry` | one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win; full gold; the card, the map's top and the foe's own place |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
@@ -3240,6 +3246,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `gradetitles` | nine foes at S earn nothing; the tenth earns Exemplar with its banner; a realm of old clears is no crown; a realm all at S earns Crowned; every realm at S earns Paragon; the titles page lists all three as earned; nothing is saved |
 | `firsts` | a B pays no bonus; the first S says its bonus and the card counts it into the gold; a second S pays none; a foe cleared before grades earns it on its first S; nothing is saved |
 | `overkill` | a blow that only just fells the foe pays nothing; a quarter past says OVERKILL on the scene and pays an eighth of the foe's gold on the card, counted in; a blow far past pays half and no more; the next fight starts with none; nothing is saved |
+| `quarry` | no quarry before a foe is beaten; the map names it at the top and marks its own place only; another beaten foe pays 45%; the quarry says so on the card and pays its full gold, counted in, every win today; it stays put once beaten; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
