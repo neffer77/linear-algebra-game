@@ -710,6 +710,13 @@ The game is built so that losing teaches you as much as winning.
   single tap. While a war path runs it says what that win would pay, and a knight walking on
   below half health is told so, with a rest by the fire offered first, as the map does. Fighting
   the same foe again and going back to the map are still there. Nothing is saved.
+- **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
+  standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
+  stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
+  right answer to it lands twice as hard. The next blow that would fell them does, so resting
+  and answering well matter as much as ever, but a fight on the edge turns on one question
+  rather than a stray roll. The arena, the Deep, rites and the daily keep their own stakes, and
+  nothing is saved.
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
@@ -3103,6 +3110,7 @@ Inside `index.html` the code is organised as:
 | `Riposte` | a right answer while the foe winds up lands ×1.5, said as RIPOSTE on the scene and in the explanation, told once a fight; the wind-up warning names it; a miss earns none; never saved |
 | `Coup` | a foe on its last 15% of health as a question is asked is on its last legs, said in the warning; a right answer to it takes all the health it has left, said as COUP DE GRÂCE; never in a rite or the daily; a miss earns none; never saved |
 | `NextFight` | the next fight on the road after a campaign victory, unless it is the one just won; named with its health and blow, what it pays on a war path, a warning and a rest when below half health; never saved |
+| `SecondWind` | once a campaign fight, a blow (or a turn's two) that would fell the knight leaves them at 1 health, said as SECOND WIND; the answer after is a last stand whose strike is ×2; never in the arena, the Deep, a rite or the daily; never saved |
 | `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
@@ -3212,6 +3220,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |
 | `coup` | a foe on its last 15% is warned of as the question is asked, beside a wind-up too; a right answer finishes it with the smallest blow, on the scene; a miss leaves it standing; above 15% there is no warning and the blow is its own; a rite is left to its pace; nothing is saved |
 | `nextfight` | a campaign victory offers the next foe as its first button, with what it pays on the war path; pressing it starts that fight; below half health it warns and offers a rest that clears both once paid; the last foe on the road offers none and the map goes back to gold; nothing is saved |
+| `secondwind` | a blow short of felling lands as it is; one that would fell the knight leaves them at 1 health, on the scene and in the explanation; the question after warns of a last stand, and a right answer to it strikes twice as hard, once; the next felling blow fells; a new fight brings it back; nothing is saved |
 | `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
