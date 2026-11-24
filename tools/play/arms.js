@@ -5,7 +5,8 @@
  * real fight on a phone, read the frame's own calls, and count the gold of
  * the best blade and plate on the scene against the starting gear's.
  * A streak of five or more sets the blade burning, and the Smithy shows each
- * piece as the fight will draw it. Nothing new is saved.
+ * piece as the fight will draw it. A won fight lifts the blade overhead.
+ * Nothing new is saved.
  */
 'use strict';
 
@@ -60,6 +61,15 @@ module.exports = {
     };
     const hot = await burn(7), cold = await burn(0);
     t.ok('a streak of seven sets the drawn blade burning, and none leaves it cold', hot.length === 1 && hot[0] === 20 && cold.join() === '0', JSON.stringify([hot, cold]));
+    // a won fight holds the blade high and hops; a fight still on does not
+    const pose = async (over) => {
+      await t.ev((over) => { window.__over = Battle.over; Battle.over = over; window.__ps = []; const f = Pose.of; window.__psFn = f;
+        Pose.of = (B, tt) => { const r = f.call(Pose, B, tt); window.__ps.push(r ? r.hop : -1); return r; }; }, over);
+      await sleep(500);
+      return t.ev(() => { Pose.of = window.__psFn; Battle.over = window.__over; return window.__ps; });
+    };
+    const held = await pose('win'), still = await pose(false);
+    t.ok('a won fight lifts the blade and hops the knight, and a fight still on does not', held.length > 3 && held.every(h => h >= 0) && new Set(held).size > 1 && still.length > 3 && still.every(h => h === -1), JSON.stringify([held, still]));
     await t.ev(() => { Battle.flee(); UI.go('s-map'); });
     // the Smithy shows each piece as the fight will draw it
     const shop = await t.ev(() => {

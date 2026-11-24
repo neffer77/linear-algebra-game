@@ -7408,10 +7408,21 @@ const Flame = {
   }
 };
 
+/* A victory pose. The fight won, the knight lifts the blade overhead and
+   hops for joy until the card comes up, so the last moment of a fight is a
+   cheer and not a pause. Only on a win, never on a fall; nothing is saved. */
+const Pose = {
+  RAISE: -2.3,
+  of(B, t){
+    if(!B || B.over!=='win') return null;
+    return { raise:this.RAISE, hop:Math.round(Math.abs(Math.sin((t||0)*7))*9) };
+  }
+};
+
 /* --- knight (the player) --- */
-function drawKnight(x,y,s,lunge,hurt,dead){
+function drawKnight(x,y,s,lunge,hurt,dead,pose){
   cx.save();
-  cx.translate(x + lunge*70, y);
+  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));   // a won fight: a hop for joy
   if(dead){ cx.rotate(-0.9); cx.globalAlpha=.55; }
   cx.scale(s,s);
 
@@ -7474,7 +7485,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   // sword (right arm) — swings with the lunge
   cx.save();
   cx.translate(36,-58);
-  cx.rotate(0.22 + lunge*2.2);   // rests clear of the helm, slashes forward
+  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);   // rests clear of the helm, slashes forward, held high in victory
   setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
   setFill(blade.guard); cx.fillRect(-13,-10,28,7);      // crossguard
   const tip=-10-blade.len, g=cx.createLinearGradient(0,tip+4,0,-8);
@@ -8112,7 +8123,8 @@ const Anim = {
     drawBg(B.realm ? B.realm.bg : null);
     const gy = H-120;
     const pLunge=Anim.pl>0?Math.sin(Anim.pl*Math.PI):0;
-    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose'));
+    const pose=Pose.of(B, Anim.t);
+    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));
     if(B.foe && B.slamNext && !B.over){
       const r=1+Math.sin(Anim.t*6)*.5;
       cx.save(); cx.globalAlpha=.25+r*.2; cx.strokeStyle='#e5484d'; cx.lineWidth=3+r*2;
