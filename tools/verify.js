@@ -3851,6 +3851,59 @@ const oathNotes = (() => {
   return checks;
 })();
 
+/* A greedy foe: a beaten foe, never an elite or a boss, now and then comes
+   back with three times the gold and flees after six questions. Worked over
+   long runs of foes and fights: only a beaten plain foe turns greedy, at
+   about one in ten, its gold tripled and all else kept; it flees only once
+   six questions are asked while it stands, in the campaign; the scene counts
+   the questions; and a flight costs nothing the fall or the flee would. */
+const greedyNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Greedy = {'), html.indexOf('/* An oath.'));
+  let seed = 113;   // mulberry32
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const G = new Function('R', src + ';return Greedy;')({ chance: p => rand() < p });
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('greedy', key, msg); };
+  let may = 0, greedy = 0;
+  for (let step = 0; step < 20000; step++) {
+    const foe = { nm: 'Foe ' + step, hp: 50 + rnd(200), atk: 3 + rnd(20), gold: rnd(300), xp: rnd(90),
+      elite: rnd(5) === 0 ? 'swift' : undefined, boss: rnd(6) === 0 };
+    const beaten = rnd(3) > 0, f = G.roll(foe, beaten);
+    const can = beaten && !foe.elite && !foe.boss;
+    if (can) may++;
+    if (f !== foe) {
+      greedy++;
+      want(can, `who ${step}`, `${beaten ? 'a beaten' : 'an unbeaten'} ${foe.elite ? 'elite' : foe.boss ? 'boss' : 'foe'} turned greedy`);
+      want(f.greedy === true && f.gold === Math.round(foe.gold * 3) && f.hp === foe.hp && f.atk === foe.atk && f.xp === foe.xp && f.nm === foe.nm && foe.greedy === undefined,
+        `purse ${step}`, JSON.stringify([foe, f]));
+    } else want(!foe.greedy, `kept ${step}`, 'a foe left plain was marked greedy');
+  }
+  want(greedy > may * 0.08 && greedy < may * 0.12, 'odds', `${greedy} of ${may} beaten plain foes turned greedy`);
+  want(G.roll(null, true) === null, 'none', 'no foe turned greedy');
+  const modes = ['campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let step = 0; step < 6000; step++) {
+    const B = { mode: modes[rnd(5)], foe: { nm: 'Imp', greedy: rnd(3) > 0 }, over: rnd(6) === 0 ? 'win' : null, ehp: rnd(4) ? 1 + rnd(90) : 0, asked: rnd(10) };
+    const on = B.mode === 'campaign' && B.foe.greedy;
+    want(G.on(B) === on, `on ${step}`, `a ${B.mode} fight greedy: ${G.on(B)}`);
+    want(G.gone(B) === (on && !B.over && B.ehp > 0 && B.asked >= 6), `gone ${step}`, `asked ${B.asked}, health ${B.ehp}, over ${B.over}: gone ${G.gone(B)}`);
+    if (on && B.asked) want(G.tele(B).includes('id="greedyTele"') && G.tele(B).includes(`question ${B.asked} of 6 before Imp flees`), `tele ${step}`, G.tele(B));
+    const l = G.line(B);
+    want(on ? l.includes('id="greedyWon"') && l.includes('greedy Imp') : l === '', `line ${step}`, l);
+  }
+  want(G.intro({ nm: 'Imp' }).includes('greedy Imp') && G.intro({ nm: 'Imp' }).includes('within 6 questions'), 'intro', G.intro({ nm: 'Imp' }));
+  want(G.fled('Imp').includes('greedy Imp slips away') && G.fled('Imp').includes('costs you nothing'), 'fled', G.fled('Imp'));
+  want(html.includes("this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));"), 'begin', 'a campaign fight does not roll for a greedy foe after the elite');
+  want(html.includes("  nextQuestion(){\n    if(this.over) return;\n    if(Greedy.gone(this)){ this.escape(); return; }\n    this.asked=(this.asked||0)+1;"), 'count', 'a question is not counted, or the greedy foe does not flee');
+  want(html.includes("this.asked=0;   // questions asked this fight"), 'reset', 'a fight starts with the last one\'s questions counted');
+  want(html.includes("else if(Greedy.on(this)) UI.toast(Greedy.intro(f));") && html.includes("if(Greedy.on(this)){ tg.innerHTML=") && html.includes('${Greedy.line(this)}'), 'said', 'a greedy foe is not told');
+  const esc = html.slice(html.indexOf('\n  escape(){'), html.indexOf('\n  flee(){'));
+  want(esc.includes("this.over='escape'") && esc.includes("UI.go('s-map')") && !/WarPath|March|hp|gold|Game\.save/.test(esc), 'escape', 'a greedy foe\'s flight costs something');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -25478,6 +25531,7 @@ console.log(`  sitting milestones checked ${pad(mileNotes.toLocaleString(), 10)}
 console.log(`  welcome backs checked      ${pad(freshNotes.toLocaleString(), 10)}  (the first campaign victory of a sitting and no other, not an arena, daily or dungeon win before it; double experience, gained, said and counted)`);
 console.log(`  gilded questions checked   ${pad(gildNotes.toLocaleString(), 10)}  (fresh campaign questions only, about one in eight; a fifth of the foe's gold and at least a coin, paid once on a right answer into the purse and the fight's count; told above the question and on the card)`);
 console.log(`  oaths checked              ${pad(oathNotes.toLocaleString(), 10)}  (sworn in the campaign only, before anything is answered, once; broken by the first miss and said once; half again the gold and an epic chest kept, a quarter off broken)`);
+console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10)}  (only a beaten plain foe, about one in ten, its gold tripled and all else kept; flees once six questions are asked while it stands, in the campaign; a flight costs nothing)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
