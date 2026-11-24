@@ -870,6 +870,10 @@ The game is built so that losing teaches you as much as winning.
   the sum. A streak, speed and criticals make a fight shorter; the line turns red when you would fall first,
   which is the cue to rest or buy a better blade. The victory card's next fight on the road carries the same
   line. Nothing is saved.
+- **⚔️ Arms on show.** The knight in the fight wears what you bought. Every blade is drawn its own length and
+  steel, from the rusted trainer's short brown stub to the long gold of the Gradient Ascendant, and every armour
+  its own plate, from the tunic's plain cloth to the Summit Regalia's gold, so a new blade or a new suit is seen
+  at once in every fight.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
@@ -3316,6 +3320,7 @@ Inside `index.html` the code is organised as:
 | `Letters` | one letter for every tenth victory, eight in all, each a few plain sentences; a draught tucked in each; what the victory card and the Saga page say, with when the next arrives; the wiring |
 | `Herald` | every realm boss with a line of its own, eight and none alike; announced in the campaign only and never for a foe that is not a boss, by name in capitals and in its own colour, with a sound; once, as the fight opens; the wiring |
 | `Reckon` | for every foe, weapon, armour, rune and health, the plain blows that fell the foe and the foe's blows that fell the knight, each the least whole number that covers the health; the words, the sum in its title and red where the knight falls first; nothing for nothing; under open fights only; the wiring |
+| `Arms` | every weapon a blade of its own and every armour a plate of its own, none alike, real colours; each better blade sold drawn longer, the forged one in its place by its blow; what is worn is what is drawn, plain when nothing is; the wiring in the drawing |
 | `Sky` | each realm's sky rolled once and kept for the sitting, plain with no chance of an omen; a gold moon, a fair wind and a mist, each one plain help of its own kind and none a cost; only in the campaign and its own realm; the foe's blow never under one health; a thousand sittings roll every omen and plain skies; what the map, the fight and the card say; the wiring |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
