@@ -1,110 +1,82 @@
 {
-  "change": "Dicer: on the fourth victory of a sitting, double or nothing on the fight's purse for one right answer",
+  "change": "Hearth: a day streak pays the first victory of each sitting a tenth more gold a day, up to seven",
   "mutations": [
     {
-      "name": "the dicer at the third victory",
+      "name": "a later victory of the sitting pays the hearth",
       "file": "index.html",
-      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
-      "replace": "    if(!(wins>0 && wins%this.EVERY===3) || this.played===wins || !(purse>0)) return null;",
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || B.mode!=='campaign') return 0;",
       "run": "verify"
     },
     {
-      "name": "a dicer throws twice at a meeting",
+      "name": "every mode pays the hearth",
       "file": "index.html",
-      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
-      "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT) || !(purse>0)) return null;",
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
       "run": "verify"
     },
     {
-      "name": "a dicer with an empty purse",
+      "name": "the streak pays past a week",
       "file": "index.html",
-      "find": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;",
-      "replace": "    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins) return null;",
+      "find": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, Math.min(this.CAP, d)); },",
+      "replace": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, d); },",
       "run": "verify"
     },
     {
-      "name": "any topic but the fight's",
+      "name": "a fifth more a day",
       "file": "index.html",
-      "find": "    return ks.includes(k) ? k : ks[0] || null;",
-      "replace": "    return ks[0] || null;",
+      "find": "  STEP: 0.1, CAP: 7,\n  days(g)",
+      "replace": "  STEP: 0.2, CAP: 7,\n  days(g)",
       "run": "verify"
     },
     {
-      "name": "a miss costs nothing",
+      "name": "the hearth is not paid",
       "file": "index.html",
-      "find": "    g.gold += ok ? n : -n;",
-      "replace": "    g.gold += ok ? n : 0;",
+      "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
+      "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
       "run": "verify"
     },
     {
-      "name": "a miss sinks the purse below nothing",
+      "name": "the card does not count the hearth in",
       "file": "index.html",
-      "find": "    const g=Game.s, n=ok ? stake : Math.min(stake, g.gold);",
-      "replace": "    const g=Game.s, n=stake;",
+      "find": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);",
+      "replace": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);",
       "run": "verify"
     },
     {
-      "name": "the tally does not see the throw",
+      "name": "the card does not say the hearth",
       "file": "index.html",
-      "find": "    Sitting.gold = Math.max(0, Sitting.gold + (ok ? n : -n));",
-      "replace": "    Sitting.gold = Math.max(0, Sitting.gold);",
-      "run": "verify"
-    },
-    {
-      "name": "a right answer pays double",
-      "file": "index.html",
-      "find": "    g.gold += ok ? n : -n;",
-      "replace": "    g.gold += ok ? 2*n : -n;",
-      "run": "verify"
-    },
-    {
-      "name": "the throw is not counted toward its topic",
-      "file": "index.html",
-      "find": "    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way\n    const n=this.settle(ok, d.stake);",
-      "replace": "    const n=this.settle(ok, d.stake);",
-      "run": "verify"
-    },
-    {
-      "name": "a throw can be answered twice",
-      "file": "index.html",
-      "find": "    this.cur=null;     // one throw to a meeting",
-      "replace": "    // one throw to a meeting",
-      "run": "verify"
-    },
-    {
-      "name": "the meeting outlasts the throw",
-      "file": "index.html",
-      "find": "    this.played=d.at;   // the cup is thrown: this meeting is over whatever comes of it",
-      "replace": "    // the cup is thrown",
-      "run": "verify"
-    },
-    {
-      "name": "no dicer on the card",
-      "file": "index.html",
-      "find": "        ${Dicer.html(dc)}\n",
+      "find": "          ${Hearth.line(eGold, g)}\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the dicer stakes the fight's gold only",
+      "name": "the title promises more forever",
       "file": "index.html",
-      "find": "    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold, this);",
-      "replace": "    const dc=counted && Dicer.meet(Sitting.wins, gold, this);",
+      "find": "    return `Your first victory each sitting pays +${now}% gold. ${next>now ?",
+      "replace": "    return `Your first victory each sitting pays +${now}% gold. ${true ?",
       "run": "verify"
     },
     {
-      "name": "a right throw keeps the purse as it was [play]",
+      "name": "the line says the capped days, not the streak",
       "file": "index.html",
-      "find": "    g.gold += ok ? n : -n;",
-      "replace": "    g.gold += ok ? 0 : -n;",
-      "run": "play:dicer"
+      "find": "🔥 Day ${g.streak.days} in a row",
+      "replace": "🔥 Day ${this.days(g)} in a row",
+      "run": "verify"
     },
     {
-      "name": "the dicer never comes [play]",
+      "name": "the hearth is not paid [play]",
       "file": "index.html",
-      "find": "        ${Dicer.html(dc)}\n",
-      "replace": "",
-      "run": "play:dicer"
+      "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
+      "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
+      "run": "play:hearth"
+    },
+    {
+      "name": "every victory pays the hearth [play]",
+      "file": "index.html",
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || B.mode!=='campaign') return 0;",
+      "run": "play:hearth"
     }
   ]
 }
