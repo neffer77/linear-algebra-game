@@ -9258,6 +9258,34 @@ const NextFight = {
   }
 };
 
+/* A flourish. A streak counts toward the blow up to seven in a row and no
+   further, so from the eighth the bar offers a flourish: spend the streak,
+   and the next right answer lands three times as hard. It is a choice
+   between a run kept for its steady multiplier, and the parries it feeds,
+   and one great blow now. A miss before it lands loses it, as it loses the
+   streak. Campaign fights only; it is the fight's, and nothing is saved. */
+const Flourish = {
+  AT: 8, MUL: 3,
+  can(B){ return !!B && B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT; },
+  label(B){ return B.flourish ? '💫 Flourish ready' : \`💫 Flourish · spend \${B.combo}\`; },
+  // the streak spent: the next right answer lands three times as hard
+  ready(B){
+    if(!this.can(B)) return false;
+    B.flourish=true; B.combo=0;
+    Anim.float(220, H-260, 'FLOURISH READY', '#7fd4ff', true); Sfx.good();
+    B.updateBars(); if(B.renderPowers) B.renderPowers();
+    return true;
+  },
+  bonus(B){ return B && B.flourish ? this.MUL : 1; },
+  // after a right answer's blow, the flourish is spent
+  spend(B){
+    if(!B || !B.flourish) return false;
+    B.flourish=false;
+    Anim.float(220, H-330, 'FLOURISH ×'+this.MUL, '#7fd4ff', true);
+    return true;
+  }
+};
+
 /* The gauntlet. A realm whose every foe is beaten offers, on the map, its
    gauntlet: every one of its foes again, first to last, with health carried
    from each fight to the next. The victory card leads on to the next foe and
@@ -10077,6 +10105,7 @@ const Battle = {
     this.gilded=false; this.gildGold=0;   // nor any gilded question
     this.sworn=false; this.oathBroken=false;   // nor any oath
     this.asked=0;   // questions asked this fight, which a greedy foe counts
+    this.flourish=false;   // nor any flourish
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -10166,6 +10195,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
+    if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));
     add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
     add('rage',   \`\${ITEMS.rage.ic} Rune ×\${it.rage}\`, it.rage>0 && !this.rage, ()=>Battle.useRage());
@@ -10652,6 +10682,7 @@ const Battle = {
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(!ok) Campfire.note(this);   // a slip to go over at the next camp
+    if(!ok) this.flourish=false;   // a miss before it lands loses the flourish
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -10670,12 +10701,13 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
+      Flourish.spend(this);   // a flourish lands once
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;

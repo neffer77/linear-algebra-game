@@ -1,89 +1,89 @@
 {
- "change": "The gauntlet: a realm all beaten runs again back to back for every first-clear purse",
+ "change": "A flourish: eight right in a row can be spent for one blow three times as hard",
  "mutations": [
   {
-   "name": "a realm not all beaten offers a gauntlet",
+   "name": "a flourish from seven in a row",
    "file": "index.html",
-   "find": "r.foes.every((f,fi)=>!!g.cleared[ri+':'+fi]);",
-   "replace": "r.foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);",
+   "find": "  AT: 8, MUL: 3,",
+   "replace": "  AT: 7, MUL: 3,",
    "run": "verify"
   },
   {
-   "name": "a gauntlet pays again and again",
+   "name": "a flourish lands twice as hard",
    "file": "index.html",
-   "find": "this.run=null; this.paid[r.ri]=1; g.gold+=gold;",
-   "replace": "this.run=null; g.gold+=gold;",
+   "find": "  AT: 8, MUL: 3,",
+   "replace": "  AT: 8, MUL: 2,",
    "run": "verify"
   },
   {
-   "name": "a gauntlet pays nothing",
+   "name": "a flourish in the arena too",
    "file": "index.html",
-   "find": "this.run=null; this.paid[r.ri]=1; g.gold+=gold;",
-   "replace": "this.run=null; this.paid[r.ri]=1;",
+   "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
+   "replace": "!B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
    "run": "verify"
   },
   {
-   "name": "a gauntlet starts at its second foe",
+   "name": "a flourish after the answer",
    "file": "index.html",
-   "find": "    this.run={ri, i:0};\n    Battle.begin(ri, 0);",
-   "replace": "    this.run={ri, i:1};\n    Battle.begin(ri, 1);",
+   "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish",
+   "replace": "B.mode==='campaign' && !B.over && !B.flourish",
    "run": "verify"
   },
   {
-   "name": "a heroic fight keeps the run",
+   "name": "a flourish keeps the streak",
    "file": "index.html",
-   "find": "meet(ri, fi, extra){ if(this.run && (extra || ri!==this.run.ri",
-   "replace": "meet(ri, fi, extra){ if(this.run && (ri!==this.run.ri",
+   "find": "    B.flourish=true; B.combo=0;\n",
+   "replace": "    B.flourish=true;\n",
    "run": "verify"
   },
   {
-   "name": "any foe of the realm steps the run on",
+   "name": "a flourish is never spent",
    "file": "index.html",
-   "find": "B.ri!==r.ri || B.fi!==r.i || !g) return null;",
-   "replace": "B.ri!==r.ri || !g) return null;",
+   "find": "    if(!B || !B.flourish) return false;\n    B.flourish=false;\n",
+   "replace": "    if(!B || !B.flourish) return false;\n",
    "run": "verify"
   },
   {
-   "name": "the arena steps the run on",
+   "name": "a miss keeps the flourish",
    "file": "index.html",
-   "find": "if(!r || !B || B.mode!=='campaign' || B.ri",
-   "replace": "if(!r || !B || B.ri",
+   "find": "    if(!ok) this.flourish=false;",
+   "replace": "    if(!ok) {}",
    "run": "verify"
   },
   {
-   "name": "the purse is the boss's alone",
+   "name": "a fight starts with the last flourish",
    "file": "index.html",
-   "find": "purse(ri){ return REALMS[ri].foes.reduce((a,f)=>a+f.gold, 0); },",
-   "replace": "purse(ri){ const f=REALMS[ri].foes; return f[f.length-1].gold; },",
+   "find": "    this.flourish=false;   // nor any flourish\n",
+   "replace": "\n",
    "run": "verify"
   },
   {
-   "name": "a fall keeps the run",
+   "name": "the blow ignores the flourish",
    "file": "index.html",
-   "find": "    Gauntlet.end();   // a fall breaks off a gauntlet run\n",
-   "replace": "",
+   "find": "* Flourish.bonus(this) * Phase.bonus(this)",
+   "replace": "* Phase.bonus(this)",
    "run": "verify"
   },
   {
-   "name": "in play, a flight keeps the run",
+   "name": "in play, the bar offers no flourish",
    "file": "index.html",
-   "find": "    if(live) Gauntlet.end();   // so does a flight from a live fight\n",
-   "replace": "",
-   "run": "play:gauntlet"
+   "find": "if(Flourish.can(this) || this.flourish) add('flourish'",
+   "replace": "if(false) add('flourish'",
+   "run": "play:flourish"
   },
   {
-   "name": "in play, the card does not lead on",
+   "name": "in play, the bar is not drawn again",
    "file": "index.html",
-   "find": "        ${Gauntlet.button(gnt)}\n",
-   "replace": "",
-   "run": "play:gauntlet"
+   "find": "B.updateBars(); if(B.renderPowers) B.renderPowers();",
+   "replace": "B.updateBars();",
+   "run": "play:flourish"
   },
   {
-   "name": "in play, the map offers no gauntlet",
+   "name": "in play, a flourish is spent at once",
    "file": "index.html",
-   "find": "      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way\n",
-   "replace": "",
-   "run": "play:gauntlet"
+   "find": "  bonus(B){ return B && B.flourish ? this.MUL : 1; },",
+   "replace": "  bonus(B){ return 1; },",
+   "run": "play:flourish"
   }
  ]
 }
