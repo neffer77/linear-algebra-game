@@ -9324,6 +9324,40 @@ const Revenge = {
    least. Then it starts again from nothing. A miss takes nothing out. The
    daily, the arena, the dungeon and the rites keep their own rewards. It
    lasts the sitting: nothing is saved. */
+/* A level-up boon. When a campaign win lifts the knight a level, the victory
+   card offers a choice of two boons for the next campaign win: a fat purse,
+   which pays half again that win's gold, or a lucky find, which drops a sure
+   chest. The choice is the player's, it pays only gold or a chest, and it
+   never touches a question. One boon is held at a time, for the sitting, and
+   nothing is saved. */
+const Boon = {
+  PURSE: 0.5,
+  open: false, held: null,
+  NAMES: { purse: 'a fat purse', find: 'a lucky find' },
+  offer(B, ups){ if(ups && B && B.mode==='campaign' && !this.held) this.open=true; return this.open; },
+  pick(k){
+    if(!this.open || !(k in this.NAMES)) return false;
+    this.held=k; this.open=false;
+    const el=typeof document!=='undefined' && document.getElementById('boonCard');
+    if(el) el.outerHTML=this.card();
+    return true;
+  },
+  take(B){ if(!B || B.mode!=='campaign' || !this.held) return null; const k=this.held; this.held=null; return k; },
+  gold(k, gold){ return k==='purse' ? Math.round(gold*this.PURSE) : 0; },
+  card(){
+    const body = this.open ? \`<div style="font-weight:800;color:var(--gold)">✨ A boon for your new level</div>
+      <div class="small" style="margin:4px 0 8px">Choose one for your next campaign win.</div>
+      <button class="btn sm" id="boonPurse" onclick="Boon.pick('purse')">💰 A fat purse: half again the gold</button>
+      <button class="btn sm" id="boonFind" onclick="Boon.pick('find')">🎁 A lucky find: a sure chest</button>\`
+      : this.held ? \`<span class="small">✨ You hold \${this.NAMES[this.held]} for your next campaign win.</span>\` : '';
+    return body ? \`<div id="boonCard" style="margin-top:8px">\${body}</div>\` : '';
+  },
+  line(k, n){
+    const said = k==='purse' ? \`💰 Your boon, a fat purse: +\${n} gold.\` : k==='find' ? '🎁 Your boon, a lucky find: a sure chest.' : '';
+    return said ? \`<div id="boonWon" style="color:var(--gold);font-weight:800;margin-top:6px">\${said}</div>\` : '';
+  }
+};
+
 const Satchel = {
   AT: 25, n: 0,
   can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
@@ -10381,12 +10415,16 @@ const Battle = {
     g.gold+=oGold;
     const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;
     g.gold+=rGold;
+    // a boon chosen at the last level-up is spent on this win
+    const boon=Boon.take(this), bGold=Boon.gold(boon, gold);
+    g.gold+=bGold;
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp);
+    Boon.offer(this, ups);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
-    const drop = R.chance(this.foe.boss || this.foe.elite || satchel ? 1 : Sweep.odds(this, .5))
+    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' ? 1 : Sweep.odds(this, .5))
       ? Loot.roll({boss:this.foe.boss, sweep, satchel, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
@@ -10410,6 +10448,7 @@ const Battle = {
           \${Quarry.line(quarry && !this.foe.elite)}
           \${Sweep.line(sweep)}
           \${Satchel.line(satchel)}
+          \${Boon.line(boon, bGold)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10419,6 +10458,7 @@ const Battle = {
             \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
             \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
           </div>
+          \${this.mode==='campaign'?Boon.card():''}
           <hr>
           \${Grade.card(marks, had)}
           <div class="small">Longest streak this battle: \${this.runBest||0}</div>
@@ -10431,9 +10471,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
