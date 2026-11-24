@@ -1,89 +1,75 @@
 {
-  "change": "A ballad: every victory card sings the fight in a line of its own",
+  "change": "The sitting's tale: every campaign victory's verse kept on the map, newest first",
   "mutations": [
     {
-      "name": "the brink is never sung",
+      "name": "the tale keeps the arena's verses too",
       "file": "index.html",
-      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n",
-      "replace": "    if(false) return 'brink';\n",
+      "find": "    if(!B || B.mode!=='campaign' || !B.foe || !song) return false;\n    this.n++;",
+      "replace": "    if(!B || !B.foe || !song) return false;\n    this.n++;",
       "run": "verify"
     },
     {
-      "name": "a miss still sings flawless",
+      "name": "the tale keeps every verse forever",
       "file": "index.html",
-      "find": "    if(B.missed===0) return 'flawless';",
-      "replace": "    if((B.missed||0)<=1) return 'flawless';",
+      "find": "    if(this.log.length>this.MAX) this.log.shift();\n    return true;",
+      "replace": "    return true;",
       "run": "verify"
     },
     {
-      "name": "overkill comes before a flawless fight",
+      "name": "the oldest verse is read first",
       "file": "index.html",
-      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(B.missed===0) return 'flawless';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';",
-      "replace": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';\n    if(B.missed===0) return 'flawless';",
+      "find": "    const rows=this.log.slice().reverse().map(e=>",
+      "replace": "    const rows=this.log.slice().map(e=>",
       "run": "verify"
     },
     {
-      "name": "a short run is a streak",
+      "name": "the fold counts only what is shown",
       "file": "index.html",
-      "find": "  STREAK: 5, GRIT: 3,",
-      "replace": "  STREAK: 3, GRIT: 3,",
+      "find": "📖 This sitting's tale · ${this.n} ${this.n===1?'verse':'verses'}",
+      "replace": "📖 This sitting's tale · ${this.log.length} ${this.log.length===1?'verse':'verses'}",
       "run": "verify"
     },
     {
-      "name": "a guarded stance is not sung",
+      "name": "the earlier verses go unsaid",
       "file": "index.html",
-      "find": "    if(st==='bold' || st==='guarded') return st;",
-      "replace": "    if(st==='bold') return st;",
+      "find": "    const more=this.n>this.log.length ?",
+      "replace": "    const more=false ?",
       "run": "verify"
     },
     {
-      "name": "the omen is forgotten",
+      "name": "the grade is dropped",
       "file": "index.html",
-      "find": "    if(Sky.on(B)) return 'omen';\n",
+      "find": "grade: grade || 'C', k: song.k",
+      "replace": "grade: 'C', k: song.k",
+      "run": "verify"
+    },
+    {
+      "name": "an empty tale still shows",
+      "file": "index.html",
+      "find": "    if(!this.log.length) return '';\n    const rows=",
+      "replace": "    const rows=",
+      "run": "verify"
+    },
+    {
+      "name": "a victory writes nothing in",
+      "file": "index.html",
+      "find": "    Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the words never turn with the foe",
+      "name": "the map loses the tale",
       "file": "index.html",
-      "find": "    return vs[h%vs.length];",
-      "replace": "    return vs[0];",
-      "run": "verify"
+      "find": "Quarry.node(quarry)+Tale.html()+this.realmPath(cur);",
+      "replace": "Quarry.node(quarry)+this.realmPath(cur);",
+      "run": "play:tale"
     },
     {
-      "name": "the streak's length is left out",
+      "name": "the tale keeps the wrong foe",
       "file": "index.html",
-      "find": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))",
-      "replace": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, 'many')",
-      "run": "verify"
-    },
-    {
-      "name": "the line loses its kind",
-      "file": "index.html",
-      "find": "data-k=\"${song.k}\" class=\"small\"",
-      "replace": "data-k=\"song\" class=\"small\"",
-      "run": "verify"
-    },
-    {
-      "name": "the ballad is read after the level-up mends",
-      "file": "index.html",
-      "find": "    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);",
-      "replace": "    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);\n    const song=Ballad.of(this, over, g.hp, g.maxHp);",
-      "run": "verify"
-    },
-    {
-      "name": "the card does not sing",
-      "file": "index.html",
-      "find": "          ${Ballad.line(song)}\n",
-      "replace": "",
-      "run": "play:ballad"
-    },
-    {
-      "name": "a hard win is sung as plain",
-      "file": "index.html",
-      "find": "    if((B.missed||0)>=this.GRIT) return 'grit';\n",
-      "replace": "",
-      "run": "play:ballad"
+      "find": "    this.log.push({ nm: B.foe.nm,",
+      "replace": "    this.log.push({ nm: 'a foe',",
+      "run": "play:tale"
     }
   ]
 }

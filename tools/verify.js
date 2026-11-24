@@ -3292,7 +3292,7 @@ const quarryNotes = (() => {
   want(win.includes('const full=first || !!this.foe.elite || quarry;'), 'full', 'the quarry does not pay its full gold');
   want(win.includes('${Quarry.line(quarry && !this.foe.elite)}'), 'card', 'the victory card does not say the quarry');
   const map = html.slice(html.indexOf('  renderMap(){'), html.indexOf("realms+='</details>';"));
-  want(map.includes('Quarry.node(quarry)+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
+  want(map.includes('Quarry.node(quarry)+Tale.html()+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
   want(map.includes("${Quarry.tag(quarry===ri+':'+fi)}") && map.includes("${Quarry.dt(quarry===ri+':'+fi)}"), 'mapnode', 'the quarry\'s own place on the map is not marked');
   return checks;
 })();
@@ -4415,6 +4415,52 @@ const balladNotes = (() => {
   want(html.includes("    const march=March.won(this);\n    // the fight sung in a line, read before a level-up restores the knight's health\n    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned="), 'read', 'the ballad is not read before the level-up');
   want(html.includes("falls before your blade.</div>\n          ${Ballad.line(song)}\n"), 'card', 'the card does not sing');
   want(html.split('Ballad.of(').length === 2 && html.split('Ballad.line(').length === 2, 'once', 'the ballad is sung more than once');
+  return checks;
+})();
+
+/* The sitting's tale. Every campaign victory's verse is written in, with
+   its foe and grade, and nothing else is: the newest verse first, the last
+   twelve kept, the count of all of them on the fold, and a line for the ones
+   that fell off the end. With nothing sung there is nothing on the map. The
+   wiring is checked where it lives: a verse is written once a victory, after
+   the ballad is read, and the tale sits under the tally on the map. */
+const taleNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Tale = {'), html.indexOf("/* A comeback. A campaign fight won after the knight's health"));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('tale', key, msg); };
+  const Grade = { COL: { S: 'gold', A: 'green', B: 'blue', C: 'dim' } };
+  const T = new Function('Grade', src + ';return Tale;')(Grade);
+  want(T.html() === '' && T.n === 0 && T.log.length === 0, 'empty', 'an empty tale shows on the map');
+  const modes = ['campaign', 'arena', 'daily', 'dungeon', 'campaign'];
+  const grades = ['S', 'A', 'B', 'C'];
+  let n = 0; const kept = [];
+  for (let i = 0; i < 40; i++) {
+    const mode = modes[i % modes.length], song = i % 9 === 4 ? null : { k: 'k' + (i % 5), text: 'Verse ' + i };
+    const B = { mode, foe: i % 11 === 6 ? null : { nm: 'Foe ' + i } };
+    const ok = mode === 'campaign' && !!B.foe && !!song;
+    want(T.add(B, song, grades[i % 4]) === ok, 'add ' + i, JSON.stringify({ mode, song: !!song, foe: !!B.foe }));
+    if (ok) { n++; kept.push({ nm: 'Foe ' + i, grade: grades[i % 4], text: 'Verse ' + i, k: 'k' + (i % 5) }); }
+    const last = kept.slice(-12);
+    want(T.n === n && T.log.length === last.length && T.log.every((e, j) => e.nm === last[j].nm && e.grade === last[j].grade && e.text === last[j].text && e.k === last[j].k), 'log ' + i, JSON.stringify(T.log.map(e => e.nm)));
+    const h = T.html();
+    if (!n) { want(h === '', 'none ' + i, h); continue; }
+    want(h.startsWith('<details id="tale"') && h.includes(`📖 This sitting's tale · ${n} ${n === 1 ? 'verse' : 'verses'}</summary>`), 'fold ' + i, h.slice(0, 200));
+    const rows = h.split('class="taleRow"').length - 1;
+    want(rows === last.length, 'rows ' + i, rows + ' rows for ' + last.length);
+    const at = last.slice().reverse().map(e => h.indexOf(`<b>${e.nm}</b>: <i>${e.text}</i>`));
+    want(at.every(x => x > 0) && at.every((x, j) => j === 0 || x > at[j - 1]), 'newest first ' + i, JSON.stringify(at));
+    want(last.every(e => h.includes(`<b style="color:${Grade.COL[e.grade]}">${e.grade}</b>`)), 'grades ' + i, 'a grade is not shown in its colour');
+    const off = n - last.length;
+    want(off > 0 ? h.includes(`and ${off} earlier ${off === 1 ? 'verse' : 'verses'} before these`) : !h.includes('earlier'), 'off ' + i, String(off));
+  }
+  want(T.add(null, { k: 'a', text: 'x' }, 'S') === false && T.add({ mode: 'campaign', foe: { nm: 'X' } }, { k: 'a', text: 'y' }) === true && T.log[T.log.length - 1].grade === 'C', 'odd', 'a verse with no grade is not set at C');
+  // only words: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'the tale does more than keep words');
+  // the wiring
+  want(html.includes("    Boon.offer(this, ups);\n    Tale.add(this, song, Grade.of(marks));") && html.split('Tale.add(').length === 2, 'write', 'a victory does not write its verse in, once');
+  want(html.indexOf('const song=Ballad.of(') < html.indexOf('Tale.add(this, song'), 'after', 'the verse is written before it is sung');
+  want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);'), 'map', 'the map does not keep the tale');
   return checks;
 })();
 
@@ -28134,6 +28180,7 @@ console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
+console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);

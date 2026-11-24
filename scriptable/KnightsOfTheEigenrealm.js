@@ -10099,6 +10099,31 @@ const Sitting = {
   }
 };
 
+/* The sitting's tale. Each campaign victory's ballad is written into the
+   tale of the sitting, with the foe and the grade it was won at, and the map
+   keeps the tale folded under the sitting's tally: the newest verse first,
+   the last twelve kept, and the count of every verse sung. Opened, it reads
+   as the story of the session so far, so a sitting ends with something to
+   look back over and a reason to add one more verse. It is only words and
+   it lasts the sitting: nothing is saved. */
+const Tale = {
+  MAX: 12, log: [], n: 0,
+  add(B, song, grade){
+    if(!B || B.mode!=='campaign' || !B.foe || !song) return false;
+    this.n++;
+    this.log.push({ nm: B.foe.nm, grade: grade || 'C', k: song.k, text: song.text });
+    if(this.log.length>this.MAX) this.log.shift();
+    return true;
+  },
+  html(){
+    if(!this.log.length) return '';
+    const rows=this.log.slice().reverse().map(e=>
+      \`<div class="taleRow" data-k="\${e.k}" style="margin-top:6px;text-align:left"><b style="color:\${Grade.COL[e.grade]||'var(--dim)'}">\${e.grade}</b> · <b>\${e.nm}</b>: <i>\${e.text}</i></div>\`).join('');
+    const more=this.n>this.log.length ? \`<div class="small" style="margin-top:6px;color:var(--dim)">and \${this.n-this.log.length} earlier \${this.n-this.log.length===1?'verse':'verses'} before these</div>\` : '';
+    return \`<details id="tale" class="small" style="margin:0 0 8px;color:var(--dim)"><summary style="cursor:pointer">📖 This sitting's tale · \${this.n} \${this.n===1?'verse':'verses'}</summary>\${rows}\${more}</details>\`;
+  }
+};
+
 /* A comeback. A campaign fight won after the knight's health fell to a
    quarter or less pays a quarter more gold, said on the victory card. Health
    that low is when quitting is most tempting, and this is a reason to stay
@@ -11281,6 +11306,7 @@ const Battle = {
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
+    Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
@@ -16921,7 +16947,7 @@ const UI = {
     const ahead=this.nextFoe(), cur = ahead ? ahead.ri : REALMS.length-1;
     const quarry=Quarry.today();
     // today's quarry heads the campaign, above the road
-    let realms=Sitting.html()+Quarry.node(quarry)+this.realmPath(cur);
+    let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];

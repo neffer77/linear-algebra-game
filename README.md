@@ -858,6 +858,9 @@ The game is built so that losing teaches you as much as winning.
   the brink, a fight with no miss, a killing blow far past need, a long streak, a bold or guarded stance, an
   omen overhead, or a win that was hard work, whichever is most worth remembering. The words turn with the
   foe, so the same feat reads fresh next time. It is only words: it pays nothing and nothing is saved.
+- **📖 The sitting's tale.** Every campaign victory's ballad is written into the tale of the sitting, with
+  the foe and the grade it was won at, kept folded on the map under the sitting's tally. Opened, it reads newest
+  verse first as the story of the session so far: the last twelve verses, and a count of the rest. Nothing is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
