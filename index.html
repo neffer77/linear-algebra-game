@@ -9170,6 +9170,38 @@ const NextFight = {
   }
 };
 
+/* Second wind. Once a campaign fight, a blow that would fell the knight
+   leaves them standing at 1 health instead, and the question after it is a
+   last stand: answer it right and the strike lands twice as hard. The next
+   blow still fells them, so resting and answering well matter as much as
+   ever, but a fight on the edge turns on one question rather than ending on a
+   stray roll. Arena runs, the Deep, rites and the daily keep their own
+   stakes, a turn's second blow is held along with its first, and nothing is
+   saved. */
+const SecondWind = {
+  MUL: 2,
+  can(B){ return !!(B && B.mode==='campaign' && !B.rite); },
+  // a blow about to land on a knight at hp: what is left of it
+  hold(B, hp, dmg){
+    if(!this.can(B) || hp<=0 || dmg<hp) return dmg;
+    if(B.winded && !B.windNow) return dmg;            // spent earlier in the fight
+    if(!B.winded){
+      B.winded=true; B.windNow=true; B.standing=true;
+      Anim.float(220, H-330, 'SECOND WIND', '#ffd479', true);
+    }
+    return hp-1;
+  },
+  // as an answer begins: is it a last stand? It is one answer's, right or wrong
+  take(B){ const s=!!B.standing; B.standing=false; B.windNow=false; return s; },
+  bonus(B){ return B && B.lastStand ? this.MUL : 1; },
+  tele(){ return `🔥 <b>Last stand.</b> You are hanging on at 1 health. Answer correctly to strike twice as hard!`; },
+  line(B, ok){
+    if(B.windNow) return `<div class="miss again" id="windLine">🔥 <b>Second wind!</b> That blow would have felled you, but you hang on at 1 health. Answer the next one right to strike twice as hard.</div>`;
+    if(ok && B.lastStand) return `<div class="miss again" id="standLine">🔥 <b>Last stand!</b> On 1 health you struck back twice as hard.</div>`;
+    return '';
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9231,6 +9263,7 @@ const Battle = {
     this.weakHit=false;              // the weak point is told once a fight
     this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
+    this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9483,6 +9516,7 @@ const Battle = {
       tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);
       tg.style.display='block';
     }
+    if(this.standing){ tg.innerHTML=(tg.style.display==='block' ? tg.innerHTML+'<br>' : '')+SecondWind.tele(); tg.style.display='block'; }
     this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
@@ -9788,6 +9822,7 @@ const Battle = {
        meeting is the lesson ladder's to pace, so it is left to it. */
     const owed=this.recover||0; this.recover=0; this.recovered=0;
     this.lastRiposte=false; this.lastCoup=false;
+    this.lastStand=SecondWind.take(this);
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
@@ -9804,7 +9839,7 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
@@ -9889,6 +9924,7 @@ const Battle = {
       let dmg=0;
       for(let i=0;i<blows;i++)
         dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
+      dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);
       Anim.strike('e',dmg,false);
@@ -9925,7 +9961,7 @@ const Battle = {
     if(this.slamNext && this.ehp<=0) this.slamNext=false;
     else if(this.slamNext){
       this.slamNext=false;
-      this.lastSlam=this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));
+      this.lastSlam=SecondWind.hold(this, Game.s.hp, this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok)));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
@@ -10010,6 +10046,7 @@ const Battle = {
       (!inRite && ok && this.cur.redo ? `<div class="miss again">↺ <b>Got it this time.</b> The second go landed${Recover.back(this.recovered)}.</div>` : '')+
       (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>`:'')+
       Riposte.line(!inRite && this.lastRiposte)+
+      SecondWind.line(this, ok)+
       `<div>${st.ex}</div>`+ rule +
       `<div id="afig"></div>`+
       `<button class="btn gold" style="margin-top:10px" id="contBtn">${inRite?'Next step ▶':'Continue ▶'}</button>`;
