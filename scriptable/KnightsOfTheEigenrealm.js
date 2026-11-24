@@ -9263,6 +9263,37 @@ const Overkill = {
   line(over, n){ return n ? \`<div id="overLine" style="color:#ff8a80;font-weight:800;margin-top:6px">💥 Overkill: \${over} past its last health, +\${n} gold.</div>\` : ''; }
 };
 
+/* An oath. Before the first answer of a campaign fight the knight may swear
+   to win it with no miss. Kept, the victory pays half again the gold and a
+   sure chest, an epic find at the least. Broken by any miss, the oath costs
+   a quarter of the fight's gold at the victory, so it is a wager on knowing
+   the work, taken only when you feel ready. A fall or a flight ends it with
+   the fight. Nothing is saved: an oath is the fight's. */
+const Oath = {
+  KEPT: 0.5, BROKEN: 0.25,
+  can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.sworn && !B.missed && !B.runBest && !B.combo); },
+  swear(B){
+    if(!this.can(B)) return false;
+    B.sworn=true; B.oathBroken=false;
+    UI.toast('🗡️ Sworn: win this fight with no miss for half again the gold and an epic chest. A miss costs a quarter of the gold.');
+    return true;
+  },
+  check(B){
+    if(!B || !B.sworn || B.oathBroken || !B.missed) return false;
+    B.oathBroken=true;
+    Anim.float(560, H-330, 'OATH BROKEN', '#ff8a80', true);
+    return true;
+  },
+  kept(B){ return !!(B && B.mode==='campaign' && B.sworn && !B.missed); },
+  gold(B, gold){ return !(B && B.mode==='campaign' && B.sworn) ? 0 : B.missed ? -Math.round(gold*this.BROKEN) : Math.round(gold*this.KEPT); },
+  label(B){ return B.sworn ? (B.oathBroken || B.missed ? '🗡️ Oath broken' : '🗡️ Oath sworn') : '🗡️ Swear an oath'; },
+  line(n){
+    if(!n) return '';
+    const said = n>0 ? \`kept, no miss: half again the gold, +\${n}, and an epic chest\` : \`broken by a miss: a quarter of the gold is forfeit, −\${-n}\`;
+    return \`<div id="oathLine" style="color:\${n>0?'#ffd36b':'#ff8a80'};font-weight:800;margin-top:6px">🗡️ Your oath was \${said}.</div>\`;
+  }
+};
+
 /* A gilded question. Now and then a campaign question comes gilded, said
    above it before you answer. Answer it right and it pays gold on the spot,
    a fifth of the foe's gold, with a shower of coins; a miss costs nothing
@@ -9546,6 +9577,7 @@ const Battle = {
     this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
     this.overkill=0; this.low=false;   // nor any comeback
     this.gilded=false; this.gildGold=0;   // nor any gilded question
+    this.sworn=false; this.oathBroken=false;   // nor any oath
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -9629,6 +9661,7 @@ const Battle = {
       add('skill-'+a.id, \`\${a.ic} \${a.nm} ×\${left}\`,
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
+    if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
     add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
     add('rage',   \`\${ITEMS.rage.ic} Rune ×\${it.rage}\`, it.rage>0 && !this.rage, ()=>Battle.useRage());
@@ -9684,6 +9717,7 @@ const Battle = {
     this.renderPowers();
   },
 
+  swear(){ if(Oath.swear(this)) this.renderPowers(); },
   usePotion(){
     const g=Game.s; if(g.items.potion<1) return;
     // The satchel is the one thing herbs buy that gold cannot, and this is the
@@ -10228,6 +10262,7 @@ const Battle = {
       Sfx.bad();
       this.missed++;
     }
+    if(Oath.check(this)) setTimeout(()=>this.renderPowers(), 60);
     // Crossing a topic into "solid" is the payoff the whole game is built around.
     if(this.lastMastery && this.lastMastery.mastered){
       setTimeout(()=>Celebrate.banner('MASTERED', TOPIC_LABEL[this.cur.key]||this.cur.topic,
@@ -10510,7 +10545,10 @@ const Battle = {
     g.gold+=bGold;
     const cGold=Comeback.gold(this, gold);
     g.gold+=cGold;
-    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold);
+    // a kept oath pays half again; a broken one costs a quarter
+    const vow=Oath.kept(this), vGold=Oath.gold(this, gold);
+    g.gold=Math.max(0, g.gold+vGold);
+    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
     // the first victory of a sitting pays its experience twice
@@ -10523,8 +10561,8 @@ const Battle = {
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
-    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile ? 1 : Sweep.odds(this, .5))
-      ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, tier:Math.min(6, this.ri+2)}) : null;
+    const drop = R.chance(this.foe.boss || this.foe.elite || satchel || boon==='find' || march || mile || vow ? 1 : Sweep.odds(this, .5))
+      ? Loot.roll({boss:this.foe.boss, sweep, satchel, march, mile, vow, tier:Math.min(6, this.ri+2)}) : null;
     const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
     let unlocked=null;
@@ -10553,6 +10591,7 @@ const Battle = {
           \${Sitting.line(mile)}
           \${Sitting.freshLine(fXp)}
           \${Gild.line(this.gildGold)}
+          \${Oath.line(vGold)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10575,9 +10614,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold+vGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
@@ -12040,7 +12079,7 @@ const Loot = {
     let rar = this.rollRarity(luck);
     if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';     // a boss, or a clean sweep, always gives something
     if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';   // a full satchel or a sitting's milestone, a rare find at the least
-    if(ctx.march && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least
+    if((ctx.march || ctx.vow) && rar!=='legendary') rar='epic';   // a realm march, an epic find at the least
     const pool = this.gearPool(ctx.tier);
 
     // The high tiers hand over gear whenever any is still unowned.
