@@ -9302,6 +9302,18 @@ const Revenge = {
    least. Then it starts again from nothing. A miss takes nothing out. The
    daily, the arena, the dungeon and the rites keep their own rewards. It
    lasts the sitting: nothing is saved. */
+/* A comeback. A campaign fight won after the knight's health fell to a
+   quarter or less pays a quarter more gold, said on the victory card. Health
+   that low is when quitting is most tempting, and this is a reason to stay
+   and answer. It is a fight's, kept for that fight only; nothing is saved. */
+const Comeback = {
+  AT: 0.25, MUL: 0.25,
+  note(B){ const g=Game.s; if(B && g && g.hp>0 && g.hp <= g.maxHp*this.AT) B.low=true; return !!(B && B.low); },
+  on(B){ return !!(B && B.mode==='campaign' && B.low); },
+  gold(B, gold){ return this.on(B) ? Math.round(gold*this.MUL) : 0; },
+  line(n){ return n>0 ? `<div id="comebackLine" style="color:#7ee0a1;font-weight:800;margin-top:6px">💪 A comeback: you won from a quarter of your health or less, +${n} gold.</div>` : ''; }
+};
+
 /* A realm march. Beat every foe of one realm in a sitting with no fall and no
    flight from a live fight between, in any order, and the last of them drops
    a sure chest with an epic find at the least. The map counts the march on
@@ -9461,7 +9473,7 @@ const Battle = {
     this.parry=false; this.parryTold=false; this.parried=false;   // a parry lasts the fight
     this.coup=false; this.lastCoup=false;          // nor is any foe on its last legs yet
     this.winded=false; this.windNow=false; this.standing=false; this.lastStand=false;   // a second wind is a fight's
-    this.overkill=0;
+    this.overkill=0; this.low=false;   // nor any comeback
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -10128,6 +10140,7 @@ const Battle = {
         dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
       dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
+      Comeback.note(this);
       if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);
       Anim.strike('e',dmg,false);
       // A vampiric elite drinks back the blow it lands.
@@ -10165,6 +10178,7 @@ const Battle = {
       this.slamNext=false;
       this.lastSlam=SecondWind.hold(this, Game.s.hp, this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok)));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
+      Comeback.note(this);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
       setTimeout(()=>{
@@ -10419,6 +10433,8 @@ const Battle = {
     // a boon chosen at the last level-up is spent on this win
     const boon=Boon.take(this), bGold=Boon.gold(boon, gold);
     g.gold+=bGold;
+    const cGold=Comeback.gold(this, gold);
+    g.gold+=cGold;
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
@@ -10453,6 +10469,7 @@ const Battle = {
           ${Satchel.line(satchel)}
           ${Boon.line(boon, bGold)}
           ${March.line(march, this.realm.nm)}
+          ${Comeback.line(cGold)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10475,9 +10492,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());

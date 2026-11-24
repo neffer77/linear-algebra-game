@@ -3220,7 +3220,7 @@ const overkillNotes = (() => {
   for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
   want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
   const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
   want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
@@ -3421,7 +3421,7 @@ const revengeNotes = (() => {
   want(V.line('Goblin', 12).includes('id="revengeWon"') && V.line('Goblin', 12).includes('12 gold') && V.line('Goblin', 0) === '', 'line', 'the card does not say the revenge');
   want(html.includes("const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;"), 'held', 'a fall in the campaign does not hold the gold lost');
   want(html.includes("const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;"), 'paid', 'a win does not pay the gold back, or not in the campaign only');
-  want(html.includes('gold+sGold+oGold+rGold+bGold, 900)'), 'counted', 'the card does not count the gold won back');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold, 900)'), 'counted', 'the card does not count the gold won back');
   want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
   want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
   return checks;
@@ -3537,7 +3537,7 @@ const boonNotes = (() => {
   want(html.includes("const ups=Game.gainXp(xp);\n    Boon.offer(this, ups);"), 'offered', 'a level-up does not offer a boon');
   want(html.includes("satchel || boon==='find' || march ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
   want(html.includes('${Boon.line(boon, bGold)}') && html.includes("${this.mode==='campaign'?Boon.card():''}"), 'said', 'the card does not show the boon');
-  want(html.includes('gold+sGold+oGold+rGold+bGold, 900)'), 'counted', 'the card does not count the purse');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold, 900)'), 'counted', 'the card does not count the purse');
   return checks;
 })();
 
@@ -3601,6 +3601,49 @@ const marchNotes = (() => {
   want(html.includes("if(ctx.march && rar!=='legendary') rar='epic';"), 'rarity', 'a march can find less than epic');
   want(html.includes('const path=WarPath.broke(); March.broke();') && html.includes("if(live && this.mode==='campaign') March.broke();"), 'broke', 'a fall or a flight does not end the march');
   want(html.includes('${March.line(march, this.realm.nm)}') && html.includes('</span>${March.tag(ri, r.foes.length)}'), 'said', 'the march is not shown on the map or the card');
+  return checks;
+})();
+
+/* A comeback: a campaign fight won after the knight's health fell to a
+   quarter or less pays a quarter more gold. Worked over long runs of blows on
+   knights of every size in every mode: the mark is set exactly when health
+   ends a blow above 0 and at or under a quarter, and never cleared within the
+   fight; it pays only in the campaign, exactly a quarter of the gold; a new
+   fight starts without it; and every blow that lands calls it. */
+const comebackNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Comeback = {'), html.indexOf('/* A realm march.'));
+  const Game = { s: null };
+  const C = new Function('Game', src + ';return Comeback;')(Game);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('comeback', key, msg); };
+  const modes = ['campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  let seed = 41;   // mulberry32
+  const rnd = n => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n); };
+  let paidN = 0, plainN = 0;
+  for (let f = 0; f < 3000; f++) {
+    const max = 40 + rnd(400), B = { mode: modes[rnd(5)], low: false };
+    Game.s = { maxHp: max, hp: max };
+    let low = false;
+    for (let b = 0; b < 1 + rnd(8) && Game.s.hp > 0; b++) {
+      Game.s.hp = Math.max(0, Game.s.hp - rnd(Math.ceil(max / 3)));
+      if (rnd(6) === 0) Game.s.hp = Math.min(max, Game.s.hp + rnd(max));   // a heal between blows
+      const was = C.note(B);
+      if (Game.s.hp > 0 && Game.s.hp * 4 <= max) low = true;
+      want(was === low && B.low === low, `note ${f}.${b}`, `health ${Game.s.hp} of ${max}: marked ${B.low}, not ${low}`);
+    }
+    const gold = 10 + rnd(500), paid = C.gold(B, gold), wanted = B.mode === 'campaign' && low ? Math.round(gold / 4) : 0;
+    want(paid === wanted, `gold ${f}`, `a ${B.mode} win at ${low ? 'low' : 'full'} health on ${gold} gold paid ${paid}, not ${wanted}`);
+    if (wanted) paidN++; else plainN++;
+  }
+  want(paidN > 100 && plainN > 300, 'spread', `${paidN} comebacks, ${plainN} plain wins`);
+  Game.s = null;
+  want(C.note({}) === false && C.on(null) === false && C.gold(null, 100) === 0, 'none', 'a comeback with no knight or no fight');
+  want(C.line(25).includes('+25 gold') && C.line(25).includes('id="comebackLine"') && C.line(0) === '', 'line', 'the card does not say the comeback');
+  want(html.includes('      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);') && html.includes('      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);'), 'blows', 'a blow does not mark the comeback');
+  want(html.includes('this.overkill=0; this.low=false;'), 'fresh', 'a fight starts with a comeback marked');
+  want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
   return checks;
 })();
 
@@ -25225,6 +25268,7 @@ console.log(`  revenges checked           ${pad(revengeNotes.toLocaleString(), 1
 console.log(`  satchels checked           ${pad(satchelNotes.toLocaleString(), 10)}  (filled by the campaign's right answers only, never past twenty-five; spent only when full; shown beside the streak; a full one opens a sure chest with a rare find at the least)`);
 console.log(`  boons checked              ${pad(boonNotes.toLocaleString(), 10)}  (offered only by a campaign level-up with none held; picked only from an open offer; spent once, on the next campaign win; a fat purse pays half again, a lucky find drops a sure chest)`);
 console.log(`  marches checked            ${pad(marchNotes.toLocaleString(), 10)}  (paid when the last foe of a realm is beaten with no fall or flight between, once a realm a sitting, in the campaign only; counted on the map; a march's chest never finds less than epic)`);
+console.log(`  comebacks checked          ${pad(comebackNotes.toLocaleString(), 10)}  (marked when a blow leaves health above 0 and at a quarter or under, never cleared in the fight; paid in the campaign only, a quarter more gold; a new fight starts without it)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
