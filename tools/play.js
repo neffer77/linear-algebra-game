@@ -67,6 +67,7 @@ const SUITES = [
   require('./play/march'),       // every foe of a realm beaten with no fall between drops an epic chest
   require('./play/comeback'),    // a win from a quarter of your health or less pays a quarter more gold
   require('./play/sitting'),     // the map counts this sitting's victories, gold and best streak
+  require('./play/milestone'),   // every fifth victory of a sitting drops a sure chest
   require('./play/weakpoint'),   // every campaign foe has a topic it cannot stand
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
