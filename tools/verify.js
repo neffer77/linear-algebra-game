@@ -4042,6 +4042,97 @@ const treasureNotes = (() => {
   return checks;
 })();
 
+/* The gauntlet. Long runs of everything that can happen to one, against a
+   model: offered only for a realm whose every foe is beaten and not yet run
+   this sitting; started from its first foe; stepped on only by a campaign
+   win, or a greedy foe's flight, over the very foe it waits on; broken off
+   by any other fight begun, a heroic or rival one included, by a fall and by
+   a flight; and paying, once a realm a sitting, every first-clear purse of
+   the realm at its last foe, with a banner. Then what the card and the map
+   say, and the wiring where it lives. */
+const gauntletNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Gauntlet = {'), html.indexOf('/* A treasure map.'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  let seed = 43;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('gauntlet', key, msg); };
+  const Game = { s: null }, banners = [], began = [];
+  let G = null;
+  const Battle = { begin(ri, fi, heroic, rival) { began.push(ri + ':' + fi); G.meet(ri, fi, heroic || rival); } };
+  const mk = new Function('Game', 'Battle', 'Celebrate', 'Sfx', realms + src + ';return {Gauntlet, REALMS};');
+  const { REALMS } = mk(Game, Battle, { banner: t => banners.push(t) }, { milestone() {} });
+  const purse = ri => REALMS[ri].foes.reduce((a, f) => a + f.gold, 0);
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let run = 0; run < 300; run++) {
+    G = mk(Game, Battle, { banner: t => banners.push(t) }, { milestone() {} }).Gauntlet;
+    const cl = {};
+    for (let ri = 0; ri < REALMS.length; ri++) REALMS[ri].foes.forEach((f, fi) => { if (rnd(5)) cl[ri + ':' + fi] = 'A'; });
+    Game.s = { cleared: cl, gold: 0 };
+    let on = null, gold = 0;
+    const paid = {};
+    const full = ri => REALMS[ri].foes.every((f, fi) => cl[ri + ':' + fi]);
+    for (let step = 0; step < 80; step++) {
+      const ri = rnd(REALMS.length), act = rnd(6);
+      if (act === 0) {
+        const can = full(ri) && !paid[ri];
+        want(G.can(ri) === can, `can ${run} ${step}`, `realm ${ri} offered ${G.can(ri)}, not ${can}`);
+        began.length = 0;
+        const ok = G.start(ri);
+        want(ok === can && (can ? began.join() === ri + ':0' : began.length === 0), `start ${run} ${step}`, `realm ${ri}: ${ok}, began ${began.join()}`);
+        if (can) on = { ri, i: 0 };
+      } else if (act === 1) {
+        // a fight begun from anywhere: the next foe of the run itself, or another, plain or heroic or a duel
+        const r = on && rnd(2) ? on.ri : ri, fi = on && rnd(2) ? on.i : rnd(REALMS[r].foes.length), extra = !rnd(4);
+        G.meet(r, fi, extra);
+        if (on && (extra || r !== on.ri || fi !== on.i)) on = null;
+      } else if (act === 2 || act === 3) {
+        // a fight over, won or fled from by a greedy foe: often the one the run waits on
+        const r = on && rnd(4) ? on.ri : ri, fi = on && rnd(4) ? on.i : rnd(REALMS[r].foes.length), B = { mode: modes[rnd(6)], ri: r, fi };
+        const nb = banners.length, t = G.won(B);
+        let expect = null;
+        if (on && B.mode === 'campaign' && r === on.ri && fi === on.i) {
+          const n = REALMS[r].foes.length;
+          if (++on.i < n) expect = { ri: r, step: on.i, n };
+          else { expect = { ri: r, done: true, gold: purse(r), n }; gold += purse(r); paid[r] = 1; on = null; }
+        }
+        want(JSON.stringify(t) === JSON.stringify(expect), `won ${run} ${step}`, `${B.mode} over ${r}:${fi}: ${JSON.stringify(t)}, not ${JSON.stringify(expect)}`);
+        want(banners.length === nb + (t && t.done ? 1 : 0) && (!t || !t.done || banners[nb] === 'GAUNTLET RUN'), `banner ${run} ${step}`, 'a run done has no banner, or a step has one');
+        const ln = G.line(t), bt = G.button(t), say = G.say(t);
+        want(!t ? ln === '' && bt === '' && say === ''
+          : t.done ? ln.includes('id="gauntletWon"') && say.includes(REALMS[t.ri].nm) && say.includes('+' + t.gold + ' gold') && bt === ''
+          : ln.includes('id="gauntletStep"') && say.includes(`${t.step} of ${t.n} beaten`) && say.includes(REALMS[t.ri].foes[t.step].nm)
+            && bt.includes('id="gauntletGo"') && bt.includes(`Battle.begin(${t.ri},${t.step})`), `say ${run} ${step}`, `${ln.slice(0, 80)} ${bt.slice(0, 60)}`);
+      } else if (act === 4) { G.end(); on = null; }
+      else {
+        // a clear here or there, as the campaign goes on
+        const fi = rnd(REALMS[ri].foes.length); cl[ri + ':' + fi] = 'A';
+      }
+      want(JSON.stringify(G.run) === JSON.stringify(on) && Game.s.gold === gold && JSON.stringify(G.paid) === JSON.stringify(paid), `state ${run} ${step}`,
+        `${JSON.stringify(G.run)} ${Game.s.gold} ${JSON.stringify(G.paid)}, not ${JSON.stringify(on)} ${gold} ${JSON.stringify(paid)}`);
+      // the map: the run under way where it is, an offer where one can start, nothing else
+      for (let r = 0; r < REALMS.length; r++) {
+        const nd = G.node(r);
+        if (on && on.ri === r) want(nd.includes(`Battle.begin(${r},${on.i})`) && nd.includes(`${on.i} of ${REALMS[r].foes.length} beaten`) && nd.includes(REALMS[r].foes[on.i].nm), `node ${run} ${step} ${r}`, nd.slice(0, 90));
+        else if (full(r) && !paid[r]) want(nd.includes(`Gauntlet.start(${r})`) && nd.includes('🪙 ' + purse(r)), `offer ${run} ${step} ${r}`, nd.slice(0, 90));
+        else want(nd === '', `none ${run} ${step} ${r}`, nd.slice(0, 90));
+      }
+    }
+  }
+  // the wiring
+  want(html.includes("    this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;\n    Gauntlet.meet(ri, fi, heroic || rival);"), 'begin', 'a fight begun does not break off a run, or a heroic or rival one does not');
+  want(html.includes("    const gnt=Gauntlet.won(this);\n    if(gnt && gnt.gold && counted) Sitting.gold+=gnt.gold;") && html.includes('${Gauntlet.line(gnt)}')
+    && html.includes("${Gauntlet.button(gnt)}\n        ${NextFight.html(nx)}"), 'win', 'a victory does not step the run on, say so, lead on to the next foe or count the purse');
+  want(html.includes("const path=WarPath.broke(); March.broke();\n    Gauntlet.end();") && html.includes("if(live) Gauntlet.end();"), 'end', 'a fall or a flight does not break off a run');
+  const esc = html.slice(html.indexOf('\n  escape(){'), html.indexOf('\n  flee(){'));
+  want(esc.includes('const run=Gauntlet.won(this);') && esc.includes('UI.toast(Gauntlet.say(run));'), 'escape', 'a greedy foe that gets away does not count as passed');
+  want(html.includes("realms+=Gauntlet.node(ri);") && html.split('Gauntlet.won(').length === 3, 'map', 'the map does not show the gauntlet, or a run steps on elsewhere');
+  return checks;
+})();
+
 /* A rival. Sir Corvin rides the road of each realm's strongest plain foe,
    never a boss, and waits after a campaign victory there only once that foe
    is beaten, so a duel never clears a foe unfought; he is that foe a tenth
@@ -27753,6 +27844,7 @@ console.log(`  familiars checked          ${pad(familiarNotes.toLocaleString(), 
 console.log(`  rivals checked             ${pad(rivalNotes.toLocaleString(), 10)}  (Sir Corvin rides each realm's strongest plain foe, waits only once it is beaten, a tenth harder for twice the gold; a duel won leaves the realm be for the sitting; asked for, said, offered and told)`);
 console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}  (a campaign miss is a slip, one to a topic, eight at most; a wounded knight with a slip is offered a camp on the latest; a right answer mends half the wounds and puts the slip behind; one answer, counted, paid once)`);
 console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 10)}  (a scrap for a campaign win at A or better, the map whole at the third, X on a realm opened and fought in and not the one just won where there is another, nothing found while it waits, the hoard of its boss's gold paid once there)`);
+console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 10)}  (offered only for a realm all beaten and not run this sitting, stepped on only by the foe it waits on, broken off by any other fight, a fall or a flight, and paying the realm's every first-clear purse once at the last)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);

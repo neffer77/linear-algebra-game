@@ -159,6 +159,12 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .node .ico{width:44px;height:44px;flex:none;border-radius:10px;background:#171129;display:grid;place-items:center}
 .node .nm{font-weight:800;font-size:15px}
 .node .dt{font-size:12px;color:var(--dim)}
+.gauntlet{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;cursor:pointer;
+  border:1px solid #ffb347;border-left:3px solid #ffb347;background:linear-gradient(180deg,#2b2247,#211a39);box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.gauntlet:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.gauntlet .ico{width:44px;height:44px;flex:none;border-radius:10px;display:grid;place-items:center;border:1px solid var(--gold-dk);background:linear-gradient(180deg,#1d1633,#120d24)}
+.gauntlet .nm{font-weight:800;font-size:15px}
+.gauntlet .dt{font-size:12px;color:var(--dim)}
 .realmhdr{display:flex;align-items:center;gap:8px;margin-top:14px}
 .realmhdr .dot{width:10px;height:10px;border-radius:50%}
 
@@ -9255,6 +9261,77 @@ const NextFight = {
   }
 };
 
+/* The gauntlet. A realm whose every foe is beaten offers, on the map, its
+   gauntlet: every one of its foes again, first to last, with health carried
+   from each fight to the next. The victory card leads on to the next foe and
+   the map keeps its place; a fall, a flight from a live fight, or any other
+   fight begun breaks it off, and it can be run again from the start. A greedy
+   foe that gets away counts as passed. Beating the last pays a purse worth
+   every first-clear purse of the realm, once a realm a sitting, with a banner.
+   It is the campaign's fights again, back to back, for a knight who wants to
+   prove a realm's topics hold up under pressure. Nothing is saved. */
+const Gauntlet = {
+  run: null, paid: {},
+  purse(ri){ return REALMS[ri].foes.reduce((a,f)=>a+f.gold, 0); },
+  can(ri){
+    const g=Game.s, r=REALMS[ri];
+    return !!g && !!r && !this.paid[ri] && r.foes.every((f,fi)=>!!g.cleared[ri+':'+fi]);
+  },
+  on(ri){ return !!this.run && (ri==null || this.run.ri===ri); },
+  start(ri){
+    if(!this.can(ri)) return false;
+    this.run={ri, i:0};
+    Battle.begin(ri, 0);
+    return true;
+  },
+  // a fight begun: any but the gauntlet's next foe, plain, breaks it off
+  meet(ri, fi, extra){ if(this.run && (extra || ri!==this.run.ri || fi!==this.run.i)) this.run=null; },
+  end(){ this.run=null; },
+  // a campaign fight over, won or fled from by a greedy foe: the next step, or the purse
+  won(B){
+    const r=this.run, g=Game.s;
+    if(!r || !B || B.mode!=='campaign' || B.ri!==r.ri || B.fi!==r.i || !g) return null;
+    const n=REALMS[r.ri].foes.length;
+    if(++r.i<n) return {ri:r.ri, step:r.i, n};
+    const gold=this.purse(r.ri);
+    this.run=null; this.paid[r.ri]=1; g.gold+=gold;
+    Celebrate.banner('GAUNTLET RUN', \`\${REALMS[r.ri].nm}, every foe back to back\`, '#ffb347', ()=>Sfx.milestone());
+    return {ri:r.ri, done:true, gold, n};
+  },
+  say(t){
+    if(!t) return '';
+    return t.done ? \`⚔️ The gauntlet of \${REALMS[t.ri].nm} is run: all \${t.n} foes back to back, +\${t.gold} gold.\`
+      : \`⚔️ Gauntlet: \${t.step} of \${t.n} beaten. Next, \${REALMS[t.ri].foes[t.step].nm}.\`;
+  },
+  line(t){ return t ? \`<div id="\${t.done?'gauntletWon':'gauntletStep'}" style="color:#ffb347;font-weight:800;margin-top:6px">\${this.say(t)}</div>\` : ''; },
+  // the card's way on to the next foe of a run under way
+  button(t){
+    if(!t || t.done || !this.on(t.ri)) return '';
+    const f=REALMS[t.ri].foes[t.step];
+    return \`<button class="btn gold" id="gauntletGo" onclick="Battle.begin(\${t.ri},\${t.step})">⚔️ On to \${f.nm} · \${t.step+1} of \${t.n}</button>\`;
+  },
+  // the map's place for it under a realm: a run to go on with, or one to start
+  node(ri){
+    const r=REALMS[ri];
+    if(this.on(ri)){
+      const i=this.run.i, f=r.foes[i];
+      return \`<div class="gauntlet" id="gauntletNode-\${ri}" onclick="Battle.begin(\${ri},\${i})">
+          <div class="ico" style="font-size:24px">⚔️</div>
+          <div style="flex:1"><div class="nm">The gauntlet: \${i} of \${r.foes.length} beaten</div>
+            <div class="dt">Next, \${f.nm} · health carries on · 🪙 \${this.purse(ri)} at the end</div></div>
+          <div style="font-size:20px;color:var(--dim)">▶</div>
+        </div>\`;
+    }
+    if(!this.can(ri)) return '';
+    return \`<div class="gauntlet" id="gauntletNode-\${ri}" onclick="Gauntlet.start(\${ri})">
+        <div class="ico" style="font-size:24px">⚔️</div>
+        <div style="flex:1"><div class="nm">Run the gauntlet</div>
+          <div class="dt">All \${r.foes.length} foes back to back, health carried on, for 🪙 \${this.purse(ri)}</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+  }
+};
+
 /* A treasure map. A campaign victory graded A or better turns up a scrap of
    a treasure map, said on the victory card. Three scraps make the map whole,
    and X marks one of the realms the knight has opened and fought in, an old
@@ -9937,6 +10014,7 @@ const Battle = {
   begin(ri, fi, heroic, rival){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
+    Gauntlet.meet(ri, fi, heroic || rival);   // any other fight breaks off a gauntlet run
     // A foe already beaten here may come back as an elite with one twist.
     // ...or, not an elite, as a greedy foe with a fat purse that flees.
     // ...or, asked for, as a heroic rematch: the hardest riddles for double gold.
@@ -11004,6 +11082,9 @@ const Battle = {
     // a scrap of a treasure map for a win at A or better, or the hoard dug up where X marks
     const tr=Treasure.won(this, Grade.of(marks));
     if(tr && tr.gold && counted) Sitting.gold+=tr.gold;
+    // a gauntlet run steps on to its next foe, or pays its purse at the last
+    const gnt=Gauntlet.won(this);
+    if(gnt && gnt.gold && counted) Sitting.gold+=gnt.gold;
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -11036,6 +11117,7 @@ const Battle = {
           \${Heroic.line(this)}
           \${Rival.line(rival)}
           \${Treasure.line(tr)}
+          \${Gauntlet.line(gnt)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11052,6 +11134,7 @@ const Battle = {
           \${this.learnedHtml()}
         </div>
         \${this.foe.boss&&first?Saga.card(this.ri):''}
+        \${Gauntlet.button(gnt)}
         \${NextFight.html(nx)}
         \${Scout.html(nx)}
         \${Wayfarer.html(way)}
@@ -11085,6 +11168,7 @@ const Battle = {
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
     const path=WarPath.broke(); March.broke();
+    Gauntlet.end();   // a fall breaks off a gauntlet run
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
     const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;
@@ -11124,6 +11208,8 @@ const Battle = {
     clearInterval(this.timer); this.over='escape'; Anim.stop(); this.tension(1); Talk.hide();
     UI.go('s-map');
     UI.toast(Greedy.fled(nm));
+    const run=Gauntlet.won(this);   // in a gauntlet, a foe that gets away counts as passed
+    if(run) UI.toast(Gauntlet.say(run));
   },
   flee(){
     const live=!this.over;
@@ -11133,6 +11219,7 @@ const Battle = {
     UI.go('s-map');
     const path=live && this.mode==='campaign' ? WarPath.broke() : 0;
     if(live && this.mode==='campaign') March.broke();
+    if(live) Gauntlet.end();   // so does a flight from a live fight
     UI.toast(path>=2 ? \`🏃 You slip away into the trees, and your war path of \${path} victories ends.\` : '🏃 You slip away into the trees.');
   }
 };
@@ -16643,6 +16730,7 @@ const UI = {
           <div style="font-size:20px;color:var(--dim)">\${open?'▶':'🔒'}</div>
         </div>\`;
       });
+      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
       realms+='</details>';
     });
     /* A knight who never finished the cellar is offered it back before anything
