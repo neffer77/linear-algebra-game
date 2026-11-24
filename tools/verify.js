@@ -4647,7 +4647,16 @@ const scarsNotes = (() => {
     want(lines.length === m * 3 && lines.every(l => l[2] < 0 && Math.abs(l[1]) < 30), 'on the body ' + art + n, JSON.stringify(lines));
     want(log.some(l => l[0] === '=strokeStyle' && l[1] === '#1a1622') && log.some(l => l[0] === '=lineWidth' && l[1] === 4), 'dark ' + art + n, 'the cracks are not dark');
   }
+  for (let n = -1; n <= 5; n++) for (let tt = 0; tt < 3; tt += 0.03) {
+    const r = S.reel(n, tt);
+    if (n < 3) want(r === 0, 'still ' + n, 'a foe reels before its last quarter: ' + r);
+    else want(Math.abs(r) <= S.REEL + 1e-12 && Math.abs(r - Math.sin(tt * 4.5) * S.REEL) < 1e-12, 'reels ' + n + ' ' + tt.toFixed(2), String(r));
+  }
+  want(S.REEL > 0.03 && S.REEL < 0.15 && S.reel(3) === 0, 'reel size', 'the sway is no sway or a fall: ' + S.REEL);
+  const sw = new Set(); for (let tt = 0; tt < 2; tt += 0.01) sw.add(Math.sign(Math.round(S.reel(3, tt) * 1000)));
+  want(sw.has(1) && sw.has(-1), 'both ways', 'the foe sways one way only');
   const f = html.slice(html.indexOf('function drawFoe('), html.indexOf('\n}\n', html.indexOf('function drawFoe(')) + 3);
+  want(f.startsWith("function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){\n  cx.save();\n  cx.translate(x - lunge*70, y);\n  if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet\n"), 'reeling', 'a foe in its last quarter does not reel from its feet');
   want(f.startsWith('function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){') && f.endsWith("  if(scars) Scars.cut(scars, art);   // its wounds, riding with it\n  cx.restore();\n}\n"), 'drawn', 'drawFoe does not cut its scars inside its own frame');
   want(html.includes("eLunge, Anim.eh, B.over==='win', Scars.of(B)));"), 'wired', 'the fight does not scar its foe');
   want((html.match(/Scars\.of\(/g) || []).length === 1 && (html.match(/Scars\.cut\(/g) || []).length === 1, 'once', 'scars drawn somewhere else too');
@@ -28660,7 +28669,7 @@ console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
-console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, none once the fight is over)`);
+console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

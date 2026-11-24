@@ -879,7 +879,8 @@ The game is built so that losing teaches you as much as winning.
 - **🙌 A victory pose.** A won fight ends with the knight lifting the blade overhead and hopping for joy until
   the victory card comes up.
 - **🩸 Scars.** A foe wears its wounds. Each quarter of its health lost opens a crack across it, one, then
-  two, then three, so how near it is to falling reads off the foe itself as well as off its bar.
+  two, then three, so how near it is to falling reads off the foe itself as well as off its bar. In its last
+  quarter it reels on its feet as well.
 - **🛡️ Dents.** The knight wears their wounds as well: each quarter of their health lost beats a dent into
   the plate, the breastplate first, then the helm, then the other side, and the dents go as health comes back.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
@@ -3481,7 +3482,7 @@ Inside `index.html` the code is organised as:
 | `Flame` | cold below a streak of five, burning from five, hotter at six and seven and no hotter after, a colour for each; the wiring in the blade's drawing |
 | `Pose` | the blade lifted and a hop only on a won fight, never a fall, a flight or a fight still on; the hop rises and lands; the wiring in the drawing |
 | `Dents` | a dent for each quarter of the knight's health lost, none at full health, none with no health to measure; the breastplate first, the helm second, the other side third, all on the plate; each in the plate's own dark with a light rim, the canvas state kept; the wiring in the knight's drawing |
-| `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
+| `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Sky` | each realm's sky rolled once and kept for the sitting, plain with no chance of an omen; a gold moon, a fair wind and a mist, each one plain help of its own kind and none a cost; only in the campaign and its own realm; the foe's blow never under one health; a thousand sittings roll every omen and plain skies; what the map, the fight and the card say; the wiring |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
