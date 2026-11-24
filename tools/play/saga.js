@@ -80,7 +80,7 @@ module.exports = {
     t.ok('beside the boss in its own colours', told && told.lit > 300 && told.cols > 4, JSON.stringify(told && [told.lit, told.cols]));
     t.ok('below the rewards and above the way on', await t.ev(() => {
       const b = document.getElementById('resultBody'), kids = [...b.children], i = kids.findIndex(k => k.id === 'sagaNew');
-      return i > 0 && kids[i - 1].innerText.includes('Victory!') && /Onward/.test(kids[i + 1].innerText); }));
+      return i > 0 && kids[i - 1].innerText.includes('Victory!') && /Onward|Next on the road/.test(kids[i + 1].innerText); }));
     t.ok('and it says the next realm lies open', await t.ev(() => document.getElementById('resultBody').innerText.includes('Matrix Marches now lies open.')));
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));

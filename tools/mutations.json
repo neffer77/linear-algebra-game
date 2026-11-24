@@ -1,68 +1,68 @@
 {
- "change": "Coup de grâce: a right answer finishes a foe on its last 15% of health",
+ "change": "Straight on: a campaign victory offers the next fight on the road",
  "mutations": [
   {
-   "name": "a foe is on its last legs at a fifth",
+   "name": "the fight just won is offered again",
    "file": "index.html",
-   "find": "const Coup = {\n  FRAC: 0.15,",
-   "replace": "const Coup = {\n  FRAC: 0.2,",
+   "find": "return nx && !(nx.ri===ri && nx.fi===fi) ? nx : null;",
+   "replace": "return nx;",
    "run": "verify"
   },
   {
-   "name": "a rite is finished like any question",
+   "name": "the war path pay is the one just won",
    "file": "index.html",
-   "find": "B.mode!=='daily' && !B.rite && B.ehp>0",
-   "replace": "B.mode!=='daily' && B.ehp>0",
+   "find": "Win it for <b>+${WarPath.pct(n+1)}%</b>",
+   "replace": "Win it for <b>+${WarPath.pct(n)}%</b>",
    "run": "verify"
   },
   {
-   "name": "the daily finishes foes too",
+   "name": "a first victory talks of a war path",
    "file": "index.html",
-   "find": "ready(B){ return !!(B && B.mode!=='daily' && ",
-   "replace": "ready(B){ return !!(B && ",
+   "find": "const path=n>=1 ? ",
+   "replace": "const path=n>=0 ? ",
    "run": "verify"
   },
   {
-   "name": "the coup takes only the blow",
+   "name": "a rest is offered that cannot be paid",
    "file": "index.html",
-   "find": "    return Math.max(hit, B.ehp);\n  }\n};",
-   "replace": "    return hit;\n  }\n};",
+   "find": "+(low.afford?`<button class=\"btn\" id=\"nextRest\"",
+   "replace": "+(true?`<button class=\"btn\" id=\"nextRest\"",
    "run": "verify"
   },
   {
-   "name": "the coup is not said on the scene",
+   "name": "a refused rest takes the offer away",
    "file": "index.html",
-   "find": "    Anim.float(610, H-410, 'COUP DE GRÂCE', '#ffb3c1', true);\n",
-   "replace": "",
+   "find": "    if(!Game.rest()) return false;\n    btn.remove();",
+   "replace": "    Game.rest();\n    btn.remove();",
    "run": "verify"
   },
   {
-   "name": "the warning leaves out the health",
+   "name": "the button starts the fight just won",
    "file": "index.html",
-   "find": "is down to its last <b>${hp}</b> health.",
-   "replace": "is on its last legs.",
+   "find": "id=\"nextGo\" onclick=\"Battle.begin(${nx.ri},${nx.fi})\"",
+   "replace": "id=\"nextGo\" onclick=\"Battle.begin(0,0)\"",
    "run": "verify"
   },
   {
-   "name": "a coup is never forgotten",
+   "name": "the arena offers the next fight too",
    "file": "index.html",
-   "find": "    this.lastRiposte=false; this.lastCoup=false;",
-   "replace": "    this.lastRiposte=false;",
+   "find": "const nx=this.mode==='campaign' ? NextFight.of(this.ri, this.fi) : null;",
+   "replace": "const nx=NextFight.of(this.ri, this.fi);",
    "run": "verify"
   },
   {
-   "name": "the warning drops the wind-up beside it",
+   "name": "the map keeps its gold beside the next fight",
    "file": "index.html",
-   "find": "tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);",
-   "replace": "tg.innerHTML=Coup.tele(this.foe.nm, this.ehp);",
+   "find": "<button class=\"btn${nx?'':' gold'}\" onclick=\"UI.go('s-map')\">",
+   "replace": "<button class=\"btn gold\" onclick=\"UI.go('s-map')\">",
    "run": "verify"
   },
   {
-   "name": "the warning is never shown in a fight",
+   "name": "the warning stays after a rest",
    "file": "index.html",
-   "find": "      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);\n      tg.style.display='block';",
-   "replace": "      tg.innerHTML=(this.slamNext ? tg.innerHTML+'<br>' : '')+Coup.tele(this.foe.nm, this.ehp);",
-   "run": "play:coup"
+   "find": "btn.remove(); const l=document.getElementById('nextLow'); if(l) l.remove();",
+   "replace": "btn.remove();",
+   "run": "play:nextfight"
   }
  ]
 }
