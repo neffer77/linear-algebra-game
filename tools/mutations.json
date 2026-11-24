@@ -1,89 +1,89 @@
 {
- "change": "A flourish: eight right in a row can be spent for one blow three times as hard",
+ "change": "A stance: before the first answer of a campaign fight, go in bold or guarded",
  "mutations": [
   {
-   "name": "a flourish from seven in a row",
+   "name": "bold costs nothing",
    "file": "index.html",
-   "find": "  AT: 8, MUL: 3,",
-   "replace": "  AT: 7, MUL: 3,",
+   "find": "    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1.5 },",
+   "replace": "    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1   },",
    "run": "verify"
   },
   {
-   "name": "a flourish lands twice as hard",
+   "name": "guarded costs nothing",
    "file": "index.html",
-   "find": "  AT: 8, MUL: 3,",
-   "replace": "  AT: 8, MUL: 2,",
+   "find": "    guarded: { ic:'🛡️', nm:'Guarded', deal:0.8, take:0.5 }",
+   "replace": "    guarded: { ic:'🛡️', nm:'Guarded', deal:1,   take:0.5 }",
    "run": "verify"
   },
   {
-   "name": "a flourish in the arena too",
+   "name": "a stance in the arena too",
    "file": "index.html",
-   "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
-   "replace": "!B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
+   "find": "  of(B){ return B && B.mode==='campaign' && this.KINDS[B.stance]",
+   "replace": "  of(B){ return B && this.KINDS[B.stance]",
    "run": "verify"
   },
   {
-   "name": "a flourish after the answer",
+   "name": "a stance turned after the answer",
    "file": "index.html",
-   "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish",
-   "replace": "B.mode==='campaign' && !B.over && !B.flourish",
+   "find": "  can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.missed && !B.runBest && !B.combo); },",
+   "replace": "  can(B){ return !!(B && B.mode==='campaign' && !B.over); },",
    "run": "verify"
   },
   {
-   "name": "a flourish keeps the streak",
+   "name": "the stance turns back on itself",
    "file": "index.html",
-   "find": "    B.flourish=true; B.combo=0;\n",
-   "replace": "    B.flourish=true;\n",
+   "find": "    B.stance = this.ORDER[(i+1) % this.ORDER.length];",
+   "replace": "    B.stance = this.ORDER[(i+2) % this.ORDER.length];",
    "run": "verify"
   },
   {
-   "name": "a flourish is never spent",
+   "name": "a stance blow lands as nothing",
    "file": "index.html",
-   "find": "    if(!B || !B.flourish) return false;\n    B.flourish=false;\n",
-   "replace": "    if(!B || !B.flourish) return false;\n",
+   "find": "return m===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*m)); },",
+   "replace": "return m===1 || dmg<=0 ? dmg : Math.round(dmg*m*0.01); },",
    "run": "verify"
   },
   {
-   "name": "a miss keeps the flourish",
+   "name": "a fight starts in the last stance",
    "file": "index.html",
-   "find": "    if(!ok) this.flourish=false;",
-   "replace": "    if(!ok) {}",
-   "run": "verify"
-  },
-  {
-   "name": "a fight starts with the last flourish",
-   "file": "index.html",
-   "find": "    this.flourish=false;   // nor any flourish\n",
+   "find": "    this.stance='even';   // and every fight starts even\n",
    "replace": "\n",
    "run": "verify"
   },
   {
-   "name": "the blow ignores the flourish",
+   "name": "the blow ignores the stance",
    "file": "index.html",
-   "find": "* Flourish.bonus(this) * Phase.bonus(this)",
-   "replace": "* Phase.bonus(this)",
+   "find": "const bonus = Stance.deal(this) * (this.perfect?3:1)",
+   "replace": "const bonus = (this.perfect?3:1)",
    "run": "verify"
   },
   {
-   "name": "in play, the bar offers no flourish",
+   "name": "the guard ignores the stance",
    "file": "index.html",
-   "find": "if(Flourish.can(this) || this.flourish) add('flourish'",
-   "replace": "if(false) add('flourish'",
-   "run": "play:flourish"
+   "find": "this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));",
+   "replace": "this.takeHit((Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));",
+   "run": "verify"
+  },
+  {
+   "name": "in play, the bar offers no stance",
+   "file": "index.html",
+   "find": "if(this.mode==='campaign') add('stance'",
+   "replace": "if(false) add('stance'",
+   "run": "play:stance"
   },
   {
    "name": "in play, the bar is not drawn again",
    "file": "index.html",
-   "find": "B.updateBars(); if(B.renderPowers) B.renderPowers();",
-   "replace": "B.updateBars();",
-   "run": "play:flourish"
+   "find": "    if(B.renderPowers) B.renderPowers();\n    return k;",
+   "replace": "    return k;",
+   "run": "play:stance"
   },
   {
-   "name": "in play, a flourish is spent at once",
+   "name": "in play, a turn is not said",
    "file": "index.html",
-   "find": "  bonus(B){ return B && B.flourish ? this.MUL : 1; },",
-   "replace": "  bonus(B){ return 1; },",
-   "run": "play:flourish"
+   "find": "    UI.toast(B.stance==='bold'",
+   "replace": "    (()=>{})(B.stance==='bold'",
+   "run": "play:stance"
   }
  ]
 }

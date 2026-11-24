@@ -9239,6 +9239,41 @@ const NextFight = {
   }
 };
 
+/* A stance. Before the first answer of a campaign fight the power bar lets
+   the knight choose how to fight it, one tap at a time round three stances:
+   even, as ever; bold, every blow landing a third harder but the foe's landing
+   half again as hard; guarded, the foe's blows halved but the knight's own a
+   fifth lighter. It is a read of the fight ahead: a foe you know cold is worth
+   going in bold against, one you are shaky on is worth guarding against. Once
+   anything is answered the stance is set for the fight. Campaign fights only;
+   it is the fight's, and nothing is saved. */
+const Stance = {
+  ORDER: ['even', 'bold', 'guarded'],
+  KINDS: {
+    even:    { ic:'⚖️', nm:'Even',    deal:1,   take:1   },
+    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1.5 },
+    guarded: { ic:'🛡️', nm:'Guarded', deal:0.8, take:0.5 }
+  },
+  of(B){ return B && B.mode==='campaign' && this.KINDS[B.stance] ? B.stance : 'even'; },
+  can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.missed && !B.runBest && !B.combo); },
+  // round the three, one tap at a time, while nothing is answered
+  turn(B){
+    if(!this.can(B)) return false;
+    const i = this.ORDER.indexOf(this.of(B));
+    B.stance = this.ORDER[(i+1) % this.ORDER.length];
+    const k = this.KINDS[B.stance];
+    UI.toast(B.stance==='bold' ? '🔥 Bold: your blows land a third harder, and the foe\'s half again as hard.'
+           : B.stance==='guarded' ? '🛡️ Guarded: the foe\'s blows are halved, and yours a fifth lighter.'
+           : '⚖️ Even: blows land as ever.');
+    if(B.renderPowers) B.renderPowers();
+    return k;
+  },
+  deal(B){ return this.KINDS[this.of(B)].deal; },
+  // the foe's blow, at least one health, through the stance
+  take(B, dmg){ const m=this.KINDS[this.of(B)].take; return m===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*m)); },
+  label(B){ const k=this.KINDS[this.of(B)]; return `${k.ic} ${k.nm}`; }
+};
+
 /* A flourish. A streak counts toward the blow up to seven in a row and no
    further, so from the eighth the bar offers a flourish: spend the streak,
    and the next right answer lands three times as hard. It is a choice
@@ -10087,6 +10122,7 @@ const Battle = {
     this.sworn=false; this.oathBroken=false;   // nor any oath
     this.asked=0;   // questions asked this fight, which a greedy foe counts
     this.flourish=false;   // nor any flourish
+    this.stance='even';   // and every fight starts even
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -10176,6 +10212,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
+    if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));
     if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));
     add('potion', `${ITEMS.potion.ic} Draught ×${it.potion}`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',`${ITEMS.insight.ic} Insight ×${it.insight}`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
@@ -10681,7 +10718,7 @@ const Battle = {
       const crit = R.chance(w.crit + this.combo*0.02);
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
-      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
+      const bonus = Stance.deal(this) * (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
                   * (staked?3:1) * (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
@@ -10768,7 +10805,7 @@ const Battle = {
       this.diceUp=false;
       let dmg=0;
       for(let i=0;i<blows;i++)
-        dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
+        dmg += this.takeHit(Stance.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3)));
       dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Comeback.note(this);
