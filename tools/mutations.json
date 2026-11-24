@@ -1,75 +1,75 @@
 {
-  "change": "Clean sweep: a win with no miss drops a sure chest with richer odds",
+  "change": "Revenge: the foe that felled you holds your lost gold until you beat it",
   "mutations": [
     {
-      "name": "a sweep in every mode",
+      "name": "falls to one foe do not add up",
       "file": "index.html",
-      "find": "on(B){ return !!(B && B.mode==='campaign' && B.missed===0); },",
-      "replace": "on(B){ return !!(B && B.missed===0); },",
+      "find": "this.owed[key]=(this.owed[key]||0)+gold;",
+      "replace": "this.owed[key]=gold;",
       "run": "verify"
     },
     {
-      "name": "a sweep with a miss in it",
+      "name": "a fall that lost nothing holds something",
       "file": "index.html",
-      "find": "on(B){ return !!(B && B.mode==='campaign' && B.missed===0); },",
-      "replace": "on(B){ return !!(B && B.mode==='campaign' && B.missed<=1); },",
+      "find": "mark(key, gold){ if(gold>0) this.owed",
+      "replace": "mark(key, gold){ if(gold>=0) this.owed",
       "run": "verify"
     },
     {
-      "name": "a sweep's chest only by chance",
+      "name": "a win pays back but does not clear it",
       "file": "index.html",
-      "find": "odds(B, base){ return this.on(B) ? 1 : base; },",
-      "replace": "odds(B, base){ return base; },",
+      "find": "const n=this.owed[key]||0; delete this.owed[key]; return n;",
+      "replace": "const n=this.owed[key]||0; return n;",
       "run": "verify"
     },
     {
-      "name": "a sweep's chest can be a plain one",
+      "name": "a win pays back nothing",
       "file": "index.html",
-      "find": "if((ctx.boss || ctx.sweep) && rar==='common') rar='uncommon';",
-      "replace": "if(ctx.boss && rar==='common') rar='uncommon';",
+      "find": "const n=this.owed[key]||0; delete this.owed[key]; return n;",
+      "replace": "delete this.owed[key]; return 0;",
       "run": "verify"
     },
     {
-      "name": "a sweep draws with no more luck",
+      "name": "a fall holds nothing",
       "file": "index.html",
-      "find": "const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);",
-      "replace": "const luck = ctx.boss ? 2.6 : 1;",
+      "find": "const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;",
+      "replace": "const held=0;",
       "run": "verify"
     },
     {
-      "name": "a sweep's luck is no luck",
+      "name": "the gold won back is not counted on the card",
       "file": "index.html",
-      "find": "  LUCK: 1.6,",
-      "replace": "  LUCK: 1,",
+      "find": "gold+sGold+oGold+rGold, 900);",
+      "replace": "gold+sGold+oGold, 900);",
       "run": "verify"
     },
     {
-      "name": "the card says nothing of a sweep",
+      "name": "the map does not mark the foe",
       "file": "index.html",
-      "find": "          ${Sweep.line(sweep)}\n",
+      "find": "${Revenge.tag(Revenge.of(ri+':'+fi))}",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the card says a sweep for nothing",
+      "name": "the gold is won back but not paid",
       "file": "index.html",
-      "find": "line(on){ return on ? `<div id=\"sweepLine\"",
-      "replace": "line(on){ return true ? `<div id=\"sweepLine\"",
-      "run": "verify"
+      "find": "    const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;",
+      "replace": "    const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;",
+      "run": "play:revenge"
     },
     {
-      "name": "the fight never passes its sweep to the chest",
+      "name": "any foe pays back what another holds",
       "file": "index.html",
-      "find": "const sweep=Sweep.on(this);",
-      "replace": "const sweep=false;",
-      "run": "play:sweep"
+      "find": "const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;",
+      "replace": "const rGold=this.mode==='campaign' ? Revenge.claim(Object.keys(Revenge.owed)[0]) : 0;",
+      "run": "play:revenge"
     },
     {
-      "name": "a win with a miss is told it swept",
+      "name": "the map marks every foe once any holds gold",
       "file": "index.html",
-      "find": "          ${Sweep.line(sweep)}\n",
-      "replace": "          ${Sweep.line(true)}\n",
-      "run": "play:sweep"
+      "find": "${Revenge.tag(Revenge.of(ri+':'+fi))}",
+      "replace": "${Revenge.tag(Object.values(Revenge.owed)[0]||0)}",
+      "run": "play:revenge"
     }
   ]
 }

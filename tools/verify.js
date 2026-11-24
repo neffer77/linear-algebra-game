@@ -3220,7 +3220,7 @@ const overkillNotes = (() => {
   for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
   want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
   const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
   want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
@@ -3376,6 +3376,53 @@ const sweepNotes = (() => {
   want(html.includes('const luck = (ctx.boss ? 2.6 : 1) * (ctx.sweep ? Sweep.LUCK : 1);'), 'luck', 'the chest does not draw with a sweep\'s luck');
   want(html.includes("R.chance(this.foe.boss || this.foe.elite ? 1 : Sweep.odds(this, .5))") && html.includes('Loot.roll({boss:this.foe.boss, sweep, tier:'), 'drop', 'a sweep does not drop a sure chest');
   want(html.includes('${Sweep.line(sweep)}'), 'said', 'the card does not say the sweep');
+  return checks;
+})();
+
+/* Revenge: a campaign foe that fells the knight holds the gold lost in the
+   retreat, and beating it wins that gold back. Worked over runs of falls and
+   wins across several foes: each foe holds the sum of its own falls and no
+   other's, a win over it pays exactly that and clears it, a second win pays
+   nothing, and a fall that lost nothing holds nothing. The fight's wiring is
+   checked where the game uses it. */
+const revengeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Revenge = {'), html.indexOf('const SecondWind = {'));
+  const V = new Function(src + ';return Revenge;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('revenge', key, msg); };
+  const keys = ['0:0', '0:1', '1:2', '2:0'];
+  let seed = 7;
+  const rnd = n => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  for (let run = 0; run < 60; run++) {
+    V.owed = {};
+    const book = {};
+    for (let step = 0; step < 30; step++) {
+      const k = keys[rnd(keys.length)];
+      if (rnd(2)) {
+        const lost = rnd(4) ? rnd(90) : 0;
+        const held = V.mark(k, lost);
+        book[k] = (book[k] || 0) + lost;
+        want(held === book[k], `mark ${run} ${step}`, `${k} holds ${held}, not ${book[k]}`);
+      } else {
+        const paid = V.claim(k);
+        want(paid === (book[k] || 0), `claim ${run} ${step}`, `a win over ${k} paid ${paid}, not ${book[k] || 0}`);
+        delete book[k];
+        want(V.claim(k) === 0 && V.of(k) === 0, `once ${run} ${step}`, `a second win over ${k} still pays`);
+      }
+      for (const o of keys) want(V.of(o) === (book[o] || 0), `of ${run} ${step} ${o}`, `${o} holds ${V.of(o)}, not ${book[o] || 0}`);
+    }
+  }
+  V.owed = {};
+  want(V.mark('0:0', 0) === 0 && !('0:0' in V.owed), 'nothing', 'a fall that lost nothing holds something');
+  want(V.fell('Goblin', 12).includes('id="revengeOwed"') && V.fell('Goblin', 12).includes('12 gold') && V.fell('Goblin', 0) === '', 'fell', 'the defeat does not say what is held');
+  want(V.tag(12).includes('id="revengeTag"') && V.tag(12).includes('12') && V.tag(0) === '', 'tag', 'the map does not mark the foe');
+  want(V.line('Goblin', 12).includes('id="revengeWon"') && V.line('Goblin', 12).includes('12 gold') && V.line('Goblin', 0) === '', 'line', 'the card does not say the revenge');
+  want(html.includes("const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;"), 'held', 'a fall in the campaign does not hold the gold lost');
+  want(html.includes("const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;"), 'paid', 'a win does not pay the gold back, or not in the campaign only');
+  want(html.includes('gold+sGold+oGold+rGold, 900)'), 'counted', 'the card does not count the gold won back');
+  want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
+  want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
   return checks;
 })();
 
@@ -24996,6 +25043,7 @@ console.log(`  first S bonuses checked    ${pad(firstSNotes.toLocaleString(), 10
 console.log(`  today's quarry checked     ${pad(quarryNotes.toLocaleString(), 10)}  (one beaten foe a day, never a boss, the lowest draw of the day; none before a foe is beaten; every beaten foe comes up in a year; a new clear moves it only onto itself; read before the win, full gold, said on the card and the map)`);
 console.log(`  parries checked            ${pad(parryNotes.toLocaleString(), 10)}  (a parry at five, ten, fifteen and on, never otherwise, one at a time, never in the daily or a rite; one blow turned away; shown beside the streak and said on the scene and in the explanation; told once a fight)`);
 console.log(`  clean sweeps checked       ${pad(sweepNotes.toLocaleString(), 10)}  (a win with no miss in the campaign only; a sure chest, never a plain one, with rarer finds than a plain win and a boss's odds tipped further)`);
+console.log(`  revenges checked           ${pad(revengeNotes.toLocaleString(), 10)}  (each foe holds the gold lost to it and no other's, falls adding up; a win over it pays that back once and clears it; said on the defeat, the map and the victory card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
