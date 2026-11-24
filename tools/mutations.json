@@ -1,89 +1,82 @@
 {
-  "change": "An oath: swear to win a fight with no miss, for half again the gold and an epic chest",
+  "change": "A greedy foe: a beaten foe comes back with three times the gold and flees after six questions",
   "mutations": [
     {
-      "name": "an oath can be sworn after an answer",
+      "name": "a greedy foe is always greedy",
       "file": "index.html",
-      "find": "can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.sworn && !B.missed && !B.runBest && !B.combo); },",
-      "replace": "can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.sworn); },",
+      "find": "CHANCE: 0.1, LEAVE: 6, MUL: 3,",
+      "replace": "CHANCE: 1, LEAVE: 6, MUL: 3,",
       "run": "verify"
     },
     {
-      "name": "an oath can be sworn in the arena",
+      "name": "an elite or a boss can be greedy",
       "file": "index.html",
-      "find": "can(B){ return !!(B && B.mode==='campaign' && !B.over",
-      "replace": "can(B){ return !!(B && !B.over",
+      "find": "if(!foe || !beaten || foe.elite || foe.boss || !R.chance(this.CHANCE)) return foe;",
+      "replace": "if(!foe || !beaten || !R.chance(this.CHANCE)) return foe;",
       "run": "verify"
     },
     {
-      "name": "a kept oath pays a quarter more",
+      "name": "a foe never beaten can be greedy",
       "file": "index.html",
-      "find": "Math.round(gold*this.KEPT); },",
-      "replace": "Math.round(gold*0.25); },",
+      "find": "if(!foe || !beaten || foe.elite",
+      "replace": "if(!foe || foe.elite",
       "run": "verify"
     },
     {
-      "name": "a broken oath costs nothing",
+      "name": "a greedy purse is no fatter",
       "file": "index.html",
-      "find": "B.missed ? -Math.round(gold*this.BROKEN) :",
-      "replace": "B.missed ? 0 :",
+      "find": "{gold:Math.round(foe.gold*this.MUL), greedy:true}",
+      "replace": "{gold:foe.gold, greedy:true}",
       "run": "verify"
     },
     {
-      "name": "an oath is broken again at every miss",
+      "name": "a felled greedy foe still flees",
       "file": "index.html",
-      "find": "    if(!B || !B.sworn || B.oathBroken || !B.missed) return false;",
-      "replace": "    if(!B || !B.sworn || !B.missed) return false;",
+      "find": "!B.over && B.ehp>0 && (B.asked||0)>=this.LEAVE; },",
+      "replace": "!B.over && (B.asked||0)>=this.LEAVE; },",
       "run": "verify"
     },
     {
-      "name": "the bar offers no oath",
+      "name": "a greedy foe never flees",
       "file": "index.html",
-      "find": "    if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());\n",
+      "find": "    if(Greedy.gone(this)){ this.escape(); return; }\n",
       "replace": "",
-      "run": "play:oath"
+      "run": "play:greedy"
     },
     {
-      "name": "an answer does not check the oath",
+      "name": "the questions are not counted",
       "file": "index.html",
-      "find": "    if(Oath.check(this)) setTimeout(()=>this.renderPowers(), 60);\n",
+      "find": "    this.asked=(this.asked||0)+1;\n",
       "replace": "",
-      "run": "play:oath"
+      "run": "play:greedy"
     },
     {
-      "name": "the oath is not paid",
+      "name": "the scene does not count the questions",
       "file": "index.html",
-      "find": "    g.gold=Math.max(0, g.gold+vGold);\n",
+      "find": "    if(Greedy.on(this)){ tg.innerHTML=",
+      "replace": "    if(false){ tg.innerHTML=",
+      "run": "play:greedy"
+    },
+    {
+      "name": "the scene does not say it is greedy as it arrives",
+      "file": "index.html",
+      "find": "    else if(Greedy.on(this)) UI.toast(Greedy.intro(f));\n",
       "replace": "",
-      "run": "play:oath"
+      "run": "play:greedy"
     },
     {
-      "name": "a kept oath drops no sure chest",
+      "name": "the card says nothing of the purse",
       "file": "index.html",
-      "find": "march || mile || vow ? 1",
-      "replace": "march || mile ? 1",
-      "run": "play:oath"
-    },
-    {
-      "name": "a kept oath's chest can be plain",
-      "file": "index.html",
-      "find": "if((ctx.march || ctx.vow) && rar!=='legendary')",
-      "replace": "if((ctx.march) && rar!=='legendary')",
-      "run": "play:oath"
-    },
-    {
-      "name": "the card does not say the oath",
-      "file": "index.html",
-      "find": "          ${Oath.line(vGold)}\n",
+      "find": "          ${Greedy.line(this)}\n",
       "replace": "",
-      "run": "play:oath"
+      "run": "play:greedy"
     },
     {
-      "name": "a fight starts with the last one's oath",
+      "name": "no foe is ever greedy",
       "file": "index.html",
-      "find": "    this.sworn=false; this.oathBroken=false;   // nor any oath\n",
-      "replace": "",
-      "run": "play:oath"
+      "find": "this._start(Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));",
+      "replace": "this._start(Elite.roll(this.realm.foes[fi], beaten));",
+      "run": "play:greedy"
     }
   ]
 }
