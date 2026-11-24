@@ -3114,6 +3114,57 @@ const bestGradeNotes = (() => {
   return checks;
 })();
 
+/* Titles for grades: Exemplar for ten foes at S, Crowned for one realm all at
+   S, Paragon for every realm, read from the best grades kept in the map's
+   clears. They join the end of the list, so a save moved by QR code reads its
+   older titles in the same places. */
+const gradeTitleNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const gsrc = html.slice(html.indexOf('const Grade = {'), html.indexOf('const Battle = {'));
+  const i = html.indexOf('const TITLES = ['), tsrc = html.slice(i, html.indexOf('\n];', i) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('gradetitles', key, msg); };
+  const sizes = [4, 4, 4, 4, 4, 4, 5, 4];
+  const REALMS = sizes.map(n => ({ foes: Array.from({ length: n }, () => ({})), bg: {} }));
+  const T = new Function('REALMS', 'Mastery', 'TOPIC_LABEL', gsrc + ';' + tsrc + ';return TITLES;')(REALMS, { all: () => [] }, {});
+  const ids = T.map(t => t.id);
+  want(new Set(ids).size === ids.length, 'ids', 'two titles share an id');
+  // a save code stores titles as bits in this order, so the titles before them never move
+  want(ids.join() === 'first,squire,errant,scholar,form,realm,dragon,ascend,arena10,arena20,poly,magister,devoted,exemplar,crowned,paragon',
+    'order', `the titles moved, which would scramble a save code's titles: ${ids}`);
+  want(T.length <= 255, 'codec', 'more titles than the code\'s 8-bit count');
+  const by = id => T.find(t => t.id === id);
+  let seed = 7; const rnd = n => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  const each = [undefined, true, 'C', 'B', 'A', 'S'];
+  for (let k = 0; k < 4000; k++) {
+    const cleared = {}; let nS = 0; const crowned = [];
+    const bias = rnd(4);   // some knights near the top, so crowns and the Paragon come up
+    REALMS.forEach((r, ri) => {
+      let all = true;
+      r.foes.forEach((f, fi) => {
+        const v = bias === 0 ? (rnd(10) ? 'S' : each[rnd(6)]) : bias === 1 && k % 5 === 0 ? 'S' : each[rnd(6)];
+        if (v !== undefined) cleared[ri + ':' + fi] = v;
+        if (v === 'S') nS++; else all = false;
+      });
+      crowned.push(all);
+    });
+    const g = { cleared, stats: {}, streak: {} };
+    const ok = by('exemplar').t(g) === (nS >= 10) && by('crowned').t(g) === crowned.some(x => x) && by('paragon').t(g) === crowned.every(x => x);
+    if (!ok) want(false, `knight ${k}`, `${nS} at S, crowns ${crowned}: exemplar ${by('exemplar').t(g)}, crowned ${by('crowned').t(g)}, paragon ${by('paragon').t(g)}`);
+    else checks++;
+  }
+  // the tenth foe at S is the one that earns the Exemplar, wherever the ten are
+  for (let n = 0; n <= 12; n++) {
+    const cleared = {}; let left = n;
+    REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { cleared[ri + ':' + fi] = left-- > 0 ? 'S' : 'A'; }));
+    want(by('exemplar').t({ cleared }) === (n >= 10), `exemplar at ${n}`, `${n} foes at S: exemplar ${by('exemplar').t({ cleared })}`);
+  }
+  // an old save's clears of true are no grades at all
+  const old = {}; REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { old[ri + ':' + fi] = true; }));
+  want(!by('exemplar').t({ cleared: old }) && !by('crowned').t({ cleared: old }) && !by('paragon').t({ cleared: old }), 'old', 'clears from before grades earn grade titles');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -26461,6 +26512,7 @@ console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  best grades checked        ${pad(bestGradeNotes.toLocaleString(), 10)}  (a foe's best grade kept in its clear and never lowered, said on the victory card when it rises or still stands above, tagged on the map, and every way a realm can stand checked for its all-S crown)`);
+console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
 console.log(`  ripostes checked           ${pad(riposteNotes.toLocaleString(), 10)}  (a right answer as the foe winds up lands ×1.5, warned of, said on the scene and in the explanation, told once a fight, folded into the strike once, with nothing saved)`);

@@ -3184,9 +3184,11 @@ The game is built so that losing teaches you as much as winning.
   crosses into mastery you get a full-screen MASTERED callout and a fanfare — the same
   treatment a level-up gets. It fires once per topic, and can be lost and re-earned if
   your accuracy on it falls away.
-- **Titles** — thirteen milestones, most tied to understanding rather than grinding
+- **Titles** — sixteen milestones, most tied to understanding rather than grinding
   (*Polymath* for ten topics mastered, *Grand Magister* for all 70), plus a daily practice
-  streak, because spaced practice is how this material actually sticks.
+  streak, because spaced practice is how this material actually sticks. Three come from
+  the best grades on the map: *Exemplar* for ten foes beaten at S, *Crowned* for a realm all
+  at S, and *Paragon* for every realm at S.
 
 ---
 
@@ -3372,6 +3374,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
 | `grade` | a clean, hale win with a streak of five is an S with all three marks ticked and its banner; a miss drops it to an A that names the open mark; two open marks is a B, three a C; the streak line counts that battle alone; nothing is saved |
 | `bestgrade` | a first win keeps its grade with no best to compare; a better win is a new best, a worse one keeps the best in view and never lowers it; the map tags each foe; a foe cleared before grades shows none and holds the crown back; beating the last at S crowns the realm, on the map and once as a banner; nothing is saved |
+| `gradetitles` | nine foes at S earn nothing; the tenth earns Exemplar with its banner; a realm of old clears is no crown; a realm all at S earns Crowned; every realm at S earns Paragon; the titles page lists all three as earned; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `riposte` | the wind-up warns of the riposte; a right answer as it winds up lands half again as hard, on the scene, in a toast once a fight and in the explanation, while the slam still lands braced; a miss or no wind-up ripostes nothing; it stacks with a weak point; a new fight tells it again; nothing is saved |

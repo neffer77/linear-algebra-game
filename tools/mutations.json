@@ -1,68 +1,47 @@
 {
-  "change": "Best grades: each foe keeps its best grade on the map, and an all-S realm is crowned",
+  "change": "Titles for grades: Exemplar, Crowned and Paragon",
   "mutations": [
     {
-      "name": "a worse win lowers the best",
+      "name": "Exemplar at nine",
       "file": "index.html",
-      "find": "keep(had, l){ const b=this.best(had); return b && this.RANK[b]>=this.RANK[l] ? b : l; },",
-      "replace": "keep(had, l){ return l; },",
+      "find": "t:g=>Grade.countS(g.cleared)>=10}",
+      "replace": "t:g=>Grade.countS(g.cleared)>=9}",
       "run": "verify"
     },
     {
-      "name": "an old clear reads as a grade",
+      "name": "an old clear counts as S",
       "file": "index.html",
-      "find": "best(v){ return typeof v==='string' && v in this.RANK ? v : null; },",
-      "replace": "best(v){ return v===true ? 'C' : typeof v==='string' && v in this.RANK ? v : null; },",
+      "find": "countS(cleared){ return Object.values(cleared||{}).filter(v=>v==='S').length; },",
+      "replace": "countS(cleared){ return Object.values(cleared||{}).filter(v=>v==='S'||v===true).length; },",
       "run": "verify"
     },
     {
-      "name": "a new best is never said",
+      "name": "Crowned needs every realm",
       "file": "index.html",
-      "find": "    if(!b || b===l) return '';\n",
-      "replace": "    if(!b || b===l || this.RANK[l]>this.RANK[b]) return '';\n",
+      "find": "    t:g=>REALMS.some((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))},",
+      "replace": "    t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))},",
       "run": "verify"
     },
     {
-      "name": "one S crowns a realm",
+      "name": "Paragon needs one realm",
       "file": "index.html",
-      "find": "crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])!=='S') return false; return n>0; },",
-      "replace": "crowned(cleared, ri, n){ for(let fi=0; fi<n; fi++) if(this.best((cleared||{})[ri+':'+fi])==='S') return n>0; return false; },",
+      "find": "    t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}\n];",
+      "replace": "    t:g=>REALMS.some((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}\n];",
       "run": "verify"
     },
     {
-      "name": "the clear keeps true",
+      "name": "the grade titles go first",
       "file": "index.html",
-      "find": "    g.cleared[key]=Grade.keep(had, Grade.of(marks));\n",
-      "replace": "",
+      "find": "const TITLES = [\n",
+      "replace": "const TITLES = [\n  {id:'exemplar0', ic:'🏅', nm:'Exemplar', ds:'Beat 10 foes at S', t:g=>Grade.countS(g.cleared)>=10},\n",
       "run": "verify"
     },
     {
-      "name": "the map shows no best",
+      "name": "Exemplar is never earned",
       "file": "index.html",
-      "find": "'<span class=\"tag g\">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi])",
-      "replace": "'<span class=\"tag g\">cleared</span>'",
-      "run": "verify"
-    },
-    {
-      "name": "the crown is never drawn",
-      "file": "index.html",
-      "find": "crown(on){ return on ?",
-      "replace": "crown(on){ return false ?",
-      "run": "verify"
-    },
-    {
-      "name": "the card leaves out the best",
-      "file": "index.html",
-      "find": "${this.next(m)}</div>${this.bestLine(had, g)}",
-      "replace": "${this.next(m)}</div>",
-      "run": "verify"
-    },
-    {
-      "name": "a crown is celebrated every win",
-      "file": "index.html",
-      "find": "const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);",
-      "replace": "const crowned=Grade.crowned(g.cleared, this.ri, nfoes);",
-      "run": "play:bestgrade"
+      "find": "t:g=>Grade.countS(g.cleared)>=10}",
+      "replace": "t:g=>false}",
+      "run": "play:gradetitles"
     }
   ]
 }
