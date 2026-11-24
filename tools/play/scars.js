@@ -59,6 +59,17 @@ module.exports = {
     t.ok('past each quarter lost, one crack more: one, then two, then three', one.cuts.join() === '1' && two.cuts.join() === '2' && three.cuts.join() === '3', JSON.stringify([one.cuts, two.cuts, three.cuts]));
     const seen = await still(t);
     t.ok('and they show: one crack changes the foe as drawn, three change it more', seen[0] === 0 && seen[1] > 100 && seen[2] > seen[1] + 100, JSON.stringify(seen));
+    // in its last quarter the foe reels from its feet, both ways; before it, it stands still
+    const reel = async (share) => {
+      await t.ev((share) => { Battle.over = false; Battle.ehp = Math.max(1, Math.round(Battle.emax * share));
+        window.__rl = []; const f = Scars.reel; window.__rlFn = f;
+        Scars.reel = (n, tt) => { const r = f.call(Scars, n, tt); window.__rl.push(r); return r; }; }, share);
+      await sleep(700);
+      return t.ev(() => { Scars.reel = window.__rlFn; return window.__rl; });
+    };
+    const near = await reel(0.1), half = await reel(0.45);
+    t.ok('a foe in its last quarter reels on its feet, both ways, and one with more left stands', near.length > 3 && near.some(r => r > 0.01) && near.some(r => r < -0.01) && half.length === 0,
+      JSON.stringify([near.length, Math.min(...near), Math.max(...near), half.length]));
     const won = await at(t, 0.1, 'win');
     t.ok('a fight that is over draws none', won.cuts.length === 0 || won.cuts.join() === '0', JSON.stringify(won));
     // the knight's plate: a dent for each quarter lost, gone as health comes back
