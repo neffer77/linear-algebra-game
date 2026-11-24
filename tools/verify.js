@@ -3904,6 +3904,69 @@ const greedyNotes = (() => {
   return checks;
 })();
 
+/* Scouting. Every campaign foe with a weak point the game can ask can be
+   scouted, and the card offers it by name, or says the knight is prepared
+   once they are; only the scouted foe's next campaign fight is prepared, and
+   that fight spends it, so a second fight is plain again; an arena, daily or
+   dungeon fight never is. Prepared, a right answer on the weak point lands
+   twice as hard and the chip says so; on another topic, nothing changes. The
+   wiring is checked where it lives. */
+const scoutNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const weak = html.slice(html.indexOf('const Weak = {'), html.indexOf('const Bestiary = {'));
+  const src = html.slice(html.indexOf('const Scout = {'), html.indexOf('/* Second wind. Once a campaign fight,'));
+  const P = new Function('const H=400; const UI={toast(){}}; const Anim={float(){}}; const TOPIC_LABEL={};' + realms + weak +
+    'const GEN=new Proxy({}, {get:(o,k)=>k==="nosuch" ? undefined : ()=>({})});' + src + ';return {Scout, Weak, REALMS};')();
+  const { Scout: S, Weak: W, REALMS: RS } = P;
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('scout', key, msg); };
+  want(W.PREP === 2 && W.MUL === 1.5, 'mul', `prepared ×${W.PREP}, plain ×${W.MUL}`);
+  RS.forEach((r, ri) => r.foes.forEach((f, fi) => {
+    const k = S.key(f);
+    want(k === W.OF[f.nm], `key ${f.nm}`, `${f.nm} is scouted on ${k}`);
+    S.at = null;
+    const h = S.html({ ri, fi, f });
+    want(h.includes('id="scoutGo"') && h.includes(`Scout.open(${ri},${fi})`) && h.includes(`Scout ${f.nm}`) && !h.includes('scoutReady'), `offer ${f.nm}`, h);
+    S.at = { ri, fi };
+    const r = S.html({ ri, fi, f });
+    want(r.includes('id="scoutReady"') && r.includes(`Prepared for ${f.nm}`) && r.includes('×2') && !r.includes('scoutGo'), `ready ${f.nm}`, r);
+    want(!S.html({ ri, fi: (fi + 1) % 4, f: RS[ri].foes[(fi + 1) % 4] }).includes('scoutReady'), `other ${f.nm}`, 'a foe not scouted is said to be prepared for');
+  }));
+  want(S.html(null) === '' && S.key({ nm: 'Straw Knight' }) === null, 'none', 'a foe with no weak point can be scouted');
+  let seed = 9;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  const modes = ['campaign', 'campaign', 'campaign', 'arena', 'daily', 'dungeon'];
+  for (let step = 0; step < 4000; step++) {
+    const at = rnd(4) ? { ri: rnd(3), fi: rnd(4) } : null;
+    S.at = at && { ...at };
+    const B = { mode: modes[rnd(6)], ri: rnd(3), fi: rnd(4) };
+    const match = !!at && B.mode === 'campaign' && at.ri === B.ri && at.fi === B.fi;
+    const got = S.spend(B);
+    want(got === match, `spend ${step}`, `${B.mode} fight ${B.ri}:${B.fi} with ${JSON.stringify(at)} scouted: prepared ${got}`);
+    want(match ? S.at === null : JSON.stringify(S.at) === JSON.stringify(at), `spent ${step}`, `the scouting left: ${JSON.stringify(S.at)}`);
+    if (match) want(S.spend(B) === false, `twice ${step}`, 'a second fight is prepared too');
+  }
+  // the weak point, prepared and not
+  const foe = RS[0].foes[0], k = W.OF[foe.nm], other = RS[0].pool.find(t => t !== k);
+  for (const prepared of [false, true]) {
+    const on = { mode: 'campaign', foe, cur: { key: k }, prepared }, off = { mode: 'campaign', foe, cur: { key: other }, prepared };
+    want(W.bonus(on) === (prepared ? 2 : 1.5) && W.chip(on).includes(prepared ? '×2' : '×1.5'), `on ${prepared}`, `${W.bonus(on)} ${W.chip(on)}`);
+    want(W.bonus(off) === 1 && W.chip(off) === '', `off ${prepared}`, 'a question on another topic lands harder');
+  }
+  want(S.intro({ nm: 'Imp' }).includes('scouted Imp') && S.intro({ nm: 'Imp' }).includes('×2'), 'intro', S.intro({ nm: 'Imp' }));
+  // the wiring
+  want(html.includes('this.prepared=Scout.spend(this); // a foe scouted first is fought prepared'), 'start', 'a fight does not spend the scouting');
+  want(html.includes('else if(this.prepared) UI.toast(Scout.intro(f));') && html.includes('${Scout.html(nx)}'), 'said', 'the scouting is not offered or told');
+  const ans = src.slice(src.indexOf('  answer('), src.indexOf('  spend('));
+  want(ans.includes('Game.recordAnswer(q.key, ok, 1);') && /if\(ok\)\{\s*this\.at=\{ri:this\.ri, fi:this\.fi\};/.test(ans) && !/else[\s\S]*this\.at=/.test(ans), 'answer', 'scouting is not counted, or a miss prepares the knight');
+  const op = src.slice(src.indexOf('  open('), src.indexOf('  ask('));
+  want(op.includes('${c.rule?') && op.indexOf('c.rule') < op.indexOf('this.ask()'), 'teach', 'the rule is not shown before the question');
+  return checks;
+})();
+
 /* A heroic rematch. Every foe made heroic keeps its name, health and art,
    pays twice the gold and half again the experience and hits a quarter
    harder, and the foe it came from is untouched; only a campaign fight with
@@ -25635,6 +25698,7 @@ console.log(`  oaths checked              ${pad(oathNotes.toLocaleString(), 10)}
 console.log(`  greedy foes checked        ${pad(greedyNotes.toLocaleString(), 10)}  (only a beaten plain foe, about one in ten, its gold tripled and all else kept; flees once six questions are asked while it stands, in the campaign; a flight costs nothing)`);
 console.log(`  chest riddles checked      ${pad(riddleNotes.toLocaleString(), 10)}  (each rarity rises one step and the legendary offers none; only a campaign find with a topic offers one; a find made at a rarity is of it, and a rolled find keeps its context; offered once, counted toward the topic, a miss keeps the find)`);
 console.log(`  heroic rematches checked   ${pad(heroicNotes.toLocaleString(), 10)}  (twice the gold, half again the experience, a quarter harder blows and all else kept; only a campaign fight, only a beaten foe asked for, never elite or greedy as well; the hardest riddles)`);
+console.log(`  scouting checked           ${pad(scoutNotes.toLocaleString(), 10)}  (every foe with a weak point offered by name; only its next campaign fight prepared, and spent by it; prepared, its weak point lands ×2 and says so; the rule shown before the question; a miss prepares nothing)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
