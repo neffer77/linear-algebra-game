@@ -7481,8 +7481,41 @@ function drawKnight(x,y,s,lunge,hurt,dead,pose){
   cx.restore();
 }
 
+/* ---------- Scars ----------
+   A foe wears its wounds. Each quarter of its health lost opens a crack
+   across it: one past three quarters, two past half, three past a quarter.
+   The cracks are drawn in the sprite's own frame, so they ride with its bob
+   and its lunge, and a fight's progress reads off the foe itself as well as
+   off the bar. A fallen foe, or a fight that is over, wears none. Nothing
+   is saved. */
+const Scars = {
+  CUTS:[ [[-18,-90],[-8,-80],[-15,-68],[-3,-58]],
+         [[17,-98],[8,-86],[19,-75],[10,-62]],
+         [[-26,-50],[-12,-46],[-6,-36],[7,-31]] ],
+  DROP:{slime:28},       // the slime is short: its cracks sit lower
+  of(B){
+    if(!B || !B.foe || B.over || !(B.emax>0)) return 0;
+    const k=B.ehp/B.emax;
+    return k>0.75 ? 0 : k>0.5 ? 1 : k>0.25 ? 2 : 3;
+  },
+  cut(n, art){
+    n=Math.min(n|0, this.CUTS.length);
+    if(n<=0) return 0;
+    const dy=this.DROP[art]||0;
+    cx.save(); cx.lineCap='round'; cx.lineJoin='round';
+    for(let i=0;i<n;i++){
+      cx.beginPath();
+      this.CUTS[i].forEach(([x,y],j)=> j ? cx.lineTo(x,y+dy) : cx.moveTo(x,y+dy));
+      cx.strokeStyle='#1a1622'; cx.lineWidth=4; cx.stroke();
+      cx.strokeStyle='rgba(255,236,200,.55)'; cx.lineWidth=1.3; cx.stroke();
+    }
+    cx.restore();
+    return n;
+  }
+};
+
 /* --- enemies --- */
-function drawFoe(x,y,s,art,col,lunge,hurt,dead){
+function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){
   cx.save();
   cx.translate(x - lunge*70, y);
   if(dead){ cx.rotate(0.9); cx.globalAlpha=.5; }
@@ -7641,6 +7674,7 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
     cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(0,-70); cx.closePath();
     setFill('#d8e0ec'); cx.fill(); cx.restore();
   }
+  if(scars) Scars.cut(scars, art);   // its wounds, riding with it
   cx.restore();
 }
 function shadeCol(hex,amt){
@@ -8124,7 +8158,7 @@ const Anim = {
         cx.beginPath(); cx.ellipse(605, gy-96, 92+r*6, 118+r*6, 0, 0, 7); cx.stroke(); cx.restore();
       }
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
-                              eLunge, Anim.eh, B.over==='win'));
+                              eLunge, Anim.eh, B.over==='win', Scars.of(B)));
     }
     // ---- impact decoration, over the sprites ----
     cx.save();
