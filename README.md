@@ -901,6 +901,10 @@ The game is built so that losing teaches you as much as winning.
 - **🕸️ A shorter skills list.** Gear shows the skills carried and any with a use; the ones with no use yet
   wait behind one line that counts them ("＋ 7 more skills with no uses yet") and opens in place, where any of
   them can still be carried. A count of one topic now reads "1 needs work". Nothing new is saved.
+- **🛤️ A shorter victory card.** A win that meets the whole road (a scout, a wayfarer, a campfire, a peddler
+  and a dicer) shows the first two and folds the rest behind one line that counts them ("＋ 3 more on the road"),
+  which opens in place and stays open while the card redraws. "Fight again" and the Smithy share one row, so the
+  way back to the map sits higher on a phone. Nothing new is saved.
 - **💫 Dazed.** A beaten foe lies where it fell with three little gold stars circling its head until the
   victory card comes up.
 - **🛡️ Dents.** The knight wears their wounds as well: each quarter of their health lost beats a dent into
@@ -3364,6 +3368,7 @@ Inside `index.html` the code is organised as:
 | `Nameplate` | the bars' halves free to shrink below their content, the foe's name wrapping, the health beside it never wrapped or squeezed; the labels where the rules expect them |
 | `Ware` | every piece beside every worn piece: green only when nothing is lost, each difference at its true size, the worn piece named; the fold shows to the next two out of reach, never hides an owned or affordable piece or a lone row, opens when asked; wired into the Smithy |
 | `Skillset` | every mix of carried skills, skills with uses and skills with none: the first two in view and in order, the rest behind one counted fold, never a lone one folded, none dropped or doubled; the fold stays as it was left; one topic "needs work"; wired into Gear and both strand badges |
+| `Road` | every mix of five road offers, each there or empty: the first two in view and in order, the rest behind one counted fold, never a road of three folded, no empty offer drawn or counted, none dropped or doubled; the fold stays as it was left and a new fight starts it folded; Fight again and the Smithy in one row |
 | `Daze` | three gold stars circling a beaten foe's head, found by turning the crown by the angle a foe falls at, at the foe's own size; on a ring round the head, circling; the canvas state kept; drawn only on a won fight; the wiring |
 | `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Waymark` | every realm greeted with a line of its own, none alike; only campaign fights in a realm with no foe yet beaten, never a boss, never the daily, an arena or a dungeon; the name in capitals and the realm's colour; once, as the fight opens, after the herald; the wiring |
