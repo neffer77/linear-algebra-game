@@ -73,6 +73,7 @@ module.exports = {
     await t.ev(() => { Battle.flee(); UI.go('s-map'); });
     // the Smithy shows each piece as the fight will draw it
     const shop = await t.ev(() => {
+      Ware.open = { w: 1, a: 1 };   // every piece, the dearer ones unfolded
       UI.go('s-shop');
       const rows = [...document.querySelectorAll('#s-shop .item')].map(r => ({ nm: r.querySelector('.nm').innerText, s: r.querySelector('.ic svg.armsee') }));
       const ws = WEAPONS.filter(w => !w.forge), as = ARMORS.filter(a => !a.forge);

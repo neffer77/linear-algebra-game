@@ -1,33 +1,68 @@
 {
-  "change": "Nameplate: a long foe nameplate wraps in its own half of the bars and never pushes the foe's health off a phone's screen",
+  "change": "A shorter skills list: Gear folds the skills with no use yet behind one counted line, and one topic needs work",
   "mutations": [
     {
-      "name": "the health pushed off the screen",
+      "name": "a carried skill folded",
       "file": "index.html",
-      "find": ".bars>.bar{min-width:0}\n",
-      "replace": "\n",
+      "find": "    const shown=rows.filter(r=>r.on||r.n>0), rest=rows.filter(r=>!(r.on||r.n>0));",
+      "replace": "    const shown=rows.filter(r=>r.n>0), rest=rows.filter(r=>!(r.n>0));",
       "run": "verify"
     },
     {
-      "name": "a long name never wraps",
+      "name": "a lone skill folded",
       "file": "index.html",
-      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
-      "replace": "\n",
+      "find": "    if(rest.length<2) return rows.map(r=>r.html).join('');",
+      "replace": "    if(rest.length<1) return rows.map(r=>r.html).join('');",
       "run": "verify"
     },
     {
-      "name": "the health pushed off the screen, seen in play",
+      "name": "the fold forgets it was opened",
       "file": "index.html",
-      "find": ".bars>.bar{min-width:0}\n.bar .lbl{gap:6px}\n#foeName{min-width:0; overflow-wrap:anywhere}\n#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
-      "replace": "\n",
-      "run": "play:nameplate"
+      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
+      "replace": "id=\"skillRest\" ontoggle",
+      "run": "verify"
     },
     {
-      "name": "a long name never wraps, seen in play",
+      "name": "the folded count wrong",
       "file": "index.html",
-      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
-      "replace": "#foeName{min-width:0}\n",
-      "run": "play:nameplate"
+      "find": "<summary>＋ ${rest.length} more skills",
+      "replace": "<summary>＋ ${rows.length} more skills",
+      "run": "verify"
+    },
+    {
+      "name": "one topic need work",
+      "file": "index.html",
+      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
+      "replace": "  work(k){ return k+' need work'; }",
+      "run": "verify"
+    },
+    {
+      "name": "Gear does not fold",
+      "file": "index.html",
+      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
+      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
+      "run": "verify"
+    },
+    {
+      "name": "Gear does not fold, seen in play",
+      "file": "index.html",
+      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
+      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
+      "run": "play:skillset"
+    },
+    {
+      "name": "the fold forgets, seen in play",
+      "file": "index.html",
+      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
+      "replace": "id=\"skillRest\" ontoggle",
+      "run": "play:skillset"
+    },
+    {
+      "name": "one topic need work, seen in play",
+      "file": "index.html",
+      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
+      "replace": "  work(k){ return k+' need work'; }",
+      "run": "play:skillset"
     }
   ]
 }

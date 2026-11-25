@@ -175,6 +175,12 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .nm{font-weight:800;font-size:14px}
 .item .ds{font-size:12px;color:var(--dim)}
 .item.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.3)}
+.item .vs{font-size:12px;font-weight:700;color:var(--dim)}
+.item .vs.up{color:var(--green)}
+details.skillRest>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
+details.skillRest>summary::-webkit-details-marker{display:none}
+details.skillRest[open]>summary{color:var(--dim)}
+.wareMore{margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
 
 #powerbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px}
@@ -9417,6 +9423,60 @@ const Topics = {
   }
 };
 
+/* Ware. The Smithy listed every blade and every coat at full length, from the
+   one in hand to one that costs seven purses, and said what each did but not
+   what it would do for you. Each row now says what it adds over what you wear,
+   or what it would cost you to go back to it; and the list runs only to the
+   next two you cannot yet afford, the dearer ones behind a fold that names how
+   dear they get. Nothing new is saved: the fold opens for this sitting. */
+const Ware = {
+  AHEAD:2, open:{},
+  // what a piece does beside the one worn: null for the worn piece itself
+  gain(kind,it,worn){
+    if(!it||!worn||it.id===worn.id) return null;
+    const f=kind==='w'
+      ? [[it.dmg-worn.dmg,' damage',' less damage'],[Math.round(it.crit*100)-Math.round(worn.crit*100),'% crit','% less crit']]
+      : [[it.def-worn.def,' defence',' less defence'],[it.hp-worn.hp,' health',' less health']];
+    const up=f.filter(x=>x[0]>0), down=f.filter(x=>x[0]<0);
+    if(!up.length&&!down.length) return {up:false, text:'The same as your '+worn.nm};
+    if(!down.length) return {up:true, text:up.map(x=>'+'+x[0]+x[1]).join(', ')+' over your '+worn.nm};
+    if(!up.length) return {up:false, text:down.map(x=>(-x[0])+x[2]).join(', ')+' than your '+worn.nm};
+    return {up:false, text:f.filter(x=>x[0]).map(x=>(x[0]>0?'+':'−')+Math.abs(x[0])+x[1]).join(', ')+' against your '+worn.nm};
+  },
+  line(kind,it,worn){ const g=this.gain(kind,it,worn); return g?\`<div class="vs\${g.up?' up':''}">\${g.text}</div>\`:''; },
+  // how many rows to show: up to the next AHEAD pieces not owned and out of reach
+  shown(kind,list,owned,gold){
+    if(this.open[kind]) return list.length;
+    const i=list.findIndex(x=>!owned(x)&&x.cost>gold);
+    if(i<0) return list.length;
+    const n=i+this.AHEAD;
+    return list.length-n<2 ? list.length : n;   // one more row is shown, not folded
+  },
+  more(kind,rest){
+    if(!rest.length) return '';
+    const top=Math.max(...rest.map(x=>x.cost)), what=kind==='w'?'blades':'coats';
+    return \`<div class="wareMore" id="wareMore\${kind}" role="button" tabindex="0" onclick="Ware.open['\${kind}']=1;UI.renderShop()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Ware.open['\${kind}']=1;UI.renderShop()}">＋ \${rest.length} dearer \${what}, up to 🪙 \${top}</div>\`;
+  }
+};
+
+/* Skillset. Gear listed all ten skills at full length, the three carried and
+   seven more with no use yet, so the skills that do something were lost in a
+   wall of ones that cannot. The carried skills and any with a use stay in view;
+   the rest wait behind one line that says how many, and open in place, every
+   one still there to read and to carry. The fold stays open for this sitting. */
+const Skillset = {
+  open:false,
+  // rows: {on, n, html}. Shown: carried or with a use; the rest folded, unless only one
+  fold(rows){
+    const shown=rows.filter(r=>r.on||r.n>0), rest=rows.filter(r=>!(r.on||r.n>0));
+    if(rest.length<2) return rows.map(r=>r.html).join('');
+    return shown.map(r=>r.html).join('')+
+      \`<details class="skillRest" id="skillRest"\${this.open?' open':''} ontoggle="Skillset.open=this.open"><summary>＋ \${rest.length} more skills with no uses yet</summary>\${rest.map(r=>r.html).join('')}</details>\`;
+  },
+  // "1 needs work", "4 need work"
+  work(k){ return k+(k===1?' needs work':' need work'); }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -17700,29 +17760,33 @@ const UI = {
     const g=Game.s, out=[];
     const buy=(kind,id,cost,owned)=>\`onclick="Shop.buy('\${kind}','\${id}',\${cost})"\`;
     out.push('<div class="panel"><h2>⚔️ Weapons</h2>');
-    WEAPONS.filter(w=>!w.forge).forEach(w=>{
+    const own=x=>!!g.owned[x.id], ws=WEAPONS.filter(w=>!w.forge), wn=Ware.shown('w',ws,own,g.gold), wWorn=Game.weapon();
+    ws.slice(0,wn).forEach(w=>{
       const owned=!!g.owned[w.id], eq=g.weapon===w.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
         <div class="ic">\${Arms.bladeSvg(w.id)||w.ic}</div>
         <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">\${w.ds}</div>
-          <div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div>
+          <div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div>\${Ware.line('w',w,wWorn)}</div>
         \${eq?'<span class="pill">equipped</span>':
           owned?\`<button class="btn sm" style="width:auto" onclick="Shop.equip('w','\${w.id}')">Equip</button>\`:
           \`<button class="btn sm gold" style="width:auto" \${buy('w',w.id,w.cost)}>🪙 \${w.cost}</button>\`}
       </div>\`);
     });
+    out.push(Ware.more('w',ws.slice(wn)));   // the dearer blades, behind a fold
     out.push('</div><div class="panel"><h2>🛡️ Armour</h2>');
-    ARMORS.filter(a=>!a.forge).forEach(a=>{
+    const as=ARMORS.filter(a=>!a.forge), an=Ware.shown('a',as,own,g.gold), aWorn=Game.armor();
+    as.slice(0,an).forEach(a=>{
       const owned=!!g.owned[a.id], eq=g.armor===a.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
         <div class="ic">\${Arms.plateSvg(a.id)||a.ic}</div>
         <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">\${a.ds}</div>
-          <div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div>
+          <div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div>\${Ware.line('a',a,aWorn)}</div>
         \${eq?'<span class="pill">equipped</span>':
           owned?\`<button class="btn sm" style="width:auto" onclick="Shop.equip('a','\${a.id}')">Equip</button>\`:
           \`<button class="btn sm gold" style="width:auto" \${buy('a',a.id,a.cost)}>🪙 \${a.cost}</button>\`}
       </div>\`);
     });
+    out.push(Ware.more('a',as.slice(an)));   // and the dearer coats
     /* The benches that spend what the realms give up — ore, essence, herbs,
        pages — are rooms of the Keep now, not the bottom of this list. What is
        left here is what gold buys, and a door to the rest. */
@@ -17752,11 +17816,11 @@ const UI = {
      them is to get better at vectors. */
   loadoutPanel(){
     const chosen=Loadout.chosen().map(a=>a.id);
-    const rows=SKILL_ABILITIES.map(ab=>{
+    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{
       const on=chosen.indexOf(ab.id)>=0, n=Loadout.charges(ab), band=Loadout.band(ab);
       const pct=Math.round(Loadout.reach(ab)*100);
       const col=Mastery.colour(Loadout.reach(ab));
-      return \`<div class="item \${on?'equipped':''}" style="cursor:pointer" onclick="Loadout.toggle('\${ab.id}')">
+      return {on, n, html:\`<div class="item \${on?'equipped':''}" style="cursor:pointer" onclick="Loadout.toggle('\${ab.id}')">
         <div class="ic">\${ab.ic}</div>
         <div style="flex:1">
           <div class="nm">\${ab.nm}
@@ -17768,8 +17832,8 @@ const UI = {
           </div>
         </div>
         <span class="pill">\${on?'carried':'carry'}</span>
-      </div>\`;
-    }).join('');
+      </div>\`};
+    }));   // the skills with no use yet folded behind one line
     return \`<div class="panel"><h2>🕸️ Skills</h2>
       <div class="sub">Three carried into every fight. Uses are not bought — they come
         from how well you know the mathematics behind them, and refill each fight.
@@ -17846,7 +17910,7 @@ const UI = {
         <div class="small" style="margin-bottom:6px">
           Mastery, weakest first. The game uses this to choose what to ask you next.<br>
           <b style="color:var(--green)">\${solid} solid</b> ·
-          <b style="color:var(--red)">\${shaky} need work</b> ·
+          <b style="color:var(--red)">\${Skillset.work(shaky)}</b> ·
           <b style="color:var(--purple)">\${dueN} due for review</b>\${untouched?\` · \${untouched} not yet seen\`:''}
         </div>
         \${rows.length?UI.chronicleBody(rows):'<div class="small">No riddles answered yet.</div>'}
@@ -17889,7 +17953,7 @@ const UI = {
         return \`<details class="strand">
           <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
             <span class="sbadge\${weak?' warn':''}" style="color:\${weak?'':Mastery.colour(avg)}">\${
-              weak? weak+' need work' : Math.round(avg*100)+'%'}</span></summary>
+              weak? Skillset.work(weak) : Math.round(avg*100)+'%'}</span></summary>
           <div class="strandBody">\${mine.map(k=>bar(k,seen.get(k))).join('')}
             \${unseen?\`<div class="small">\${unseen} not yet seen in this strand</div>\`:''}</div>
         </details>\`;
@@ -42991,7 +43055,7 @@ const Train = {
           const weak=keys.filter(k=>{const r=Game.s&&Game.s.topicStats[k]; return r&&r.seen&&Mastery.eff(k)<0.6;}).length;
           return \`<details class="strand" ontoggle="Train.soleOpen(this)">
             <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
-              <span class="sbadge\${weak?' warn':''}">\${weak?weak+' need work':keys.length+' topics'}</span></summary>
+              <span class="sbadge\${weak?' warn':''}">\${weak?Skillset.work(weak):keys.length+' topics'}</span></summary>
             <div class="strandBody">\${keys.map(k=>{
               const r=Game.s&&Game.s.topicStats[k];
               // what you know now, so a topic that has slipped says so here too
