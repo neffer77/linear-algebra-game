@@ -859,6 +859,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div class="track" style="margin-top:6px;height:10px"><div class="fill" id="sagaBar" style="background:var(--gold);height:100%"></div></div>
     </div>
     <div id="sagaList"></div>
+    <div id="letterList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -8755,6 +8756,60 @@ const Talk = {
   }
 };
 
+/* A reckoning. Under every fight on the map that is open to the
+   knight, two numbers worked out of the ones above them: how many plain
+   blows of the knight's weapon fell the foe, its health divided by the
+   weapon's blow and rounded up, and how many of the foe's blows would fell
+   the knight as they stand now, their health divided by the foe's blow
+   through their armour, rounded up the same way. A plain blow has no
+   streak, no speed and no critical in it, so a good fight takes fewer; the
+   wind-up slam and a boss's second phase are left out, so a hard one can
+   take more. Its title shows the sum. It reads the save and writes nothing. */
+const Reckon = {
+  blow(){ return Math.max(1, Game.weapon().dmg); },
+  def(){ return Game.armor().def + Runes.def(); },
+  of(f, g){
+    if(!f || !g) return null;
+    const blow=this.blow(), hit=Combat.foeHit(f.atk, this.def(), 1), hp=Math.max(1, Math.round(g.hp));
+    return { blow, hit, hp, blows:Math.ceil(f.hp/blow), falls:Math.ceil(hp/hit) };
+  },
+  line(f, g){
+    const s=this.of(f, g);
+    if(!s) return '';
+    const tip=`${f.hp} ÷ ${s.blow} = ${(f.hp/s.blow).toFixed(1)}, so ${s.blows}; your ${s.hp} ÷ its ${s.hit} = ${(s.hp/s.hit).toFixed(1)}, so ${s.falls}`;
+    const risk=s.falls<=s.blows ? ' style="color:#ff8f6b"' : '';
+    return `<div class="dt reckon" data-blows="${s.blows}" data-falls="${s.falls}" title="${tip}"${risk}>🗡️ ${s.blows} plain ${s.blows===1?'blow fells':'blows fell'} it · 💔 ${s.falls} of its ${s.falls===1?'blow fells':'blows fell'} you</div>`;
+  }
+};
+
+/* A herald. A realm's boss is announced as it arrives: its name across the
+   screen in its own colour, and under it what it is in its own mathematics,
+   the same trick the Saga tells once it has fallen, so the fight that ends a
+   realm opens like one and the line is a hint of how to beat it. Campaign
+   bosses only, a rematch and a gauntlet's included, never the daily's straw
+   knight or a dungeon's; said once as the fight opens, touching nothing in
+   it. Nothing is saved. */
+const Herald = {
+  SAY: {
+    'The Vector Wyrm':        'its coils point every way and add up to nowhere',
+    'The Determinant Golem':  'it undoes every blow while its determinant holds',
+    'The Tangent Wraith':     'it lives on a line that touches its curve at one point',
+    'The Lich of Limits':     'it keeps the strips of an area and never lets their sum close',
+    'The Eigen Dragon':       'its fire runs along its own lines and no others',
+    'The Spectral Sovereign': 'it breaks all it touches into parts only it can name',
+    'The Unbounded':          'it swears it grows without end',
+    'The Gradient Itself':    'the way up, from wherever you stand'
+  },
+  on(B){ return !!(B && B.mode==='campaign' && B.foe && B.foe.boss && this.SAY[B.foe.nm]); },
+  text(f){ return '👑 '+f.nm.toUpperCase(); },
+  announce(B){
+    if(!this.on(B)) return false;
+    const f=B.foe;
+    Celebrate.banner(this.text(f), this.SAY[f.nm], f.col, ()=>{ Sfx.slam(); Haptic.hit(); });
+    return true;
+  }
+};
+
 /* ---------- Elite rematches ----------
    A campaign foe you have already beaten comes back, one fight in four, as
    an elite with one twist. Each twist leans on something worth practising.
@@ -8975,6 +9030,53 @@ const Bestiary = {
       this.shot(c, e.f, e.beaten);
     });
   }
+};
+
+/* Letters from home. Every tenth victory a knight wins, a letter comes from
+   Maren, who taught them their sums in the village of Linden Ford: news from
+   home, a little of what the mathematics has done there, and a Healing Draught
+   tucked inside. There are eight, and the Saga page keeps every one received
+   to be read again and says at which victory the next arrives. They are read
+   from the victories the game already counts, so nothing new is saved. */
+const Letters = {
+  EVERY: 10, FROM: 'Maren',
+  L: [
+   'All of Linden Ford heard you rode out. The miller says a knight who fights with arithmetic has lost the plot, but the miller still counts on his fingers. Keep your blade sharp and your working neat.',
+   'The rains came early and the river rose to the second mark on the bridge post, just where you once worked out it would. The children measure everything twice now. A draught from the herb garden comes with this.',
+   'A tinker came through selling maps of the Eigenrealm with every arrow pointing the wrong way. We turned them round and they were right. I think of you whenever something only needs turning round.',
+   'Your old slate hangs on the schoolroom wall, with the sum you got wrong the first time and right the second. I tell the children the second line is the one that matters.',
+   'The bell tower leans a little, and the mason asked how far. Your cousin laid out a triangle on the green and had the answer before supper. That is your doing, from the summer you would not stop drawing triangles.',
+   'Word came that a great beast fell in a far realm, and the tavern argued all night over whether it was you. I said it does not matter who, so long as the working was sound. It was you, though, was it not?',
+   'The harvest is in, weighed and counted, and for once the tally came out the same three times. The miller has bought himself a slate. Do not let it go to your head.',
+   'This is the last letter before you come home: my hand is tired and you are nearly done. Whatever waits at the end of the road, meet it as you met the rest, one step, checked, then the next.'
+  ],
+  wins(g){ return Math.max(0, (g && g.stats && g.stats.wins)|0); },
+  // the letters a knight has had: one for every tenth victory, up to the last
+  had(g){ return Math.min(this.L.length, Math.floor(this.wins(g)/this.EVERY)); },
+  // the letter this victory brings, numbered from one, or none
+  arrived(g){ const w=this.wins(g); return w>0 && w%this.EVERY===0 && w/this.EVERY<=this.L.length ? w/this.EVERY : 0; },
+  // and the draught tucked inside it
+  gift(g, n){ if(!n || !g || !g.items) return false; g.items.potion=(g.items.potion||0)+1; return true; },
+  letter(n, id, more){
+    return `<div class="panel letter" ${id?`id="${id}" `:''}data-n="${n}" style="text-align:left;border-color:#c9a36b;background:linear-gradient(#2a2216,#1d1810)">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:#e8d9b0">✉️ A LETTER FROM HOME · ${n} OF ${this.L.length}</div>
+      <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6;font-style:italic;color:#e8d9b0">${this.L[n-1]}</div>
+      <div class="small" style="margin-top:6px;text-align:right;color:#c9a36b">Maren, Linden Ford</div>${more||''}
+    </div>`;
+  },
+  card(n){
+    if(!n || !this.L[n-1]) return '';
+    return this.letter(n, 'letterCard', `\n      <div class="small" id="letterGift" style="margin-top:4px;color:var(--green)">Tucked inside: 🧪 a Healing Draught, now in your pack.</div>`);
+  },
+  // the Saga page: every letter received, newest last, and when the next comes
+  html(g){
+    const n=this.had(g), N=this.L.length;
+    const next=n<N ? `The next arrives at your ${Sitting.nth((n+1)*this.EVERY)} victory.` : 'Every letter has come.';
+    return `<div class="panel" id="lettersHead" style="text-align:left"><h2 style="font-size:16px;margin:0">✉️ Letters from home</h2>
+        <div class="small" style="margin-top:4px">${n} of ${N} received. ${next}</div></div>`
+      + Array.from({length:n}, (_, i)=>this.letter(i+1)).join('');
+  },
+  render(){ const el=document.getElementById('letterList'); if(el) el.innerHTML=this.html(Game.s); }
 };
 
 /* The Saga: the story of the Eigenrealm, a chapter for each realm, read when
@@ -9224,7 +9326,8 @@ const Coup = {
    than a trip through the map. While a war path runs it says what that win
    would pay, and a knight walking on below half health is told so, with a
    rest by the fire offered first, as the map does. It reads only which foes
-   are beaten, and nothing is saved. */
+   are beaten, and nothing is saved. Under it, the reckoning the map gives
+   the same fight: the plain blows that fell it and its blows that fell you. */
 const NextFight = {
   // the next fight on the road, unless it is the one just won (fighting it again has its own button)
   of(ri, fi){ const nx=UI.nextFoe(); return nx && !(nx.ri===ri && nx.fi===fi) ? nx : null; },
@@ -9234,6 +9337,7 @@ const NextFight = {
     const path=n>=1 ? ` Win it for <b>+${WarPath.pct(n+1)}%</b> gold on your war path.` : '';
     const low=Game.lowFor(f);
     return `<div class="sub" id="nextFight" style="margin:2px 0 6px">Next on the road: <b>${f.boss?'👑 ':''}${f.nm}</b> · ❤️ ${f.hp} · ⚔️ ${f.atk}.${path}</div>`
+      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you
       +(low?`<div class="sub" id="nextLow" style="color:var(--red);margin-bottom:6px">You are at ❤️ ${low.hp} of ${low.max} · a miss costs about ${low.hit}</div>`
            +(low.afford?`<button class="btn" id="nextRest" onclick="NextFight.rest(this)">🔥 Rest first · 🪙 ${low.cost}</button>`:''):'')
       +`<button class="btn gold" id="nextGo" onclick="Battle.begin(${nx.ri},${nx.fi})">⚔️ Fight ${f.nm}</button>`;
@@ -10465,6 +10569,7 @@ const Battle = {
     this.updateBars();
     this.nextQuestion();
     Talk.say('meet');
+    Herald.announce(this);   // a realm's boss arrives announced
     if(f.elite) UI.toast(Elite.intro(f));
     else if(Greedy.on(this)) UI.toast(Greedy.intro(f));
     else if(Heroic.on(this)) UI.toast(Heroic.intro(f));
@@ -11459,6 +11564,8 @@ const Battle = {
     Boon.offer(this, ups);
     Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
     const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds
+    // every tenth victory, a letter from home with a draught tucked inside
+    const letter=Letters.arrived(g); Letters.gift(g, letter);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
@@ -11527,6 +11634,7 @@ const Battle = {
           ${this.learnedHtml()}
         </div>
         ${this.foe.boss&&first?Saga.card(this.ri):''}
+        ${Letters.card(letter)}
         ${Gauntlet.button(gnt)}
         ${NextFight.html(nx)}
         ${Scout.html(nx)}
@@ -16777,7 +16885,7 @@ const UI = {
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-bestiary') Bestiary.render();
-    if(id==='s-saga') Saga.render();
+    if(id==='s-saga'){ Saga.render(); Letters.render(); }
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
@@ -17121,6 +17229,7 @@ const UI = {
           <div style="flex:1">
             <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
             <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}${Quarry.dt(quarry===ri+':'+fi)}</div>
+            ${open?Reckon.line(f, g):''}
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;

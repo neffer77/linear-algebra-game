@@ -2959,10 +2959,11 @@ const nextFightNotes = (() => {
   let next = null, low = null, rested = false;
   const UI = { nextFoe: () => next };
   const WarPath = { n: 0, STEP: 0.1, CAP: 5, pct(n) { return Math.round(this.STEP * Math.min(this.CAP, Math.max(0, n - 1)) * 100); } };
-  const Game = { lowFor: () => low, rest: () => rested };
+  const Game = { lowFor: () => low, rest: () => rested, s: { hp: 80 } };
+  const Reckon = { line: (f, g) => `<div data-r="${f.nm}:${g.hp}"></div>` };
   const removed = [];
   const document = { getElementById: id => id === 'nextLow' ? { remove: () => removed.push(id) } : null };
-  const N = new Function('UI', 'WarPath', 'Game', 'document', src + ';return NextFight;')(UI, WarPath, Game, document);
+  const N = new Function('UI', 'WarPath', 'Game', 'document', 'Reckon', src + ';return NextFight;')(UI, WarPath, Game, document, Reckon);
   let checks = 0;
   const want = (ok, key, msg) => { checks++; if (!ok) fail('nextfight', key, msg); };
   const slime = { nm: 'Meadow Slime', hp: 52, atk: 9 }, wyrm = { nm: 'The Vector Wyrm', hp: 165, atk: 20, boss: true };
@@ -2984,6 +2985,7 @@ const nextFightNotes = (() => {
       const pct = Math.round(10 * Math.min(5, n));
       want(n >= 1 ? h.includes(`Win it for <b>+${pct}%</b> gold on your war path.`) : !h.includes('war path'), `${f.nm}, path ${n}`, `says ${h.match(/Win it[^<]*<b>[^<]*<\/b>[^.]*\./) || 'nothing'} of the war path, not +${pct}%`);
       want(!h.includes('nextLow') && !h.includes('nextRest'), `${f.nm}, path ${n}`, 'warns a knight above half health');
+      want(h.includes(`data-r="${f.nm}:80"`) && h.indexOf('data-r=') > h.indexOf('id="nextFight"') && h.indexOf('data-r=') < h.indexOf('id="nextGo"'), `${f.nm}, path ${n}`, 'the next fight is not reckoned under its name');
     }
   }
   // below half health: warned, and a rest offered when it can be paid for
@@ -4411,6 +4413,116 @@ const hearthNotes = (() => {
   want(html.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);"), 'counted', 'the card does not count the hearth in');
   want(html.includes('          ${Sitting.freshLine(fXp)}\n          ${Hearth.line(eGold, g)}\n'), 'card', 'the card does not say what the hearth paid');
   want(html.includes('id="hearthTip" style="color:#ff9c3d">${Hearth.tip(st.days)}</div>'), 'title', 'the title does not say what the streak pays');
+  return checks;
+})();
+
+/* Letters from home. One for every tenth victory the game already counts,
+   eight in all, each a few plain sentences: when each arrives, the draught
+   tucked inside it, what the victory card and the Saga page say, and the
+   wiring. */
+const letterNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Letters = {'), html.indexOf('/* The Saga: the story of the Eigenrealm'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('letters', key, msg); };
+  const Sitting = { nth(n) { const t = n % 100, e = n % 10; return n + ((t > 10 && t < 14) ? 'th' : e === 1 ? 'st' : e === 2 ? 'nd' : e === 3 ? 'rd' : 'th'); } };
+  const L = new Function('Sitting', 'Game', src + ';return Letters;')(Sitting, { s: null });
+  want(L.EVERY === 10 && L.L.length === 8, 'count', JSON.stringify([L.EVERY, L.L.length]));
+  L.L.forEach((t, i) => {
+    const n = (t.match(/[.?!](\s|$)/g) || []).length;
+    want(typeof t === 'string' && n >= 2 && n <= 4 && t.length < 260 && !/[{}<>$]/.test(t) && !/—|–/.test(t), 'letter ' + (i + 1), t);
+  });
+  want(new Set(L.L).size === 8, 'apart', 'two letters say the same');
+  for (let w = -2; w <= 110; w++) {
+    const g = { stats: { wins: w }, items: { potion: 2 } };
+    const at = w > 0 && w % 10 === 0 && w <= 80, had = Math.max(0, Math.min(8, Math.floor(w / 10)));
+    want(L.arrived(g) === (at ? w / 10 : 0), 'arrives ' + w, L.arrived(g));
+    want(L.had(g) === had, 'had ' + w, L.had(g));
+    const n = L.arrived(g), got = L.gift(g, n);
+    want(got === !!n && g.items.potion === (n ? 3 : 2), 'gift ' + w, JSON.stringify(g.items));
+    const c = L.card(n);
+    want(n ? c.includes('id="letterCard"') && c.includes(`data-n="${n}"`) && c.includes(`${n} OF 8`) && c.includes(L.L[n - 1]) && c.includes('id="letterGift"') && c.includes('Maren, Linden Ford') : c === '', 'card ' + w, c);
+    const h = L.html(g), shown = (h.match(/class="panel letter"/g) || []).length;
+    want(shown === had && h.includes(`${had} of 8 received.`) && !h.includes('id="letterCard"') && !h.includes('letterGift')
+      && (had < 8 ? h.includes(`The next arrives at your ${Sitting.nth((had + 1) * 10)} victory.`) : h.includes('Every letter has come.'))
+      && L.L.every((t, i) => h.includes(t) === (i < had)), 'page ' + w, h.slice(0, 300));
+  }
+  want(L.arrived({}) === 0 && L.had(null) === 0 && L.gift(null, 1) === false && L.gift({ stats: {} }, 1) === false && L.card(9) === '', 'none', 'a letter with no knight');
+  // the wiring
+  want(html.includes("    const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds\n    // every tenth victory, a letter from home with a draught tucked inside\n    const letter=Letters.arrived(g); Letters.gift(g, letter);\n")
+    && html.indexOf('const letter=Letters.arrived(g)') < html.indexOf('    Game.save();\n\n    setTimeout(()=>{\n      UI.go(\'s-result\');'), 'read', 'the letter is not read and given before the victory is saved');
+  want(html.includes("        ${this.foe.boss&&first?Saga.card(this.ri):''}\n        ${Letters.card(letter)}\n"), 'card', 'the victory card does not show the letter');
+  want(html.includes('    <div id="sagaList"></div>\n    <div id="letterList"></div>\n') && html.includes("if(id==='s-saga'){ Saga.render(); Letters.render(); }"), 'page', 'the Saga page does not keep the letters');
+  return checks;
+})();
+
+const reckonNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Reckon = {');
+  const src = html.slice(start, html.indexOf('/* A herald.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('reckon', key, msg); };
+  const W = { dmg: 18 }, A = { def: 2 }, Rn = { d: 0 };
+  const Game = { weapon: () => W, armor: () => A }, Runes = { def: () => Rn.d };
+  const Combat = { foeHit(atk, def, j) { return Math.max(4, Math.round(atk * j - def)); } };
+  const S = new Function('Game', 'Runes', 'Combat', src + ';return Reckon;')(Game, Runes, Combat);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const foes = [...realms.matchAll(/\{nm:'([^']+)',\s*art:'[^']+',\s*hp:(\d+),\s*atk:(\d+)/g)].map(m => ({ nm: m[1], hp: +m[2], atk: +m[3] }));
+  want(foes.length === 32, 'foes', foes.length);
+  const weapons = [...html.slice(html.indexOf('const WEAPONS'), html.indexOf('];', html.indexOf('const WEAPONS'))).matchAll(/dmg:(\d+)/g)].map(m => +m[1]);
+  const armors = [...html.slice(html.indexOf('const ARMORS'), html.indexOf('];', html.indexOf('const ARMORS'))).matchAll(/def:(\d+)/g)].map(m => +m[1]);
+  want(weapons.length >= 3 && armors.length >= 3, 'gear', JSON.stringify([weapons, armors]));
+  for (const dmg of weapons) for (const def of armors) for (const rd of [0, 3]) for (const hp of [1, 37.4, 120, 999]) for (const f of foes) {
+    W.dmg = dmg; A.def = def; Rn.d = rd;
+    const g = { hp, maxHp: 1000 }, s = S.of(f, g), hit = Math.max(4, Math.round(f.atk - def - rd)), h = Math.max(1, Math.round(hp));
+    const blows = Math.ceil(f.hp / dmg), falls = Math.ceil(h / hit);
+    want(s.blow === dmg && s.hit === hit && s.hp === h && s.blows === blows && s.falls === falls
+      && (s.blows - 1) * dmg < f.hp && s.blows * dmg >= f.hp && (s.falls - 1) * hit < h && s.falls * hit >= h, 'reckon ' + [dmg, def, rd, hp, f.nm], JSON.stringify(s));
+    const l = S.line(f, g);
+    want(l.includes(`data-blows="${blows}"`) && l.includes(`data-falls="${falls}"`) && l.includes(`🗡️ ${blows} plain ${blows === 1 ? 'blow fells' : 'blows fell'} it`)
+      && l.includes(`💔 ${falls} of its ${falls === 1 ? 'blow fells' : 'blows fell'} you`)
+      && l.includes(`title="${f.hp} ÷ ${dmg} = ${(f.hp / dmg).toFixed(1)}, so ${blows}; your ${h} ÷ its ${hit} = ${(h / hit).toFixed(1)}, so ${falls}"`)
+      && l.includes('color:#ff8f6b') === (falls <= blows) && !/ id=/.test(l), 'line ' + [dmg, def, rd, hp, f.nm], l);
+  }
+  want(S.of(null, {}) === null && S.of(foes[0], null) === null && S.line(null, { hp: 5 }) === '', 'none', 'a reckoning with nothing to reckon');
+  // the wiring: under each open fight on the map, never a sealed one
+  want(html.includes("${Quarry.dt(quarry===ri+':'+fi)}</div>\n            ${open?Reckon.line(f, g):''}\n          </div>\n"), 'wired', 'the map does not reckon its open fights');
+  return checks;
+})();
+
+const heraldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Herald = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Elite rematches', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('herald', key, msg); };
+  const shown = [], sounds = [];
+  const Celebrate = { banner(t, s, c, snd) { shown.push({ t, s, c }); if (snd) snd(); } };
+  const Sfx = { slam() { sounds.push('slam'); } }, Haptic = { hit() { sounds.push('hit'); } };
+  const H = new Function('Celebrate', 'Sfx', 'Haptic', src + ';return Herald;')(Celebrate, Sfx, Haptic);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const bosses = [...realms.matchAll(/\{nm:'([^']+)'[^}]*col:\s*'(#[0-9a-f]{6})'[^}]*boss:true\}/gi)].map(m => ({ nm: m[1], col: m[2] }));
+  want(bosses.length === 8 && Object.keys(H.SAY).length === 8, 'count', JSON.stringify([bosses.length, Object.keys(H.SAY).length]));
+  want(bosses.every(b => H.SAY[b.nm]), 'every', 'a realm boss has no herald line: ' + bosses.filter(b => !H.SAY[b.nm]).map(b => b.nm).join(', '));
+  want(new Set(Object.values(H.SAY)).size === 8, 'apart', 'two bosses are announced the same');
+  Object.entries(H.SAY).forEach(([nm, t]) => {
+    want(typeof t === 'string' && t.length > 10 && t.length < 70 && !/[{}<>$.!]/.test(t) && !/—|–/.test(t) && /^[a-z]/.test(t), 'line ' + nm, t);
+  });
+  for (const mode of ['campaign', 'daily', 'dungeon', 'boss', 'arena', undefined])
+    for (const b of [...bosses, { nm: 'Slime', col: '#123456' }, { nm: 'The Vector Wyrm', col: '#39c47a', boss: false }]) {
+      const foe = { nm: b.nm, col: b.col, boss: b.boss !== false && b.nm !== 'Slime' };
+      shown.length = 0; sounds.length = 0;
+      const B = { mode, foe }, on = mode === 'campaign' && foe.boss;
+      want(H.on(B) === on, 'on ' + mode + ' ' + b.nm, H.on(B));
+      const r = H.announce(B);
+      want(r === on && shown.length === (on ? 1 : 0) && sounds.join() === (on ? 'slam,hit' : ''), 'announce ' + mode + ' ' + b.nm, JSON.stringify(shown));
+      if (on) want(shown[0].t === '👑 ' + b.nm.toUpperCase() && shown[0].s === H.SAY[b.nm] && shown[0].c === b.col, 'banner ' + b.nm, JSON.stringify(shown[0]));
+    }
+  shown.length = 0;
+  want(H.on(null) === false && H.on({ mode: 'campaign' }) === false && H.announce({ mode: 'campaign', foe: null }) === false && shown.length === 0, 'none', 'a herald with no foe');
+  // the wiring: once, as the fight opens, after the foe's first words
+  want(html.includes("    Talk.say('meet');\n    Herald.announce(this);   // a realm's boss arrives announced\n")
+    && (html.match(/Herald\.announce\(/g) || []).length === 1, 'wired', 'the fight does not announce its boss once as it opens');
   return checks;
 })();
 
@@ -28379,6 +28491,9 @@ console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
 console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}  (met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, on the fight's last topic where it can be, paying the purse again on a right answer and losing it on a miss, never past an empty purse, once a meeting)`);
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
+console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
+console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
+console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
 console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
