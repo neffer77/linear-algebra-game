@@ -23,10 +23,10 @@
       "run": "play:nameplate"
     },
     {
-      "name": "the health text wraps, seen in play",
+      "name": "a long name never wraps, seen in play",
       "file": "index.html",
-      "find": "#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
-      "replace": "\n",
+      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
+      "replace": "#foeName{min-width:0}\n",
       "run": "play:nameplate"
     }
   ]

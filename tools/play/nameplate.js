@@ -14,7 +14,7 @@ const look = t => t.ev(() => {
   const r = id => document.getElementById(id).getBoundingClientRect();
   const n = r('foeName'), h = r('eHpTxt'), p = r('pHpTxt'), s = document.getElementById('s-battle');
   return { name: document.getElementById('foeName').innerText, hp: document.getElementById('eHpTxt').innerText,
-    nameRight: n.right, hpLeft: h.left, hpRight: h.right, hpLines: Math.round(h.height / 14), pRight: p.right,
+    nameRight: n.right, nameOver: document.getElementById('foeName').scrollWidth > document.getElementById('foeName').clientWidth + 1, hpLeft: h.left, hpRight: h.right, hpLines: Math.round(h.height / 14), pRight: p.right,
     vw: innerWidth, wide: s.scrollWidth <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1 };
 });
 
@@ -49,6 +49,13 @@ module.exports = {
     c = await look(t);
     t.ok('the long nameplate is all there', /Greedy/.test(c.name) && /Heroic/.test(c.name) && /Phase II/.test(c.name) && /Determinant Golem/.test(c.name), c.name);
     t.ok('it wraps in its own half, and the health stays whole and on the screen', c.hpRight <= c.vw && c.nameRight <= c.hpLeft + 1 && c.hp === c.hp.trim() && /^\d+\/\d+$/.test(c.hp) && c.hpLines <= 1 && c.wide, JSON.stringify(c));
+
+    // a name with no place to break in it, as a long word or a long run of marks has:
+    // it breaks anywhere within its own half rather than pushing the health away
+    await t.ev(() => { Battle.foe = Object.assign({}, Battle.foe, { nm: 'The ' + 'Determinant'.repeat(4) + ' Golem' }); Battle.updateBars(); });
+    await sleep(300);
+    c = await look(t);
+    t.ok('an unbroken name breaks within its own half, and the health stays whole and on the screen', /DeterminantDeterminant/.test(c.name.replace(/\s/g, '')) && c.hpRight <= c.vw && c.nameRight <= c.hpLeft + 1 && /^\d+\/\d+$/.test(c.hp) && c.hpLines <= 1 && !c.nameOver && c.wide, JSON.stringify(c));
 
     await t.ev(() => { Battle.flee(); for (const k of Object.keys(Game.s.cleared)) delete Game.s.cleared[k]; UI.go('s-map'); });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
