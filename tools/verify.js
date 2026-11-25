@@ -4820,6 +4820,18 @@ const roadNotes = (() => {
   want(html.includes('details.road>summary{list-style:none;') && !/Game\.s\.road|g\.roadOpen/.test(html), 'saved', 'the fold shows its marker, or is saved');
   return checks;
 })();
+const calcRoomNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('calc room', key, msg); };
+  want(html.includes('body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'), 'css', 'the screen leaves no room under the scratch pad button');
+  want(/#calcBtn\{position:fixed;[^}]*width:52px; height:52px;/.test(html), 'size', 'the button grew past the strip left for it');
+  const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
+  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant();") && sync.includes("b.style.display = on ? '' : 'none';")
+    && sync.includes("document.body.classList.toggle('calcRoom', on);"), 'sync', 'the strip does not come and go with the button');
+  want(html.split('Calc.syncButton()').length >= 3, 'called', 'the button is not synced when a screen changes');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -27337,6 +27349,7 @@ console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 
 console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)}  (each piece in the Smithy says what it adds over what is worn, and the dear ones wait behind a fold)`);
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
+console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

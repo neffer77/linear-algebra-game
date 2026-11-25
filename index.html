@@ -656,6 +656,10 @@ details.realm .rless{color:var(--gold); font-weight:700}
   border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45);
   box-shadow:0 5px 14px rgba(0,0,0,.45); cursor:pointer}
 #calcBtn:active{transform:translateY(2px)}
+/* Room for it: while the scratch pad's button floats in the corner, the screen
+   under it ends with a strip as tall as the button, so the last row of skills
+   and items can always be scrolled out from beneath it. */
+body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 #calcPanel{position:fixed; inset:0; z-index:58; display:none; align-items:flex-end;
   background:rgba(8,5,16,.55)}
 #calcPanel.on{display:flex}
@@ -41668,7 +41672,9 @@ const Calc = {
   syncButton(){
     const b=document.getElementById('calcBtn');
     if(!b) return;
-    b.style.display = (Prefs.d.calc!==false && this.relevant()) ? '' : 'none';
+    const on = Prefs.d.calc!==false && this.relevant();
+    b.style.display = on ? '' : 'none';
+    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button
     if(!this.relevant() && this.shown) this.close();
   },
 

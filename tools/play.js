@@ -271,6 +271,7 @@ const SUITES = [
   require('./play/ware'),        // the Smithy compares each piece with what is worn
   require('./play/skillset'),    // Gear folds the skills with no use yet
   require('./play/road'),        // a win's road shows two and folds the rest
+  require('./play/calcroom'),    // the scratch pad button never covers the bar
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

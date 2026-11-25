@@ -1,15 +1,9 @@
 {
-  "change": "A shorter victory card: the road's offers past the first two fold behind one counted line; Fight again and Smithy share a row",
+  "change": "Room for the scratch pad: the 🧮 button never sits on a skill, an item or the Retreat",
   "mutations": [
-    {"name": "a road of three folded", "file": "index.html", "find": "    if(p.length-this.SHOW<2) return p.join('\\n');   // one more is shown, not folded", "replace": "    if(p.length-this.SHOW<1) return p.join('\\n');   // one more is shown, not folded", "run": "verify"},
-    {"name": "three in view", "file": "index.html", "find": "    return p.slice(0,this.SHOW).join('\\n')+", "replace": "    return p.slice(0,this.SHOW+1).join('\\n')+", "run": "verify"},
-    {"name": "an empty offer counted", "file": "index.html", "find": "    const p=(parts||[]).filter(x=>x&&String(x).trim());", "replace": "    const p=(parts||[]).filter(x=>x!==null);", "run": "verify"},
-    {"name": "the fold forgets it was opened", "file": "index.html", "find": "id=\"roadMore\"${this.open?' open':''} ontoggle", "replace": "id=\"roadMore\" ontoggle", "run": "verify"},
-    {"name": "a new fight keeps the road open", "file": "index.html", "find": "    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded\n", "replace": "", "run": "verify"},
-    {"name": "the victory card stacks its road", "file": "index.html", "find": "        ${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}", "replace": "        ${[Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)].join('')}", "run": "verify"},
-    {"name": "the buttons stacked again", "file": "index.html", "find": ".btnRow{display:flex;gap:8px}", "replace": ".btnRow{display:block}", "run": "verify"},
-    {"name": "the road does not fold, seen in play", "file": "index.html", "find": "    if(p.length-this.SHOW<2) return p.join('\\n');   // one more is shown, not folded", "replace": "    if(p.length) return p.join('\\n');", "run": "play:road"},
-    {"name": "the buttons stacked, seen in play", "file": "index.html", "find": ".btnRow{display:flex;gap:8px}", "replace": ".btnRow{display:block}", "run": "play:road"},
-    {"name": "the next road stays open, seen in play", "file": "index.html", "find": "    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded\n", "replace": "", "run": "play:road"}
+    {"name": "no room under the button", "file": "index.html", "find": "body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}", "replace": "body.calcRoom .screen.on{}", "run": "verify"},
+    {"name": "the strip stays when the button goes", "file": "index.html", "find": "    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button\n", "replace": "    document.body.classList.add('calcRoom');\n", "run": "verify"},
+    {"name": "no room under the button, seen in play", "file": "index.html", "find": "body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}", "replace": "body.calcRoom .screen.on{}", "run": "play:calcroom"},
+    {"name": "the strip stays on the map, seen in play", "file": "index.html", "find": "    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button\n", "replace": "    document.body.classList.add('calcRoom');\n", "run": "play:calcroom"}
   ]
 }
