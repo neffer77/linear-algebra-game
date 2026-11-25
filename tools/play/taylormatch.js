@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Gareth');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the functions can be matched up', await t.ev(() =>
       /Or match them up: four functions and four polynomials, and which hugs which near 0\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTaylor');

@@ -27,7 +27,8 @@ module.exports = {
     await t.newKnight('Gareth');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the ladder workshop can be turned round', await t.ev(() =>
       /Then turn it round: see a ladder, and pick which of four numbers is the top's speed\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLadder');

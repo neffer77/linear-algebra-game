@@ -37,8 +37,10 @@ const answer = async (t, right) => {
   await t.ev(right => {
     const cs = Combat.strike; Combat.strike = () => 1;
     Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1e6;
-    const wrong = (Battle.cur.choices || []).find(c => c !== Battle.cur.a);
-    Battle.answer(null, right ? Battle.cur.a : wrong);
+    // the step on screen, which a ladder can make other than the question itself
+    const st = Battle.step();
+    const wrong = (st.choices || []).find(c => c !== st.a);
+    Battle.answer(null, right ? st.a : wrong);
     Combat.strike = cs;
   }, right);
   await sleep(900);
@@ -52,7 +54,7 @@ const finish = async (t, hp) => {
     const cs = Combat.strike; Combat.strike = () => 5;
     Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1;
     Game.s.hp = hp;
-    Battle.answer(null, Battle.cur.a);
+    Battle.answer(null, Battle.step().a);
     Combat.strike = cs;
     window.__restore = () => { Celebrate.banner = cb; };
   }, hp);

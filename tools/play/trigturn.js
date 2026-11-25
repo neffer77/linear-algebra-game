@@ -38,7 +38,8 @@ module.exports = {
     await t.newKnight('Enid');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each guess can be called', await t.ev(() =>
       /Or call it: see four waves with a guess F each, and say whether F is right, flipped, or the wrong size\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTrigInt');

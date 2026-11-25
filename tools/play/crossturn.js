@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Enide');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the cross product can be called in or out', await t.ev(() =>
       /Or call it in or out: for four pairs flat on the page, say whether u × v points out of the page, into it, or is zero\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCross');

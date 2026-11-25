@@ -177,6 +177,14 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.3)}
 .item .vs{font-size:12px;font-weight:700;color:var(--dim)}
 .item .vs.up{color:var(--green)}
+.btnRow{display:flex;gap:8px}
+.btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+details.tomeAll>summary{list-style:none;margin:6px 0 10px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:14px;font-weight:700;color:var(--gold);cursor:pointer}
+details.tomeAll>summary::-webkit-details-marker{display:none}
+details.tomeAll[open]>summary{color:var(--dim)}
+details.road>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
+details.road>summary::-webkit-details-marker{display:none}
+details.road[open]>summary{color:var(--dim)}
 details.skillRest>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 details.skillRest>summary::-webkit-details-marker{display:none}
 details.skillRest[open]>summary{color:var(--dim)}
@@ -261,6 +269,9 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 .medal{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;margin:4px 4px 0 0;
   background:#2b2247;border:1px solid var(--edge);font-size:12px;font-weight:800}
 .medal.got{border-color:var(--gold);background:#3a2f16;color:var(--gold)}
+.medal .tway{font-family:var(--sans,inherit);font-size:11px;font-weight:800;color:var(--dim);margin-left:2px}
+.medal.near{border-color:var(--gold-dk);border-style:dashed}
+.medal.near .tway{color:var(--gold)}
 .streakbox{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
   background:linear-gradient(90deg,#3a2416,#241c3e);border:1px solid #6b4a10}
 .streakbox .n{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
@@ -670,6 +681,10 @@ details.realm .rless{color:var(--gold); font-weight:700}
   border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45);
   box-shadow:0 5px 14px rgba(0,0,0,.45); cursor:pointer}
 #calcBtn:active{transform:translateY(2px)}
+/* Room for it: while the scratch pad's button floats in the corner, the screen
+   under it ends with a strip as tall as the button, so the last row of skills
+   and items can always be scrolled out from beneath it. */
+body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
 #calcPanel{position:fixed; inset:0; z-index:58; display:none; align-items:flex-end;
   background:rgba(8,5,16,.55)}
 #calcPanel.on{display:flex}
@@ -9477,6 +9492,35 @@ const Skillset = {
   work(k){ return k+(k===1?' needs work':' need work'); }
 };
 
+/* Road. A good win can meet the whole road at once: a scout's chance at the
+   next foe, a wayfarer's question, a campfire, a peddler and a dicer, each a
+   card of its own, stacked between the victory and the way back to the map.
+   The first two stay in view; the rest wait behind one line that says how
+   many more there are, and open in place. Nothing is lost and nothing saved. */
+/* Tome fold. Under the index of every workshop, the Tome went on to give each
+   one a card of its own, forty-odd paragraphs, so the lessons at the foot of
+   the page sat thirty screens down on a phone. The index already opens every
+   workshop; the cards that say what each one does now wait behind one line
+   that counts them, and open in place for the rest of the sitting. */
+const TomeFold = {
+  open:false,
+  wrap(cards){
+    const n=(String(cards).match(/<div class="panel"/g)||[]).length;
+    if(!n) return '';
+    return \`<details class="tomeAll" id="tomeAll"\${this.open?' open':''} ontoggle="TomeFold.open=this.open"><summary>＋ What each of the \${n} workshops does</summary>\${cards}</details>\`;
+  }
+};
+
+const Road = {
+  SHOW:2, open:false,
+  group(parts){
+    const p=(parts||[]).filter(x=>x&&String(x).trim());
+    if(p.length-this.SHOW<2) return p.join('\\n');   // one more is shown, not folded
+    return p.slice(0,this.SHOW).join('\\n')+
+      \`<details class="road" id="roadMore"\${this.open?' open':''} ontoggle="Road.open=this.open"><summary>＋ \${p.length-this.SHOW} more on the road</summary>\${p.slice(this.SHOW).join('\\n')}</details>\`;
+  }
+};
+
 /* Letters from home. Every tenth victory a knight wins, a letter comes from
    Maren, who taught them their sums in the village of Linden Ford: news from
    home, a little of what the mathematics has done there, and a Healing Draught
@@ -10932,6 +10976,7 @@ const Battle = {
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
   begin(ri, fi, heroic, rival){
+    if(typeof Road!=='undefined') Road.open=false;   // each win's road starts folded
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     Gauntlet.meet(ri, fi, heroic || rival);   // any other fight breaks off a gauntlet run
@@ -12088,16 +12133,11 @@ const Battle = {
         \${Letters.card(letter)}
         \${Gauntlet.button(gnt)}
         \${NextFight.html(nx)}
-        \${Scout.html(nx)}
-        \${Wayfarer.html(way)}
-        \${Campfire.html(this)}
-        \${Peddler.html(pd)}
-        \${Dicer.html(dc)}
+        \${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
-        <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         \${Rival.offer(this)}
         \${Heroic.button(this)}
-        <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
+        <div class="btnRow" id="winRow"><button class="btn" id="againBtn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>\`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills
@@ -12214,6 +12254,52 @@ const TITLES = [
   {id:'paragon',  ic:'💎', nm:'Paragon',         ds:'Beat every foe in every realm at S',
     t:g=>REALMS.every((r,ri)=>Grade.crowned(g.cleared, ri, r.foes.length))}
 ];
+
+/* Title way. A locked title said what it asked for and nothing about how far
+   off it was: "Solve 250 riddles" read the same at 3 as at 249. Each one that
+   can be counted now says where the knight stands ("112/250"), and the one
+   nearest to earning is marked, so the next title is always in sight. Read
+   from what the save already holds; nothing new is kept. */
+const TitleWay = {
+  mastered(){ try{ return Mastery.all().filter(x=>x.r.m>=0.85).length; }catch(e){ return 0; } },
+  of(t,g){
+    if(!g) return null;
+    const st=g.stats||{}, n=(v,of)=>({n:Math.max(0,Math.min(of,Math.floor(v||0))), of});
+    switch(t.id){
+      case 'squire':   return n(st.correct,50);
+      case 'errant':   return n(st.correct,250);
+      case 'scholar':  return n(st.correct,1000);
+      case 'form':     return n(st.best,15);
+      case 'arena10':  return n(g.arenaBest,10);
+      case 'arena20':  return n(g.arenaBest,20);
+      case 'poly':     return n(this.mastered(),10);
+      case 'magister': return n(this.mastered(),Object.keys(TOPIC_LABEL).length);
+      case 'devoted':  return n(g.streak&&g.streak.days,7);
+      case 'exemplar': return n(Grade.countS(g.cleared),10);
+      case 'realm': {
+        const best=Math.max(0,...REALMS.map((r,ri)=>r.foes.filter((f,fi)=>g.cleared&&g.cleared[ri+':'+fi]).length/r.foes.length));
+        return {n:Math.round(best*100), of:100, pct:true};
+      }
+      default: return null;
+    }
+  },
+  text(w){ return w.pct ? w.n+'%' : w.n+'/'+w.of; },
+  // the locked title furthest along, if any is more than started
+  near(g){
+    let best=null, f=0;
+    for(const t of TITLES){
+      if(g&&g.titles&&g.titles[t.id]) continue;
+      const w=this.of(t,g); if(!w||!w.of) continue;
+      const x=w.n/w.of; if(x>f&&x<1){ f=x; best=t.id; }
+    }
+    return best;
+  },
+  medal(t,g){
+    const got=g&&g.titles&&g.titles[t.id], w=got?null:this.of(t,g), near=!got&&this.near(g)===t.id;
+    return \`<span class="medal \${got?'got':''}\${near?' near':''}" data-title="\${t.id}">\${got?t.ic:'🔒'} \${t.nm}
+            <span class="small" style="font-weight:400">— \${t.ds}</span>\${w?\`<span class="tway">\${this.text(w)}</span>\`:''}</span>\`;
+  }
+};
 
 const Titles = {
   check(){
@@ -17457,9 +17543,7 @@ const UI = {
       </div>
       <div class="panel"><h2>🏅 Titles</h2>
         <div class="sub" style="margin-bottom:6px">\${Titles.count()} of \${TITLES.length} earned.</div>
-        \${TITLES.map(t=>{const got=Game.s&&Game.s.titles&&Game.s.titles[t.id];
-          return \`<span class="medal \${got?'got':''}">\${got?t.ic:'🔒'} \${t.nm}
-            <span class="small" style="font-weight:400">— \${t.ds}</span></span>\`;}).join('')}
+        \${TITLES.map(t=>TitleWay.medal(t,Game.s)).join('')}
       </div>\`;
     // The stamp says which build this is, and whether the gates were opened
     // rather than won — both things a bug report needs to carry.
@@ -17975,7 +18059,7 @@ const UI = {
          <div class="sub" style="margin-top:6px;font-size:14px">\${MixPick.LIST.length} workshops can each be turned round. Here they come mixed: one question from a different workshop each time, its rule stated first, and every workshop once before any comes back.</div>
          <button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick.open()">Mix them up</button>
        </div>\` +
-      \`<div class="panel" style="border-color:var(--gold-dk)">
+      TomeFold.wrap(\`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it. Or rank the stretch: four matrices, from the biggest stretch of area to the smallest.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
@@ -18259,7 +18343,7 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🗺️ Hillwalker Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom. Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way. Or walk a fence to its lowest point, where ∇f = λ∇g.</div>
          <button class="btn sm" id="tomeHill" style="width:auto;margin-top:8px" onclick="Hill.open()">Open the hillwalker workshop</button>
-       </div>\` +
+       </div>\`) +
       TOME.map(p=>\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">\${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">\${p.b}</div></div>\`).join('');
   }
@@ -43436,7 +43520,9 @@ const Calc = {
   syncButton(){
     const b=document.getElementById('calcBtn');
     if(!b) return;
-    b.style.display = (Prefs.d.calc!==false && this.relevant()) ? '' : 'none';
+    const on = Prefs.d.calc!==false && this.relevant();
+    b.style.display = on ? '' : 'none';
+    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button
     if(!this.relevant() && this.shown) this.close();
   },
 

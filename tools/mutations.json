@@ -1,68 +1,54 @@
 {
-  "change": "A shorter skills list: Gear folds the skills with no use yet behind one counted line, and one topic needs work",
+  "change": "Titles show the way: each locked title says how far off it is, and the nearest is marked",
   "mutations": [
     {
-      "name": "a carried skill folded",
+      "name": "the count overruns its title",
       "file": "index.html",
-      "find": "    const shown=rows.filter(r=>r.on||r.n>0), rest=rows.filter(r=>!(r.on||r.n>0));",
-      "replace": "    const shown=rows.filter(r=>r.n>0), rest=rows.filter(r=>!(r.n>0));",
+      "find": "    const st=g.stats||{}, n=(v,of)=>({n:Math.max(0,Math.min(of,Math.floor(v||0))), of});",
+      "replace": "    const st=g.stats||{}, n=(v,of)=>({n:Math.max(0,Math.floor(v||0)), of});",
       "run": "verify"
     },
     {
-      "name": "a lone skill folded",
+      "name": "Knight-Errant counts to the wrong mark",
       "file": "index.html",
-      "find": "    if(rest.length<2) return rows.map(r=>r.html).join('');",
-      "replace": "    if(rest.length<1) return rows.map(r=>r.html).join('');",
+      "find": "      case 'errant':   return n(st.correct,250);",
+      "replace": "      case 'errant':   return n(st.correct,200);",
       "run": "verify"
     },
     {
-      "name": "the fold forgets it was opened",
+      "name": "the streak title reads the wrong stat",
       "file": "index.html",
-      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"skillRest\" ontoggle",
+      "find": "      case 'form':     return n(st.best,15);",
+      "replace": "      case 'form':     return n(st.correct,15);",
       "run": "verify"
     },
     {
-      "name": "the folded count wrong",
+      "name": "a finished count marked as next",
       "file": "index.html",
-      "find": "<summary>＋ ${rest.length} more skills",
-      "replace": "<summary>＋ ${rows.length} more skills",
+      "find": "      const x=w.n/w.of; if(x>f&&x<1){ f=x; best=t.id; }",
+      "replace": "      const x=w.n/w.of; if(x>f){ f=x; best=t.id; }",
       "run": "verify"
     },
     {
-      "name": "one topic need work",
+      "name": "an earned title still counted",
       "file": "index.html",
-      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
-      "replace": "  work(k){ return k+' need work'; }",
+      "find": "    const got=g&&g.titles&&g.titles[t.id], w=got?null:this.of(t,g), near=!got&&this.near(g)===t.id;",
+      "replace": "    const got=g&&g.titles&&g.titles[t.id], w=this.of(t,g), near=!got&&this.near(g)===t.id;",
       "run": "verify"
     },
     {
-      "name": "Gear does not fold",
+      "name": "the counts not shown, seen in play",
       "file": "index.html",
-      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
-      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
-      "run": "verify"
+      "find": "${w?`<span class=\"tway\">${this.text(w)}</span>`:''}",
+      "replace": "${''}",
+      "run": "play:titleway"
     },
     {
-      "name": "Gear does not fold, seen in play",
+      "name": "the nearest not marked, seen in play",
       "file": "index.html",
-      "find": "    const rows=Skillset.fold(SKILL_ABILITIES.map(ab=>{",
-      "replace": "    const rows=((x)=>x.map(r=>r.html).join(''))(SKILL_ABILITIES.map(ab=>{",
-      "run": "play:skillset"
-    },
-    {
-      "name": "the fold forgets, seen in play",
-      "file": "index.html",
-      "find": "id=\"skillRest\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"skillRest\" ontoggle",
-      "run": "play:skillset"
-    },
-    {
-      "name": "one topic need work, seen in play",
-      "file": "index.html",
-      "find": "  work(k){ return k+(k===1?' needs work':' need work'); }",
-      "replace": "  work(k){ return k+' need work'; }",
-      "run": "play:skillset"
+      "find": "${near?' near':''}\" data-title",
+      "replace": "\" data-title",
+      "run": "play:titleway"
     }
   ]
 }

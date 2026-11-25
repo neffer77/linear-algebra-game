@@ -3959,7 +3959,7 @@ const campNotes = (() => {
   }
   // the wiring
   want(html.includes("      ? {key:this.cur.key, diff:this.curDiff} : null;\n    if(!ok) Campfire.note(this);") && html.split('Campfire.note(').length === 2, 'noted', 'a slip is not noted on a miss alone');
-  want(html.includes('${Campfire.html(this)}'), 'card', 'the card does not offer the camp');
+  want(html.includes('Campfire.html(this)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'card', 'the card does not offer the camp');
   const ans = src.slice(src.indexOf('  answer('));
   want(ans.includes('this.cur=null;     // one question, one rest') && ans.includes('Game.recordAnswer(q.key, ok, 1);')
     && /if\(ok\)\{\s*const n=this\.mend\(\); g\.hp=Math\.min\(g\.maxHp, g\.hp\+n\);\s*this\.slips=this\.slips\.filter\(x=>x\.key!==s\.key\);/.test(ans)
@@ -4290,7 +4290,7 @@ const peddlerNotes = (() => {
   want(P.buy(null, 'nonsense', 1, 3) === false && P.html(null) === '', 'none', 'the peddler sells what the shop does not');
   // the wiring
   want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
-  want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  want(html.includes('Campfire.html(this), Peddler.html(pd)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])') && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
   return checks;
 })();
 
@@ -4372,7 +4372,7 @@ const dicerNotes = (() => {
   }
   // the wiring
   want(html.includes("    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones\n    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, this);"), 'meet', 'the dicer is not met on a counted victory, with the purse the card counts');
-  want(html.includes("        ${Peddler.html(pd)}\n        ${Dicer.html(dc)}\n") && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
+  want(html.includes('Peddler.html(pd), Dicer.html(dc)') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])') && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
   return checks;
 })();
 
@@ -4786,6 +4786,117 @@ const skillsetNotes = (() => {
     && html.includes('${Skillset.work(shaky)}') && html.includes('weak? Skillset.work(weak) :') && html.includes("${weak?Skillset.work(weak):keys.length+' topics'}")
     && !/\+' need work'/.test(html) && !html.includes('${shaky} need work'), 'wired', 'Gear does not fold its skills, or a count still reads "1 need work"');
   want(html.includes('details.skillRest>summary{list-style:none;') && !/Game\.s\.skillRest|g\.skillRest/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const roadNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Road = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('road', key, msg); };
+  const R = new Function(src + ';return Road;')();
+  // every mix of five offers, each there or empty, folded or opened
+  for (let m = 0; m < 32; m++) for (const open of [false, true]) for (const blank of ['', '  ', null, undefined]) {
+    R.open = open;
+    const parts = [0, 1, 2, 3, 4].map(i => (m >> i) & 1 ? '<div id="o' + i + '">' + i + '</div>' : blank);
+    const real = parts.filter(x => x && String(x).trim()), h = R.group(parts);
+    want(real.every(x => h.split(x).length === 2), 'all ' + m, 'an offer is dropped or drawn twice');
+    want(!/undefined|null/.test(h), 'blank ' + m, 'an empty offer is drawn as text');
+    if (real.length - R.SHOW < 2) { want(h === real.join('\n') && !h.includes('<details'), 'whole ' + m, 'a road of three or fewer is folded'); continue; }
+    const d = h.indexOf('<details');
+    want(h.slice(0, d) === real.slice(0, R.SHOW).join('\n'), 'first ' + m, 'the first two offers are not the ones in view');
+    want(h.slice(d).includes(real.slice(R.SHOW).join('\n')), 'rest ' + m, 'a folded offer is out of order or missing');
+    want(h.includes('<summary>＋ ' + (real.length - R.SHOW) + ' more on the road</summary>'), 'count ' + m, 'the fold does not count what is behind it');
+    want(h.includes('ontoggle="Road.open=this.open"') && h.includes('id="roadMore" open ') === open, 'open ' + m, 'the fold does not stay as it was left');
+  }
+  want(R.group() === '' && R.group([]) === '', 'none', 'a road with no one on it draws something');
+  R.open = false;
+  want(html.includes('${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}')
+    && !/\n\s*\$\{Scout\.html\(nx\)\}\n/.test(html), 'wired', 'the victory card stacks its road offers unfolded');
+  want(/begin\(ri, fi, heroic, rival\)\{\n\s*if\(typeof Road!=='undefined'\) Road\.open=false;/.test(html), 'reset', 'a new fight keeps the last road opened');
+  want(html.includes('<div class="btnRow" id="winRow"><button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
+    && !html.includes('🏪 Visit the Smithy'), 'row', 'Fight again and the Smithy are not one row');
+  want(html.includes('.btnRow{display:flex;gap:8px}') && html.includes('.btnRow>.btn{flex:1 1 0;min-width:0;'), 'css', 'the button row does not share its width');
+  want(html.includes('details.road>summary{list-style:none;') && !/Game\.s\.road|g\.roadOpen/.test(html), 'saved', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const calcRoomNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('calc room', key, msg); };
+  want(html.includes('body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'), 'css', 'the screen leaves no room under the scratch pad button');
+  want(/#calcBtn\{position:fixed;[^}]*width:52px; height:52px;/.test(html), 'size', 'the button grew past the strip left for it');
+  const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
+  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant();") && sync.includes("b.style.display = on ? '' : 'none';")
+    && sync.includes("document.body.classList.toggle('calcRoom', on);"), 'sync', 'the strip does not come and go with the button');
+  want(html.split('Calc.syncButton()').length >= 3, 'called', 'the button is not synced when a screen changes');
+  return checks;
+})();
+const tomeFoldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const TomeFold = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('tome fold', key, msg); };
+  const F = new Function(src + ';return TomeFold;')();
+  for (let n = 0; n <= 60; n++) for (const open of [false, true]) {
+    F.open = open;
+    const cards = Array.from({ length: n }, (_, i) => '<div class="panel"><button id="tome' + i + '">' + i + '</button></div>').join('');
+    const h = F.wrap(cards);
+    if (!n) { want(h === '', 'none', 'an empty fold is drawn'); continue; }
+    want(h.startsWith('<details class="tomeAll" id="tomeAll"') && h.endsWith(cards + '</details>'), 'all ' + n, 'a card is dropped, or sits outside the fold');
+    want(h.includes('<summary>＋ What each of the ' + n + ' workshops does</summary>'), 'count ' + n, 'the fold does not count the cards behind it');
+    want(h.includes('ontoggle="TomeFold.open=this.open"') && h.includes('id="tomeAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
+  }
+  F.open = false;
+  const s = html.indexOf('  renderTome(){'), tome = html.slice(s, html.indexOf('\n  }\n', s));
+  const a = tome.indexOf('TomeFold.wrap(`'), m = tome.indexOf('🛠 Matrix Workshop'), b = tome.indexOf('`) +\n      TOME.map(');
+  want(a > 0 && a < m && b > m && tome.indexOf('MixPick.open()') < a && tome.indexOf('WorkshopIndex.html()') < a, 'wired', 'the workshop cards are not folded, or the index and the mix are folded with them');
+  const inside = tome.slice(a, b), outside = tome.slice(0, a) + tome.slice(b);
+  const ids = (inside.match(/id="tome[A-Za-z]+"/g) || []);
+  want(ids.length >= 40 && (inside.match(/<div class="panel"/g) || []).length === ids.length, 'cards', 'a workshop card has no button, or a card without one is folded');
+  want(!/TOME\.map/.test(inside) && /TOME\.map/.test(outside), 'lore', 'the lessons are folded away with the cards');
+  want(html.includes('details.tomeAll>summary{list-style:none;') && !/Game\.s\.tomeAll|Game\.s\.tomeFold/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const titleWayNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const ts = html.indexOf('const TITLES = ['), te = html.indexOf('\n];\n', ts) + 4;
+  const s = html.indexOf('const TitleWay = {'), src = html.slice(s, html.indexOf('\n};\n', s) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('title way', key, msg); };
+  const REALMS = [{ foes: [1, 2, 3, 4], bg: { key: 'vale' } }, { foes: [1, 2, 3, 4, 5], bg: { key: 'citadel' } }];
+  let mastered = 0;
+  const Mastery = { all: () => Array.from({ length: 30 }, (_, i) => ({ r: { m: i < mastered ? 0.9 : 0.2 } })) };
+  const Grade = { countS: c => Object.values(c || {}).filter(v => v === 'S').length, crowned: () => false };
+  const TOPIC_LABEL = Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['k' + i, 'T' + i]));
+  const [TITLES, W] = new Function('REALMS', 'Mastery', 'Grade', 'TOPIC_LABEL', html.slice(ts, te) + src + ';return [TITLES, TitleWay];')(REALMS, Mastery, Grade, TOPIC_LABEL);
+  const by = id => TITLES.find(t => t.id === id);
+  const counted = { squire: 50, errant: 250, scholar: 1000, form: 15, arena10: 10, arena20: 20, poly: 10, magister: 30, devoted: 7, exemplar: 10 };
+  for (const v of [0, 1, 3, 9, 14, 15, 19, 40, 49, 50, 112, 249, 250, 999, 1000, 4000, -2, undefined]) {
+    mastered = Math.max(0, Math.min(30, v || 0));
+    const b = typeof v === 'number' ? v + 1 : v;   // the best streak runs one ahead, so a title reading the wrong stat shows
+    const g = { stats: { correct: v, best: b }, arenaBest: v, streak: { days: v }, cleared: Object.fromEntries(Array.from({ length: Math.max(0, Math.min(9, v || 0)) }, (_, i) => ['0:' + i, 'S'])), titles: {} };
+    for (const [id, of] of Object.entries(counted)) {
+      const u = id === 'form' ? b : v, w = W.of(by(id), g), want0 = id === 'exemplar' ? Math.min(9, Math.max(0, v || 0)) : Math.max(0, Math.min(of, Math.floor(u || 0)));
+      want(w && w.of === of && w.n === want0, id + ' ' + v, id + ' counts ' + JSON.stringify(w) + ' at ' + v);
+      want(W.text(w) === w.n + '/' + w.of, 'text ' + id + v, 'a count reads wrong');
+      // a title counted complete is earned by the same rule
+      if (id !== 'poly' && id !== 'magister' && id !== 'exemplar') want((w.n >= of) === !!by(id).t(Object.assign({ arenaBest: v }, g)), 'agree ' + id + ' ' + v, id + "'s count and its rule disagree at " + v);
+    }
+    const near = W.near(g);
+    const fr = Object.entries(counted).map(([id]) => { const w = W.of(by(id), g); return [id, w.n / w.of]; }).filter(x => x[1] < 1);
+    const top = fr.length ? Math.max(...fr.map(x => x[1])) : 0;
+    want(top > 0 ? fr.some(x => x[0] === near && x[1] === top) || (near === 'realm') : near === null || near === 'realm', 'near ' + v, 'the nearest title is not the one marked at ' + v);
+    for (const id of ['dragon', 'ascend', 'crowned', 'paragon']) want(W.of(by(id), g) === null, 'none ' + id + v, id + ' claims a count it cannot have');
+  }
+  // an earned title is never the nearest, and shows no count
+  const g = { stats: { correct: 40, best: 2 }, titles: { squire: 1 }, cleared: {}, streak: { days: 0 } };
+  want(W.near(g) !== 'squire' && !W.medal(by('squire'), g).includes('tway') && W.medal(by('errant'), g).includes('<span class="tway">40/250</span>'), 'earned', 'an earned title is counted or marked as next');
+  const realm = W.of(by('realm'), { cleared: { '1:0': 1, '1:1': 1, '1:2': 1, '0:0': 1 } });
+  want(realm && realm.n === 60 && W.text(realm) === '60%', 'realm', 'the nearest realm is not measured by its share cleared');
+  want(W.of(by('squire'), null) === null, 'empty', 'a missing save is counted');
+  want(html.includes('${TITLES.map(t=>TitleWay.medal(t,Game.s)).join(\'\')}') && html.includes('.medal.near{'), 'wired', 'the titles page does not show how far off each title is');
   return checks;
 })();
 const haulNotes = (() => {
@@ -5475,7 +5586,7 @@ const wayNotes = (() => {
     }
   }
   // the wiring
-  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('${Wayfarer.html(way)}'), 'wired', 'a victory does not roll or show a wayfarer');
+  want(html.includes("    const way=Wayfarer.roll(this);") && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'wired', 'a victory does not roll or show a wayfarer');
   const ans = src.slice(src.indexOf('  answer('));
   want(ans.includes('this.cur=null;     // one question, one prize') && ans.includes('Game.recordAnswer(q.key, ok, 1);') && ans.includes('if(ok){ w.kind.give(w);') && !/else[^;]*give/.test(ans), 'answer', 'a meeting pays twice, is not counted, or pays a miss');
   const ask = src.slice(src.indexOf('  ask('), src.indexOf('  answer('));
@@ -5538,7 +5649,7 @@ const scoutNotes = (() => {
   want(S.intro({ nm: 'Imp' }).includes('scouted Imp') && S.intro({ nm: 'Imp' }).includes('×2'), 'intro', S.intro({ nm: 'Imp' }));
   // the wiring
   want(html.includes('this.prepared=Scout.spend(this); // a foe scouted first is fought prepared'), 'start', 'a fight does not spend the scouting');
-  want(html.includes('else if(this.prepared) UI.toast(Scout.intro(f));') && html.includes('${Scout.html(nx)}'), 'said', 'the scouting is not offered or told');
+  want(html.includes('else if(this.prepared) UI.toast(Scout.intro(f));') && html.includes('Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])'), 'said', 'the scouting is not offered or told');
   const ans = src.slice(src.indexOf('  answer('), src.indexOf('  spend('));
   want(ans.includes('Game.recordAnswer(q.key, ok, 1);') && /if\(ok\)\{\s*this\.at=\{ri:this\.ri, fi:this\.fi\};/.test(ans) && !/else[\s\S]*this\.at=/.test(ans), 'answer', 'scouting is not counted, or a miss prepares the knight');
   const op = src.slice(src.indexOf('  open('), src.indexOf('  ask('));
@@ -29038,6 +29149,10 @@ console.log(`  realm topic lines         ${pad(topicsNotes.toLocaleString(), 10)
 console.log(`  nameplate rules           ${pad(nameplateNotes.toLocaleString(), 10)}  (a long foe nameplate wraps in its own half of the bars, and the health beside it stays whole and on the screen)`);
 console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)}  (each piece in the Smithy says what it adds over what is worn, and the dear ones wait behind a fold)`);
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
+console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
+console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
+console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
+console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

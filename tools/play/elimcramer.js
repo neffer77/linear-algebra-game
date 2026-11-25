@@ -31,7 +31,8 @@ module.exports = {
     await t.newKnight('Isolde');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok("the Tome says the elimination workshop can use Cramer's rule", await t.ev(() =>
       /Or read the rows as columns, and find each unknown by Cramer's rule as a ratio of two areas\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeElim');

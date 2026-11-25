@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Gareth');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each sum can be called', await t.ev(() =>
       /Or call it: see four curves cut into rectangles, and say whether each sum is over the area, exact or under\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeArea');

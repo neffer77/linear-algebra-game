@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Gareth');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each product can be called', await t.ev(() =>
       /Or call it: see four products, each at a point, and say whether each is rising, flat or falling there\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeProduct');

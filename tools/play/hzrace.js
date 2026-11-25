@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Isolde');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says a race can be ranked', await t.ev(() =>
       /Or rank a race: put four functions in order from slowest to fastest as x grows\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeHorizon');

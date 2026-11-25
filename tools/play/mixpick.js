@@ -25,7 +25,8 @@ module.exports = {
     await t.newKnight('Lancelot');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     const n = await t.ev(() => MixPick.LIST.length);
     t.ok('the Tome offers the mix, with how many workshops are in it', await t.ev(n =>
       document.getElementById('s-tome').innerText.includes(`${n} workshops can each be turned round. Here they come mixed`), n));
