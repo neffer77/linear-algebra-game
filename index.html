@@ -452,8 +452,8 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 #showwork .wbtn:active{background:rgba(255,255,255,.04);}
 #showwork .wbtn.nudge{margin-bottom:6px;}
 #showwork .wpair{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
-#showwork .wpair .wbtn{margin:0; padding:8px 6px; line-height:1.25;}
-#showwork .wbtn small{display:block; font-size:11.5px; opacity:.72; margin-top:2px;}
+#showwork .wpair .wbtn{margin:0; padding:8px 6px; line-height:1.25; font-size:13px;}
+#showwork .wbtn small{display:block; font-size:11px; opacity:.72; margin-top:2px;}
 #showwork .wnudge{margin-bottom:6px; padding:10px 12px; border-radius:12px; font-size:14px; line-height:1.45;
   border:1px solid rgba(255,212,121,.35); background:rgba(255,212,121,.06);}
 #showwork .wnudge b{color:var(--gold); font-size:12px; letter-spacing:.04em;}
@@ -11530,10 +11530,10 @@ const Battle = {
     const offer = !this.nudged && this.canNudge();
     /* Offered together, the two doors share one row, each with its price
        in small print under it; alone, the working keeps its full line. */
-    const go=`<div class="wbtn" id="wgo">${offer ? '🔎 Show the working<small>costs the strike, not blood</small>'
+    const go=`<div class="wbtn" id="wgo">${offer ? '🔎 Show the working<small>the strike, not blood</small>'
                                              : '🔎 Show me the working — costs the strike, not blood'}</div>`;
     w.innerHTML=offer
-      ? `<div class="wpair"><div class="wbtn nudge" id="wnudge">💡 Nudge me<small>the first step, for half the strike</small></div>${go}</div>`
+      ? `<div class="wpair"><div class="wbtn nudge" id="wnudge">💡 Nudge me<small>a step, half the strike</small></div>${go}</div>`
       : (this.nudged ? `<div class="wnudge"><b>💡 A way in</b><br><span></span></div>` : '')+go;
     // Set as text: the step is plain words and sums, never markup.
     if(this.nudged) w.querySelector('.wnudge span').textContent=this.nudged.text;

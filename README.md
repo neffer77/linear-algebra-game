@@ -931,7 +931,7 @@ The game is built so that losing teaches you as much as winning.
   press, and an item in hand keeps its name. Nothing new is saved.
 - **💡 The nudge and the working share a row.** Under a question, "Nudge me" and "Show me the working" took a
   full-width line each. Offered together they now sit side by side, each with its price in small print under it
-  ("the first step, for half the strike", "costs the strike, not blood"); after a nudge, the working takes the full
+  ("a step, half the strike", "the strike, not blood"); after a nudge, the working takes the full
   line again. Nothing new is saved.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line

@@ -5020,7 +5020,7 @@ const fightBarNotes = (() => {
   const draw = (nudged, can, answered) => { R.nudged = nudged; R.canNudge = () => can; R.answered = answered; R.renderWork(); return inner; };
   const two = draw(null, true, false);
   want(two.startsWith('<div class="wpair">') && two.indexOf('id="wnudge"') < two.indexOf('id="wgo"') && two.trim().endsWith('</div></div>'), 'pair', 'offered together, the nudge and the working are not one row');
-  want(two.includes('💡 Nudge me<small>the first step, for half the strike</small>') && two.includes('🔎 Show the working<small>costs the strike, not blood</small>'), 'prices', 'a door in the pair lost its price');
+  want(two.includes('💡 Nudge me<small>a step, half the strike</small>') && two.includes('🔎 Show the working<small>the strike, not blood</small>'), 'prices', 'a door in the pair lost its price');
   want(ids.wnudge && ids.wnudge.onclick() === 'n' && ids.wgo && ids.wgo.onclick() === 'w', 'acts', 'a door in the pair does not open');
   const alone = draw(null, false, false);
   want(!alone.includes('wpair') && !alone.includes('wnudge') && alone === '<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>', 'alone', 'the working alone lost its full line');

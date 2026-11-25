@@ -46,7 +46,7 @@
     {
       "name": "pair loses a price",
       "file": "index.html",
-      "find": "'🔎 Show the working<small>costs the strike, not blood</small>'",
+      "find": "'🔎 Show the working<small>the strike, not blood</small>'",
       "replace": "'🔎 Show the working'",
       "run": "verify"
     }

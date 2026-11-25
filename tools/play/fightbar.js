@@ -67,8 +67,8 @@ module.exports = {
     let d = await doors(t);
     t.ok('the nudge and the working are offered', d.n && d.g, JSON.stringify(d));
     t.ok('side by side in one row', d.n && d.g && Math.abs(d.n.top - d.g.top) <= 2 && d.n.w > 120 && d.g.w > 120 && d.n.w + d.g.w <= d.sw, JSON.stringify(d));
-    t.ok('each says its price', d.n && /^💡 Nudge me the first step, for half the strike$/.test(d.n.txt) && /^🔎 Show the working costs the strike, not blood$/.test(d.g.txt), JSON.stringify(d));
-    t.ok('neither runs past three lines', d.n && d.g && d.n.h < 80 && d.g.h < 80, JSON.stringify(d));
+    t.ok('each says its price', d.n && /^💡 Nudge me a step, half the strike$/.test(d.n.txt) && /^🔎 Show the working the strike, not blood$/.test(d.g.txt), JSON.stringify(d));
+    t.ok('each is its name over its price, two lines at most', d.n && d.g && d.n.h <= 60 && d.g.h <= 60, JSON.stringify(d));
     t.ok('the fight still fits the phone across', d.wide, 'the page scrolls sideways');
 
     await t.ev(() => document.getElementById('wnudge').click());
