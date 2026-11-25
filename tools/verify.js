@@ -3014,8 +3014,8 @@ const nextFightNotes = (() => {
   want(at > win.indexOf("UI.go('s-result');") && at > win.indexOf('g.cleared[key]=true;'), 'win', 'the next fight is found before this one is counted as beaten');
   want(win.indexOf("if(this.mode==='arena')") < at && win.indexOf("if(this.mode==='dungeon')") < at, 'win', 'the arena or a descent reaches the next fight');
   const btns = win.indexOf('${NextFight.html(nx)}');
-  want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')"), 'win', 'the next fight is not the first button');
-  want(win.includes(`<button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>`), 'win', 'the map keeps the gold when there is a next fight');
+  want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')") && btns < win.indexOf('${WinRow.html(this, nx)}'), 'win', 'the next fight is not the first button');
+  want(win.includes("${nx?'':`<button class=\"btn gold\" onclick=\"UI.go('s-map')\">🗺️ Onward</button>`}") && win.includes('${WinRow.html(this, nx)}'), 'win', 'the map keeps the gold when there is a next fight');
   want(!/(Game\.s|\bg|this\.s)\.next(Fight|Foe)\b/.test(html), 'save', 'the next fight is saved');
   return checks;
 })();
@@ -3127,7 +3127,7 @@ const bestGradeNotes = (() => {
   want(win.includes('const had=g.cleared[key], first=!had;') && win.includes('g.cleared[key]=Grade.keep(had, Grade.of(marks));'), 'win', 'the best grade is not kept in the clear');
   want(win.indexOf('g.cleared[key]=Grade.keep(had') < win.indexOf('Game.save();'), 'win', 'the best grade is kept after the save');
   want(win.includes("else if(crowned) Celebrate.banner('REALM CROWNED'"), 'win', 'a crown is not celebrated');
-  want(html.includes("'<span class=\"tag g\">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi])") && html.includes('${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}'), 'map', 'the map does not show best grades and crowns');
+  want(html.includes("${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}") && html.includes('${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}'), 'map', 'the map does not show best grades and crowns');
   want(!/Game\.s|localStorage/.test(src.slice(src.indexOf('RANK:'), src.indexOf('crown(on)'))), 'saved', 'the best grade reaches into the save');
   return checks;
 })();
@@ -4134,7 +4134,7 @@ const gauntletNotes = (() => {
   want(html.includes("const path=WarPath.broke(); March.broke();\n    Gauntlet.end();") && html.includes("if(live) Gauntlet.end();"), 'end', 'a fall or a flight does not break off a run');
   const esc = html.slice(html.indexOf('\n  escape(){'), html.indexOf('\n  flee(){'));
   want(esc.includes('const run=Gauntlet.won(this);') && esc.includes('UI.toast(Gauntlet.say(run));'), 'escape', 'a greedy foe that gets away does not count as passed');
-  want(html.includes("realms+=Gauntlet.node(ri);") && html.split('Gauntlet.won(').length === 3, 'map', 'the map does not show the gauntlet, or a run steps on elsewhere');
+  want(html.includes("realm+=Gauntlet.node(ri);") && html.split('Gauntlet.won(').length === 3, 'map', 'the map does not show the gauntlet, or a run steps on elsewhere');
   return checks;
 })();
 
@@ -4817,7 +4817,7 @@ const roadNotes = (() => {
   want(html.includes('${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}')
     && !/\n\s*\$\{Scout\.html\(nx\)\}\n/.test(html), 'wired', 'the victory card stacks its road offers unfolded');
   want(/begin\(ri, fi, heroic, rival\)\{\n\s*if\(typeof Road!=='undefined'\) Road\.open=false;/.test(html), 'reset', 'a new fight keeps the last road opened');
-  want(html.includes('<div class="btnRow" id="winRow"><button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
+  want(html.includes('id="winRow">${map}<button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
     && !html.includes('🏪 Visit the Smithy'), 'row', 'Fight again and the Smithy are not one row');
   want(html.includes('.btnRow{display:flex;gap:8px}') && html.includes('.btnRow>.btn{flex:1 1 0;min-width:0;'), 'css', 'the button row does not share its width');
   want(html.includes('details.road>summary{list-style:none;') && !/Game\.s\.road|g\.roadOpen/.test(html), 'saved', 'the fold shows its marker, or is saved');
@@ -4830,9 +4830,37 @@ const calcRoomNotes = (() => {
   want(html.includes('body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'), 'css', 'the screen leaves no room under the scratch pad button');
   want(/#calcBtn\{position:fixed;[^}]*width:52px; height:52px;/.test(html), 'size', 'the button grew past the strip left for it');
   const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
-  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant();") && sync.includes("b.style.display = on ? '' : 'none';")
+  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant() && !fight;") && sync.includes("b.style.display = on ? '' : 'none';")
     && sync.includes("document.body.classList.toggle('calcRoom', on);"), 'sync', 'the strip does not come and go with the button');
   want(html.split('Calc.syncButton()').length >= 3, 'called', 'the button is not synced when a screen changes');
+  return checks;
+})();
+const calcChipNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('calc chip', key, msg); };
+  const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
+  want(sync.includes('const fight = this.inFight();'), 'fight', 'the corner button does not know it is in a fight');
+  const f = html.indexOf('  inFight(){'), fight = html.slice(f, html.indexOf('\n  },', f));
+  want(f > 0 && fight.includes("on.id==='s-battle'"), 'where', 'a fight is not the battle screen');
+  want(!fight.includes('s-train'), 'train', 'the training ground lost its corner button');
+  const r = html.indexOf('  renderPowers(){'), pw = html.slice(r, html.indexOf('\n  },', r));
+  const chip = "if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());";
+  want(pw.includes(chip), 'chip', 'the fight\'s skill bar has no scratch pad');
+  want(pw.indexOf(chip) > pw.indexOf("add('sigil'"), 'last', 'the scratch pad is not last in the bar');
+  // Run the real relevant/inFight/syncButton against a stub page: the corner button
+  // and its strip show only on the training ground, and only with the pad on.
+  const rl = html.indexOf('  relevant(){'), rel = html.slice(rl, html.indexOf('\n  },', rl) + 4);
+  for (const scr of ['s-battle', 's-train', 's-map']) for (const pref of [true, false]) {
+    const btn = { style: {} }, cls = {};
+    const document = { querySelector: () => ({ id: scr }), getElementById: () => btn,
+      body: { classList: { toggle: (k, v) => { cls[k] = v; } } } };
+    const Prefs = { d: { calc: pref } };
+    const C = new Function('document', 'Prefs', `return {shown:false, close(){},\n${rel},\n${fight}\n  },\n${sync}\n  }};`)(document, Prefs);
+    C.syncButton();
+    const want1 = scr === 's-train' && pref;
+    want((btn.style.display === '') === want1 && cls.calcRoom === want1, 'case', `corner button wrong on ${scr} with the pad ${pref ? 'on' : 'off'}`);
+  }
   return checks;
 })();
 const tomeFoldNotes = (() => {
@@ -4860,6 +4888,95 @@ const tomeFoldNotes = (() => {
   want(ids.length >= 40 && (inside.match(/<div class="panel"/g) || []).length === ids.length, 'cards', 'a workshop card has no button, or a card without one is folded');
   want(!/TOME\.map/.test(inside) && /TOME\.map/.test(outside), 'lore', 'the lessons are folded away with the cards');
   want(html.includes('details.tomeAll>summary{list-style:none;') && !/Game\.s\.tomeAll|Game\.s\.tomeFold/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const sealFoldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const SealFold = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('seal fold', key, msg); };
+  const F = new Function(src + ';return SealFold;')();
+  const NM = ['Vale', 'Marches', 'Cliffs', 'Abyss', 'Citadel', 'Reach', 'Expanse', 'Summit', 'Beyond', 'Further'];
+  for (let n = 0; n <= 10; n++) for (const open of [false, true]) {
+    F.open = open;
+    const parts = Array.from({ length: n }, (_, i) => '<details class="realm" id="realm-' + i + '"><summary>' + NM[i] + '</summary></details>');
+    const names = NM.slice(0, n), h = F.wrap(parts, names);
+    if (n < 2) { want(h === parts.join(''), 'alone ' + n, 'a lone sealed realm is folded, or dropped'); continue; }
+    want(h.startsWith('<details class="sealAll" id="sealAll"') && h.endsWith(parts.join('') + '</details>'), 'all ' + n, 'a realm is dropped, reordered, or sits outside the fold');
+    want(h.includes('<summary>＋ ' + n + ' more sealed realms <span class="sealSpan">' + names[0] + ' to ' + names[n - 1] + '</span></summary>'), 'count ' + n, 'the fold does not count and name the realms behind it');
+    want(h.includes('ontoggle="if(this.isConnected) SealFold.open=this.open"') && h.includes('id="sealAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
+  }
+  F.open = false;
+  want(F.wrap(['<p>a</p>', '', null, '<p>b</p>'], ['A', 'B']).includes('＋ 2 more sealed realms'), 'blank', 'an empty part is counted as a realm');
+  const s = html.indexOf('  renderMap(){'), map = html.slice(s, html.indexOf('\n  },\n', s));
+  want(/const folded = !unlocked && ri>firstSealed;/.test(map) && map.includes("if(folded){ far.push(realm); farNames.push(r.nm); } else realms+=realm;")
+    && map.includes('realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt)'), 'wired', 'the realms past the next sealed one are not folded together, or the next one is folded with them');
+  want(map.includes("const unlocked = !sealedAt[ri];") && map.includes("const firstSealed=sealedAt.indexOf(true)"), 'sealed', 'what counts as sealed has changed');
+  const t = html.indexOf('  toRealm(ri){'), to = html.slice(t, html.indexOf('\n  },', t));
+  want(to.indexOf("closest('details.sealAll')") > 0 && to.includes("if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri);")
+    && to.indexOf('this.renderMap()') < to.indexOf('\n    d.open=true;'), 'road', 'a stone on the road does not open the fold to reach its realm');
+  want(/\.node\.slim \.nm\{[^}]*white-space:nowrap; overflow:hidden; text-overflow:ellipsis;/.test(html), 'slim', 'a short row can wrap to a second line');
+  want(html.includes('details.sealAll>summary{list-style:none;') && !/Game\.s\.seal/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const roadStepNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('road step', key, msg); };
+  const s = html.indexOf('  realmPath(cur){'), road = html.slice(s, html.indexOf('\n  },', s));
+  const step = +(/\n  ROADSTEP: (\d+),\n  realmPath\(cur\)\{/.exec(html) || [])[1];
+  want(step === 54, 'step', 'the road\'s stones are not 54 apart');
+  want(road.includes('STEP=this.ROADSTEP, H=STEP*(n-1)+60;') && road.includes('const ys=REALMS.map((_,i)=>30+i*STEP);'), 'wired', 'the road does not lay its stones out by ROADSTEP');
+  // the room each needs, from the stylesheet: the glowing stone and a label of up to three lines
+  const px = re => +(re.exec(html) || [])[1];
+  const disc = px(/\.stone\.here \.sdisc\{width:(\d+)px/), small = px(/\.stone \.sdisc\{width:(\d+)px/);
+  const line = px(/\.stone \.slab\{[^}]*font-size:(\d+)px/) * 1.25, name = px(/\.stone \.slab b\{[^}]*font-size:(\d+)px/) * 1.25;
+  want(disc === 50 && small === 42 && line === 15 && name === 16.25, 'css', JSON.stringify([disc, small, line, name]));
+  for (const lines of [2, 3]) {
+    const lab = name * (lines - 1) + line;   // a name that wraps once, and the line under it
+    want(step >= lab, 'labels ' + lines, `two neighbouring labels of ${lines} lines overlap at a step of ${step}`);
+    want(step >= lab / 2 + disc / 2 + 2, 'stone ' + lines, `a label of ${lines} lines touches the glowing stone below it at a step of ${step}`);
+  }
+  want(2 * step >= disc + small, 'same side', 'two stones on the same side touch');
+  return checks;
+})();
+const slimRowNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('slim rows', key, msg); };
+  const s = html.indexOf('  renderMap(){'), map = html.slice(s, html.indexOf('\n  },\n', s));
+  const a = map.indexOf('        if(done){'), b = map.indexOf('          return;\n        }', a), slim = map.slice(a, b), full = map.slice(b);
+  want(a > 0 && b > a && map.indexOf('const open = unlocked && prevDone;') < a, 'won', 'a won fight does not take its own row before the full card');
+  want(slim.includes('<div class="node done slim ${open?\'\':\'locked\'}" onclick="Battle.begin(${ri},${fi})">'), 'fight', 'a short row does not begin its fight, or is never locked with its realm');
+  want(slim.includes("${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}") && slim.includes('<div class="sgold">🪙 ${f.gold}</div>'), 'says', 'a short row does not name the foe, its best grade or its gold');
+  want(slim.includes("${Quarry.tag(quarry===ri+':'+fi)}") && slim.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marks', 'a short row loses the quarry or the debt it is marked with');
+  want(!/Reckon\.line|f\.hp|f\.atk/.test(slim), 'over', 'a short row still plans a fight that is over');
+  want(full.includes('${open?Reckon.line(f, g):\'\'}') && !/done\?/.test(full.slice(0, full.indexOf('Gauntlet.node(ri)'))), 'full', 'the fight still to come loses its card, or the card still asks whether it was won');
+  want(/\.node\.slim\{padding:6px 10px;/.test(html) && /\.node\.slim \.nm\{flex:1; min-width:0;/.test(html) && /\.node\.slim \.sgold\{[^}]*white-space:nowrap/.test(html), 'css', 'a short row is not drawn short, or its name cannot wrap');
+  return checks;
+})();
+const winRowNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const WinRow = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('win row', key, msg); };
+  const W = new Function(src + '\nreturn WinRow;')();
+  const B = { ri: 2, fi: 3 };
+  const ids = h => [...h.matchAll(/<button[^>]*id="(\w+)"/g)].map(m => m[1]);
+  const three = W.html(B, { ri: 2, fi: 4 }), two = W.html(B, null);
+  want(three.startsWith('<div class="btnRow three" id="winRow">') && ids(three).join() === 'mapBtn,againBtn,smithyBtn', 'three', 'with a next fight the map, a rematch and the Smithy are not one row of three');
+  want(three.includes(`onclick="UI.go('s-map')">🗺️ Map</button>`) && three.includes('onclick="Battle.begin(2,3)" aria-label="Fight again">↻ Again</button>')
+    && three.includes(`onclick="UI.go('s-shop')">🏪 Smithy</button>`), 'acts', 'a button in the row goes somewhere else');
+  want(!/class="btn gold"/.test(three), 'gold', 'a quiet way out took the gold from the next fight');
+  want(two.startsWith('<div class="btnRow" id="winRow">') && ids(two).join() === 'againBtn,smithyBtn' && !two.includes('mapBtn'), 'two', 'with no next fight the row is not the two it was');
+  want(two.includes('>↻ Fight again</button>') && two.includes('onclick="Battle.begin(2,3)"'), 'again', 'Fight again lost its words or its fight');
+  // the map shows once either way: in the row, or as the gold Onward
+  const Bt = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const win = Bt.slice(Bt.indexOf('\n  win(){'), Bt.indexOf('\n  lose(){'));
+  want(win.split("UI.go('s-map')").length === 2 && win.indexOf('${WinRow.html(this, nx)}') > win.indexOf('${Heroic.button(this)}'), 'once', 'the map shows twice, or the row is not last');
+  want(/\.btnRow\.three>\.btn\{[^}]*white-space:nowrap;[^}]*text-align:center\}/.test(html), 'css', 'a button in the row of three can wrap');
   return checks;
 })();
 const titleWayNotes = (() => {
@@ -29179,7 +29296,12 @@ console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)} 
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
+console.log(`  calc chip                 ${pad(calcChipNotes.toLocaleString(), 10)}  (in a fight the scratch pad is the bar's last chip; the corner button is for practice)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
+console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
+console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
+console.log(`  slim rows                 ${pad(slimRowNotes.toLocaleString(), 10)}  (a won fight takes one short row with its name, best grade and gold; the fight to come keeps its card)`);
+console.log(`  win row                   ${pad(winRowNotes.toLocaleString(), 10)}  (with a next fight, the map, a rematch and the Smithy share one row of three at the foot of the victory card)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);

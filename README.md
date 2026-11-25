@@ -909,6 +909,22 @@ The game is built so that losing teaches you as much as winning.
   repeated its realm's whole list of topics. Now the foes still in the dark stand small, side by side, over one line
   that counts them ("three foes wait in Matrix Marches, the boss among them"), and a realm's topics are said once under
   its name. A new knight's Bestiary is a page of shadows, not thirty-two rows of them.
+- **🔒 A shorter map.** Under the road, every realm kept a heading of its own, so a new knight scrolled past six
+  headings for realms they could not yet enter, each already a dark stone on the road above. Now the realm being
+  worked through and the next to open keep their headings, and the ones past those wait behind one line that counts
+  and names them ("＋ 6 more sealed realms, Integral Abyss to Gradient Summit"). It opens in place and stays open
+  for the sitting, and tapping a sealed stone on the road opens it on the way to that realm.
+- **🗺️ A shorter road.** The campaign's road set its stones far apart, so on a phone it filled most of the screen
+  by itself. Neighbouring stones sit on opposite sides, so only a label's lines and the glowing stone need the room;
+  they now sit closer, and the road is about a quarter shorter, with no label or stone touching another.
+- **✓ Beaten fights take one short row.** In the realm being worked through, every fight already won kept its full
+  card on the map, with its health, strike, gold and reckoning of blows, so three of them stood between the realm's
+  heading and the fight still to come. A won fight now takes one short row with its name, its best grade and its
+  gold, still a tap away; the fight still to come keeps its card, a few rows under the heading.
+- **🧭 One row of ways home.** A victory card with a next fight waiting ended in four full-width buttons under
+  the fight: To the map, a rival's duel, a heroic rematch, then Fight again beside the Smithy. The quiet ways out
+  now share one row of three at the very foot of the card ("🗺️ Map", "↻ Again", "🏪 Smithy"), so the next fight
+  and the offers stand alone above them. With no next fight the map is still the gold "Onward". Nothing new is saved.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
   each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
@@ -919,6 +935,10 @@ The game is built so that losing teaches you as much as winning.
 - **🧮 Room for the scratch pad.** In a fight on a phone the floating 🧮 button sat on top of the last skill or
   item in the bar. While it shows, the screen now ends with a strip as tall as the button, so scrolled down every
   skill, item and the Retreat sit wholly above it; where the button is hidden, so is the strip. Nothing new is saved.
+- **🧮 The scratch pad sits in the fight's bar.** Even with room left under it, the floating 🧮 button still
+  covered a skill until the page was scrolled. In a fight the pad is now the last chip in the skill bar ("🧮 Scratch
+  pad"), tapped to open and tapped again to close, so nothing floats over the fight and no strip is left under it.
+  The training ground keeps its corner button. Turned off in Settings, it is gone from both. Nothing new is saved.
 - **🛤️ A shorter victory card.** A win that meets the whole road (a scout, a wayfarer, a campfire, a peddler
   and a dicer) shows the first two and folds the rest behind one line that counts them ("＋ 3 more on the road"),
   which opens in place and stays open while the card redraws. "Fight again" and the Smithy share one row, so the
@@ -3537,7 +3557,12 @@ Inside `index.html` the code is organised as:
 | `Skillset` | every mix of carried skills, skills with uses and skills with none: the first two in view and in order, the rest behind one counted fold, never a lone one folded, none dropped or doubled; the fold stays as it was left; one topic "needs work"; wired into Gear and both strand badges |
 | `Road` | every mix of five road offers, each there or empty: the first two in view and in order, the rest behind one counted fold, never a road of three folded, no empty offer drawn or counted, none dropped or doubled; the fold stays as it was left and a new fight starts it folded; Fight again and the Smithy in one row |
 | calc room | the strip under the scratch pad button is in the stylesheet, comes and goes with the button, and the button is no taller than the strip |
+| calc chip | in a fight the scratch pad is the skill bar's last chip, shown only with the pad on; the real button logic, run on a stub page, shows the corner button and its strip on the training ground alone |
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
+| `SealFold` | every count of sealed realms from none to ten, folded or opened: two or more inside one fold with a line that counts them and names the first and last, in order, none dropped; one alone shown unfolded; blanks not counted; the fold stays as it was left; on the map only the realms past the next to open are folded; a stone on the road opens the fold before its realm |
+| `UI.ROADSTEP` | the campaign road's stones 54 apart and laid out by it; from the stylesheet, enough room between neighbours for two- and three-line labels, for a label beside the glowing stone, and for two stones on the same side |
+| `slim rows` | a won fight takes its own short row before the full card: it still begins its fight and is locked with its realm; it names the foe, its best grade or a tick, and its gold, and keeps the quarry and debt marks; no health, strike or reckoning; the fight to come keeps its card and reckoning; drawn short with a name that can wrap |
+| `WinRow` | with a next fight, the map, a rematch and the Smithy are one row of three, in that order, going where they say and none gold; with none, the row is Fight again and the Smithy; the map shows once on the card, and the row is last; no button in the row can wrap |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
 | `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |

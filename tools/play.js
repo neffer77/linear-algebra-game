@@ -287,6 +287,9 @@ const SUITES = [
   require('./play/calcroom'),    // the scratch pad button never covers the bar
   require('./play/tomefold'),    // the Tome folds its workshop cards
   require('./play/titleway'),    // each locked title says how far off it is
+  require('./play/sealfold'),    // the map folds the sealed realms past the next
+  require('./play/roadstep'),    // the campaign road's stones sit closer
+  require('./play/slimrows'),    // beaten fights take one short row on the map
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

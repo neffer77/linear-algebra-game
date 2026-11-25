@@ -160,6 +160,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .vs.up{color:var(--green)}
 .btnRow{display:flex;gap:8px}
 .btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+.btnRow.three>.btn{padding-left:6px;padding-right:6px;font-size:15px;white-space:nowrap;text-align:center}
 .bestShades{display:flex;flex-wrap:wrap;gap:6px 10px;padding:8px 0 4px;border-top:1px solid rgba(255,255,255,.08)}
 .bestShade{display:flex;flex-direction:column;align-items:center;gap:2px;width:60px;font-size:12px;font-weight:800;opacity:.6}
 .bestDark{font-size:13px;opacity:.6}
@@ -172,6 +173,10 @@ details.road>summary::-webkit-details-marker{display:none}
 details.road[open]>summary{color:var(--dim)}
 details.skillRest>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 details.skillRest>summary::-webkit-details-marker{display:none}
+details.sealAll>summary{list-style:none;margin:8px 0 2px;padding:10px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
+details.sealAll>summary::-webkit-details-marker{display:none}
+details.sealAll[open]>summary{color:var(--dim)}
+details.sealAll .sealSpan{display:block;margin-top:2px;font-size:12px;font-weight:600;color:var(--dim)}
 details.skillRest[open]>summary{color:var(--dim)}
 .wareMore{margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
@@ -382,6 +387,11 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* Map nodes: a gilt edge and a plate behind the sigil. */
 .node{border-left:3px solid var(--gold-dk);}
 .node.done{border-left-color:#3f6a46;}
+.node.slim{padding:6px 10px; margin:5px 0; gap:8px;}
+.node.slim .ico{width:30px; height:30px; font-size:17px; border-radius:8px;}
+.node.slim .nm{flex:1; min-width:0; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.node.slim .tag{font-size:10px; padding:1px 6px;}
+.node.slim .sgold{font-size:12px; color:var(--dim); white-space:nowrap;}
 .node .ico{border:1px solid var(--gold-dk); background:linear-gradient(180deg,#1d1633,#120d24);}
 .realmhdr h2{font-family:var(--serif);}
 
@@ -9506,6 +9516,36 @@ const TomeFold = {
   }
 };
 
+/* Sealed realms. Under the road, every realm kept a heading of its own on the
+   map, so a new knight scrolled past six headings for realms they cannot yet
+   enter, each already a dark stone on the road above. The next realm to open
+   keeps its heading, since it says what to go and do; the ones past it wait
+   behind one line that counts and names them, which opens in place for the
+   rest of the sitting. A stone tapped on the road opens it on the way. */
+const SealFold = {
+  open:false,
+  wrap(parts, names){
+    const p=(parts||[]).filter(x=>x&&String(x).trim());
+    if(p.length<2) return p.join('');   // one alone is shown, not folded
+    const nm=(names||[]).filter(Boolean);
+    const span=nm.length>1?`${nm[0]} to ${nm[nm.length-1]}`:(nm[0]||'');
+    return `<details class="sealAll" id="sealAll"${this.open?' open':''} ontoggle="if(this.isConnected) SealFold.open=this.open"><summary>＋ ${p.length} more sealed realms${span?` <span class="sealSpan">${span}</span>`:''}</summary>${p.join('')}</details>`;
+  }
+};
+
+/* The victory card's ways home. With a next fight waiting, the gold button is
+   that fight, and the map, a rematch and the Smithy are the quiet ways out: they
+   share one row of three, under the offers, instead of three full-width rows.
+   With no next fight the map is the way on, so it keeps its own gold button and
+   the row keeps its two. */
+const WinRow = {
+  html(B, nx){
+    const again=`Battle.begin(${B.ri},${B.fi})`;
+    const map = nx ? `<button class="btn ghost" id="mapBtn" onclick="UI.go('s-map')">🗺️ Map</button>` : '';
+    const aw = nx ? ' aria-label="Fight again">↻ Again' : '>↻ Fight again';
+    return `<div class="btnRow${nx?' three':''}" id="winRow">${map}<button class="btn" id="againBtn" onclick="${again}"${aw}</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>`;
+  }
+};
 const Road = {
   SHOW:2, open:false,
   group(parts){
@@ -11159,6 +11199,9 @@ const Battle = {
        can be carrying into a fight is a number nobody can see. */
     const wards=Dungeon.wards();
     if(wards>0) add('sigil', `🌀 Ward ×${wards}`, false, ()=>{});
+    /* The scratch pad, last in the row: a fight's own tool, beside the others,
+       where it covers nothing. Off in Settings means off here too. */
+    if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());
   },
 
   /* A raised Ward halves the next blow that actually lands, whichever kind it
@@ -12141,10 +12184,10 @@ const Battle = {
         ${Gauntlet.button(gnt)}
         ${NextFight.html(nx)}
         ${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}
-        <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
+        ${nx?'':`<button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>`}
         ${Rival.offer(this)}
         ${Heroic.button(this)}
-        <div class="btnRow" id="winRow"><button class="btn" id="againBtn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>`;
+        ${WinRow.html(this, nx)}`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills
@@ -17571,9 +17614,14 @@ const UI = {
   /* The road: every realm as a stone on a winding path, coloured by how far
      the knight has got. A realm whose champion is down is filled; the one being
      worked through glows and shows its fights as pips; one still sealed is
-     dark and says so. The path behind the knight is drawn in gold. */
+     dark and says so. The path behind the knight is drawn in gold.
+     The stones sit ROADSTEP apart down the page. They were 74 apart, which
+     made the road most of a phone's screen; since neighbours alternate sides,
+     only a label's two lines and the glowing stone need the room, and 54 is
+     enough for both with space between. */
+  ROADSTEP: 54,
   realmPath(cur){
-    const g=Game.s, n=REALMS.length, STEP=74, H=STEP*(n-1)+60;
+    const g=Game.s, n=REALMS.length, STEP=this.ROADSTEP, H=STEP*(n-1)+60;
     const xs=REALMS.map((_,i)=>i%2 ? 72 : 28);              // percent across
     const ys=REALMS.map((_,i)=>30+i*STEP);
     const pt=i=>`${xs[i]*3.6} ${ys[i]}`;                     // in a 360-wide box
@@ -17610,8 +17658,13 @@ const UI = {
   },
   // Open a realm's fights and bring them into view.
   toRealm(ri){
-    const d=document.getElementById('realm-'+ri);
+    let d=document.getElementById('realm-'+ri);
     if(!d) return;
+    /* A sealed realm further on is reached through its fold. The fold's state is
+       SealFold.open, so set that and draw the map again from it, rather than
+       opening the old fold and trusting its toggle event to say so later. */
+    const fold=d.parentElement && d.parentElement.closest('details.sealAll');
+    if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri); if(!d) return; }
     d.open=true;
     d.scrollIntoView({block:'start', behavior: Prefs.d.motion ? 'smooth' : 'auto'});
   },
@@ -17756,11 +17809,17 @@ const UI = {
     const quarry=Quarry.today();
     // today's quarry heads the campaign, above the road
     let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);
+    // the realms past the next one to open are folded together below the rest
+    const sealedAt=REALMS.map((r,ri)=>ri>0 && !g.cleared[(ri-1)+':'+(REALMS[ri-1].foes.length-1)]);
+    const firstSealed=sealedAt.indexOf(true), far=[], farNames=[];
+    let farAt=-1;
     REALMS.forEach((r,ri)=>{
-      const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
-      const unlocked = ri===0 || !!g.cleared[prevBossKey];
+      const unlocked = !sealedAt[ri];
       const beaten=r.foes.filter((f,fi)=>g.cleared[ri+':'+fi]).length;
-      realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
+      const folded = !unlocked && ri>firstSealed;
+      if(folded && farAt<0) farAt=realms.length;
+      let realm='';
+      realm+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
             <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Sky.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
@@ -17769,19 +17828,34 @@ const UI = {
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
         const open = unlocked && prevDone;
-        realms+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
+        /* A fight already won takes one short row: its name, its best grade
+           and its gold, still a tap away. Its health, its blows and the
+           reckoning were for planning a fight that is over, and three such
+           rows stood between the realm's heading and the fight still to come. */
+        if(done){
+          realm+=`<div class="node done slim ${open?'':'locked'}" onclick="Battle.begin(${ri},${fi})">
+          <div class="ico">${f.boss?'👑':'👾'}</div>
+          <div class="nm">${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class="tag g">✓</span>'}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
+          <div class="sgold">🪙 ${f.gold}</div>
+          <div style="font-size:16px;color:var(--dim)">${open?'▶':'🔒'}</div>
+        </div>`;
+          return;
+        }
+        realm+=`<div class="node ${open?'':'locked'}" onclick="Battle.begin(${ri},${fi})">
           <div class="ico" style="font-size:24px">${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
+            <div class="nm">${f.nm} ${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
             <div class="dt">❤️ ${f.hp} · ⚔️ ${f.atk} · 🪙 ${f.gold}${Quarry.dt(quarry===ri+':'+fi)}</div>
             ${open?Reckon.line(f, g):''}
           </div>
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;
       });
-      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
-      realms+='</details>';
+      realm+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
+      realm+='</details>';
+      if(folded){ far.push(realm); farNames.push(r.nm); } else realms+=realm;
     });
+    if(far.length) realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt);
     /* A knight who never finished the cellar is offered it back before anything
        else — but the map is not locked behind it. Someone who walked out early
        should be able to get on with the game. */
@@ -43524,10 +43598,18 @@ const Calc = {
     const on=document.querySelector('.screen.on');
     return !!on && (on.id==='s-battle' || on.id==='s-train');
   },
+  inFight(){
+    const on=document.querySelector('.screen.on');
+    return !!on && on.id==='s-battle';
+  },
   syncButton(){
     const b=document.getElementById('calcBtn');
     if(!b) return;
-    const on = Prefs.d.calc!==false && this.relevant();
+    /* In a fight the pad lives in the skill bar instead (Battle.renderPowers):
+       a button floating in the corner sat on top of the last skill there. So the
+       corner button, and the strip it needs, are for the training ground only. */
+    const fight = this.inFight();
+    const on = Prefs.d.calc!==false && this.relevant() && !fight;
     b.style.display = on ? '' : 'none';
     document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button
     if(!this.relevant() && this.shown) this.close();

@@ -1,54 +1,40 @@
 {
-  "change": "A shorter Saga: only the next chapter keeps its card, and the ones further on wait in one short list",
+  "change": "One row of ways home",
   "mutations": [
     {
-      "name": "every unread chapter gets a card again",
+      "name": "map back as a full button",
       "file": "index.html",
-      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
-      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
+      "find": "${nx?'':`<button class=\"btn gold\" onclick=\"UI.go('s-map')\">🗺️ Onward</button>`}",
+      "replace": "<button class=\"btn${nx?'':' gold'}\" onclick=\"UI.go('s-map')\">🗺️ ${nx?'To the map':'Onward'}</button>",
       "run": "verify"
     },
     {
-      "name": "the short list is never drawn",
+      "name": "row of three always",
       "file": "index.html",
-      "find": "      this.far(next);\n    this.paint(list);",
-      "replace": "      '';\n    this.paint(list);",
+      "find": "    const map = nx ? `<button",
+      "replace": "    const map = true ? `<button",
       "run": "verify"
     },
     {
-      "name": "the next chapter is the first, read or not",
+      "name": "row out of order",
       "file": "index.html",
-      "find": "  next(){ return REALMS.findIndex((r,ri)=>!this.read(ri)); },",
-      "replace": "  next(){ return 0; },",
+      "find": "id=\"winRow\">${map}<button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>",
+      "replace": "id=\"winRow\"><button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>${map}",
       "run": "verify"
     },
     {
-      "name": "the short list lists the next chapter too",
+      "name": "row buttons wrap",
       "file": "index.html",
-      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
-      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>!this.read(ri));",
+      "find": "font-size:15px;white-space:nowrap;text-align:center}",
+      "replace": "font-size:15px;text-align:center}",
       "run": "verify"
     },
     {
-      "name": "the short list lists chapters read",
+      "name": "row before the offers",
       "file": "index.html",
-      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
-      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next);",
+      "find": "        ${Rival.offer(this)}\n        ${Heroic.button(this)}\n        ${WinRow.html(this, nx)}`;",
+      "replace": "        ${WinRow.html(this, nx)}\n        ${Rival.offer(this)}\n        ${Heroic.button(this)}`;",
       "run": "verify"
-    },
-    {
-      "name": "every unread chapter gets a card again, seen in play",
-      "file": "index.html",
-      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
-      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
-      "run": "play:saga"
-    },
-    {
-      "name": "the short list rows run tall, seen in play",
-      "file": "index.html",
-      "find": ".sagaFar{font-size:13px;padding:5px 0 0;",
-      "replace": ".sagaFar{font-size:13px;padding:40px 0 0;",
-      "run": "play:saga"
     }
   ]
 }
