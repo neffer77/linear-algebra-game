@@ -3,7 +3,9 @@
  * Every campaign foe on one page off the map, realm by realm. A beaten foe
  * shows its name, numbers, its own tale and the topics its realm tests,
  * drawn in its own colours, with a button to fight it again; one not yet
- * beaten is an unnamed shadow. These checks open it as a new knight, clear
+ * beaten is an unnamed shadow, standing small beside the others still in
+ * the dark above one line that counts them; the topics a realm tests are
+ * said once under its name. These checks open it as a new knight, clear
  * a few foes, read the page and its portraits back, and fight from it.
  * Nothing new is saved.
  */
@@ -19,7 +21,14 @@ const page = t => t.ev(() => {
     for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { lit++; cols.add((d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4)); }
     return { id: r.id, text: r.innerText, lit, cols: cols.size, fight: !!r.querySelector('button') };
   });
-  return { count: document.getElementById('bestCount').innerText, bar: document.getElementById('bestBar').style.width, rows,
+  // each realm's panel: its one line of tests, rows that still name them, its shadows and the line under them
+  const panels = [...document.querySelectorAll('#bestList > .panel')].map(p => ({
+    tests: [...p.querySelectorAll('.bestTests')].map(x => x.innerText),
+    rowTests: [...p.querySelectorAll('.bestRow')].filter(r => /Tests:/.test(r.innerText)).length,
+    shades: p.querySelectorAll('.bestShade').length,
+    tops: [...p.querySelectorAll('.bestShade')].map(x => Math.round(x.getBoundingClientRect().top)),
+    dark: (p.querySelector('.bestDark') || { innerText: '' }).innerText }));
+  return { count: document.getElementById('bestCount').innerText, bar: document.getElementById('bestBar').style.width, rows, panels,
            heads: [...document.querySelectorAll('#bestList h2')].map(h => h.innerText) };
 });
 
@@ -41,6 +50,10 @@ module.exports = {
     t.ok('each one an unnamed shadow, with no fight button', p.rows.every(r => /\?\?\?/.test(r.text) && !r.fight), JSON.stringify(p.rows[0]));
     t.ok('and no name or tale given away', await t.ev(() => !REALMS.some(r => r.foes.some(f => document.getElementById('bestList').innerText.includes(f.nm)))));
     t.ok('a shadow is a shape in one dark tone', p.rows.every(r => r.lit > 300 && r.cols <= 2), JSON.stringify(p.rows.map(r => [r.lit, r.cols])));
+    const names = await t.ev(() => REALMS.map(r => r.nm));
+    t.ok('a realm not yet entered is its four shadows and one line', p.panels.length === names.length && p.panels.every((q, i) =>
+      q.shades === 4 && q.dark === `Not yet beaten: four foes wait in ${names[i]}, the boss among them.` && !q.tests.length), JSON.stringify(p.panels[0]));
+    t.ok('the four shadows stand side by side on a phone', p.panels.every(q => q.tops.length === 4 && new Set(q.tops).size === 1), JSON.stringify(p.panels.map(q => q.tops)));
 
     // beat the first realm, and one foe of the second
     await t.ev(() => { ['0:0', '0:1', '0:2', '0:3', '1:0'].forEach(k => { Game.s.cleared[k] = true; }); UI.go('s-map'); });
@@ -52,7 +65,10 @@ module.exports = {
     const slime = p.rows.find(r => r.id === 'best-0-0'), wyrm = p.rows.find(r => r.id === 'best-0-3');
     const want = await t.ev(() => ({ s: REALMS[0].foes[0], tale: Bestiary.LORE[REALMS[0].foes[0].nm], meet: Talk.BOSS['The Vector Wyrm'].meet }));
     t.ok('a beaten foe shows its name, numbers and tale', slime.text.includes(want.s.nm) && slime.text.includes(`❤️ ${want.s.hp} · ⚔️ ${want.s.atk} · 💰 ${want.s.gold}`) && slime.text.includes(want.tale), slime.text);
-    t.ok('and the topics its realm tests', /Tests: .+/.test(slime.text), slime.text);
+    t.ok('the topics a realm tests are said once, under its name', p.panels[0].tests.length === 1 && /^Tests: .+, .+/.test(p.panels[0].tests[0]) && p.panels[1].tests.length === 1 && p.panels.slice(2).every(q => !q.tests.length), JSON.stringify(p.panels.map(q => q.tests.length)));
+    t.ok('and no longer under every foe', p.panels.every(q => q.rowTests === 0), JSON.stringify(p.panels.map(q => q.rowTests)));
+    t.ok('a realm beaten through has no shadows left', p.panels[0].shades === 0 && p.panels[0].dark === '', JSON.stringify(p.panels[0]));
+    t.eq('a realm part beaten counts what is left in the dark', [p.panels[1].shades, p.panels[1].dark], [3, `Not yet beaten: three foes wait in ${names[1]}, the boss among them.`]);
     t.ok('a boss its opening line too', wyrm.text.includes('👑 The Vector Wyrm') && wyrm.text.includes(want.meet), wyrm.text);
     t.ok('a beaten foe is drawn in colour', slime.lit > 300 && slime.cols > 4 && wyrm.cols > 4, JSON.stringify([slime.lit, slime.cols, wyrm.cols]));
     t.ok('a foe not yet beaten is still a shadow', /\?\?\?/.test(p.rows.find(r => r.id === 'best-1-1').text));

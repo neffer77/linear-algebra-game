@@ -4899,6 +4899,31 @@ const titleWayNotes = (() => {
   want(html.includes('${TITLES.map(t=>TitleWay.medal(t,Game.s)).join(\'\')}') && html.includes('.medal.near{'), 'wired', 'the titles page does not show how far off each title is');
   return checks;
 })();
+const bestShadeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const a = html.indexOf('  shadeLine(n, boss, nm){');
+  const B = new Function('return {' + html.slice(a, html.indexOf('\n  },\n', a) + 4) + '};')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('bestiary shades', key, msg); };
+  const WORDS = ['two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  for (const nm of ['Vale of Vectors', 'Matrix Marches', 'The Gradient Summit'])
+    for (const boss of [false, true]) {
+      want(B.shadeLine(0, boss, nm) === '', 'none', 'a realm with no foe in the dark gets a line');
+      want(B.shadeLine(1, boss, nm) === (boss ? `Not yet beaten: the boss of ${nm}.` : `Not yet beaten: one foe waits in ${nm}.`), 'one ' + boss, 'one foe in the dark is told wrong: ' + B.shadeLine(1, boss, nm));
+      WORDS.forEach((w, i) => {
+        const got = B.shadeLine(i + 2, boss, nm);
+        want(got === `Not yet beaten: ${w} foes wait in ${nm}${boss ? ', the boss among them' : ''}.`, w + ' ' + boss, 'the foes in the dark are counted wrong: ' + got);
+      });
+      want(B.shadeLine(12, boss, nm).startsWith('Not yet beaten: 12 foes wait in'), 'many', 'a count past the words is lost');
+    }
+  const s = html.indexOf('  render(){\n    const list=document.getElementById(\'bestList\')'), r = html.slice(s, html.indexOf('\n  }\n', s));
+  want((r.match(/Tests: /g) || []).length === 1 && r.indexOf('if(seen.length) html+=`<div class="bestTests"') > 0 && r.indexOf('if(seen.length)') < r.indexOf('seen.forEach('), 'tests', 'a realm\'s topics are not said once under its name');
+  want(r.includes('dark.map(({f, fi})=>') && r.includes('<div class="bestRow bestShade" id="best-${ri}-${fi}">') && r.includes('${f.boss?\'👑 \':\'\'}???</div>'), 'shades', 'a foe in the dark has no shadow of its own, or gives away its name');
+  want(r.includes('this.shadeLine(dark.length, dark.some(e=>e.f.boss), r.nm)') && r.indexOf('dark.map(') > r.indexOf('seen.forEach('), 'line', 'the line under the shadows is not counted from them, or the shadows come first');
+  want(!/f\.nm/.test(r.slice(r.indexOf('dark.map('), r.indexOf('</div><div class="bestDark">'))), 'secret', 'a shadow names its foe');
+  want(html.includes('.bestShades{display:flex;flex-wrap:wrap;') && html.includes('.bestShade{display:flex;flex-direction:column;'), 'css', 'the shadows do not stand side by side');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -27419,6 +27444,7 @@ console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)} 
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
+console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
