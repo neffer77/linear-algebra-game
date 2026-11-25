@@ -11184,6 +11184,9 @@ const Battle = {
        can be carrying into a fight is a number nobody can see. */
     const wards=Dungeon.wards();
     if(wards>0) add('sigil', `🌀 Ward ×${wards}`, false, ()=>{});
+    /* The scratch pad, last in the row: a fight's own tool, beside the others,
+       where it covers nothing. Off in Settings means off here too. */
+    if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());
   },
 
   /* A raised Ward halves the next blow that actually lands, whichever kind it
@@ -43577,10 +43580,18 @@ const Calc = {
     const on=document.querySelector('.screen.on');
     return !!on && (on.id==='s-battle' || on.id==='s-train');
   },
+  inFight(){
+    const on=document.querySelector('.screen.on');
+    return !!on && on.id==='s-battle';
+  },
   syncButton(){
     const b=document.getElementById('calcBtn');
     if(!b) return;
-    const on = Prefs.d.calc!==false && this.relevant();
+    /* In a fight the pad lives in the skill bar instead (Battle.renderPowers):
+       a button floating in the corner sat on top of the last skill there. So the
+       corner button, and the strip it needs, are for the training ground only. */
+    const fight = this.inFight();
+    const on = Prefs.d.calc!==false && this.relevant() && !fight;
     b.style.display = on ? '' : 'none';
     document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button
     if(!this.relevant() && this.shown) this.close();

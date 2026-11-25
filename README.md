@@ -931,6 +931,10 @@ The game is built so that losing teaches you as much as winning.
 - **🧮 Room for the scratch pad.** In a fight on a phone the floating 🧮 button sat on top of the last skill or
   item in the bar. While it shows, the screen now ends with a strip as tall as the button, so scrolled down every
   skill, item and the Retreat sit wholly above it; where the button is hidden, so is the strip. Nothing new is saved.
+- **🧮 The scratch pad sits in the fight's bar.** Even with room left under it, the floating 🧮 button still
+  covered a skill until the page was scrolled. In a fight the pad is now the last chip in the skill bar ("🧮 Scratch
+  pad"), tapped to open and tapped again to close, so nothing floats over the fight and no strip is left under it.
+  The training ground keeps its corner button. Turned off in Settings, it is gone from both. Nothing new is saved.
 - **🛤️ A shorter victory card.** A win that meets the whole road (a scout, a wayfarer, a campfire, a peddler
   and a dicer) shows the first two and folds the rest behind one line that counts them ("＋ 3 more on the road"),
   which opens in place and stays open while the card redraws. "Fight again" and the Smithy share one row, so the
@@ -3549,6 +3553,7 @@ Inside `index.html` the code is organised as:
 | `Skillset` | every mix of carried skills, skills with uses and skills with none: the first two in view and in order, the rest behind one counted fold, never a lone one folded, none dropped or doubled; the fold stays as it was left; one topic "needs work"; wired into Gear and both strand badges |
 | `Road` | every mix of five road offers, each there or empty: the first two in view and in order, the rest behind one counted fold, never a road of three folded, no empty offer drawn or counted, none dropped or doubled; the fold stays as it was left and a new fight starts it folded; Fight again and the Smithy in one row |
 | calc room | the strip under the scratch pad button is in the stylesheet, comes and goes with the button, and the button is no taller than the strip |
+| calc chip | in a fight the scratch pad is the skill bar's last chip, shown only with the pad on; the real button logic, run on a stub page, shows the corner button and its strip on the training ground alone |
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
 | `SealFold` | every count of sealed realms from none to ten, folded or opened: two or more inside one fold with a line that counts them and names the first and last, in order, none dropped; one alone shown unfolded; blanks not counted; the fold stays as it was left; on the map only the realms past the next to open are folded; a stone on the road opens the fold before its realm |
 | `UI.ROADSTEP` | the campaign road's stones 54 apart and laid out by it; from the stylesheet, enough room between neighbours for two- and three-line labels, for a label beside the glowing stone, and for two stones on the same side |

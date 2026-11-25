@@ -1,54 +1,47 @@
 {
-  "change": "Beaten fights take one short row: the fight still to come keeps its card and sits near the realm's heading",
+  "change": "The scratch pad sits in the fight's bar",
   "mutations": [
     {
-      "name": "a won fight keeps its full card",
+      "name": "corner button back in fights",
       "file": "index.html",
-      "find": "        if(done){\n",
-      "replace": "        if(false){\n",
+      "find": "const on = Prefs.d.calc!==false && this.relevant() && !fight;",
+      "replace": "const on = Prefs.d.calc!==false && this.relevant();",
       "run": "verify"
     },
     {
-      "name": "a short row drops its best grade",
+      "name": "no chip in the bar",
       "file": "index.html",
-      "find": "<div class=\"nm\">${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}",
-      "replace": "<div class=\"nm\">${f.nm} <span class=\"tag g\">✓</span>",
+      "find": "    if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a short row still reckons",
+      "name": "fight read as training",
       "file": "index.html",
-      "find": "          <div class=\"sgold\">🪙 ${f.gold}</div>\n",
-      "replace": "          <div class=\"sgold\">🪙 ${f.gold}</div>${Reckon.line(f, g)}\n",
+      "find": "return !!on && on.id==='s-battle';\n  },\n  syncButton",
+      "replace": "return !!on && on.id==='s-train';\n  },\n  syncButton",
       "run": "verify"
     },
     {
-      "name": "a short row no longer fights",
+      "name": "chip ignores the setting",
       "file": "index.html",
-      "find": "<div class=\"node done slim ${open?'':'locked'}\" onclick=\"Battle.begin(${ri},${fi})\">",
-      "replace": "<div class=\"node done slim ${open?'':'locked'}\">",
+      "find": "if(Prefs.d.calc!==false) add('calc',",
+      "replace": "if(true) add('calc',",
       "run": "verify"
     },
     {
-      "name": "a won fight keeps its full card, seen in play",
+      "name": "chip only opens",
       "file": "index.html",
-      "find": "        if(done){\n",
-      "replace": "        if(false){\n",
-      "run": "play:slimrows"
+      "find": "()=>Calc.shown?Calc.close():Calc.open());\n  },",
+      "replace": "()=>Calc.open());\n  },",
+      "run": "verify"
     },
     {
-      "name": "a short row runs tall, seen in play",
+      "name": "corner button gone from training",
       "file": "index.html",
-      "find": ".node.slim{padding:6px 10px; margin:5px 0; gap:8px;}",
-      "replace": ".node.slim{padding:26px 10px; margin:5px 0; gap:8px;}",
-      "run": "play:slimrows"
-    },
-    {
-      "name": "a short row no longer fights, seen in play",
-      "file": "index.html",
-      "find": "<div class=\"node done slim ${open?'':'locked'}\" onclick=\"Battle.begin(${ri},${fi})\">",
-      "replace": "<div class=\"node done slim ${open?'':'locked'}\">",
-      "run": "play:slimrows"
+      "find": "const on = Prefs.d.calc!==false && this.relevant() && !fight;",
+      "replace": "const on = Prefs.d.calc!==false && this.relevant() && !fight && false;",
+      "run": "verify"
     }
   ]
 }

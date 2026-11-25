@@ -4830,9 +4830,37 @@ const calcRoomNotes = (() => {
   want(html.includes('body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}'), 'css', 'the screen leaves no room under the scratch pad button');
   want(/#calcBtn\{position:fixed;[^}]*width:52px; height:52px;/.test(html), 'size', 'the button grew past the strip left for it');
   const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
-  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant();") && sync.includes("b.style.display = on ? '' : 'none';")
+  want(sync.includes("const on = Prefs.d.calc!==false && this.relevant() && !fight;") && sync.includes("b.style.display = on ? '' : 'none';")
     && sync.includes("document.body.classList.toggle('calcRoom', on);"), 'sync', 'the strip does not come and go with the button');
   want(html.split('Calc.syncButton()').length >= 3, 'called', 'the button is not synced when a screen changes');
+  return checks;
+})();
+const calcChipNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('calc chip', key, msg); };
+  const s = html.indexOf('  syncButton(){'), sync = html.slice(s, html.indexOf('\n  },', s));
+  want(sync.includes('const fight = this.inFight();'), 'fight', 'the corner button does not know it is in a fight');
+  const f = html.indexOf('  inFight(){'), fight = html.slice(f, html.indexOf('\n  },', f));
+  want(f > 0 && fight.includes("on.id==='s-battle'"), 'where', 'a fight is not the battle screen');
+  want(!fight.includes('s-train'), 'train', 'the training ground lost its corner button');
+  const r = html.indexOf('  renderPowers(){'), pw = html.slice(r, html.indexOf('\n  },', r));
+  const chip = "if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());";
+  want(pw.includes(chip), 'chip', 'the fight\'s skill bar has no scratch pad');
+  want(pw.indexOf(chip) > pw.indexOf("add('sigil'"), 'last', 'the scratch pad is not last in the bar');
+  // Run the real relevant/inFight/syncButton against a stub page: the corner button
+  // and its strip show only on the training ground, and only with the pad on.
+  const rl = html.indexOf('  relevant(){'), rel = html.slice(rl, html.indexOf('\n  },', rl) + 4);
+  for (const scr of ['s-battle', 's-train', 's-map']) for (const pref of [true, false]) {
+    const btn = { style: {} }, cls = {};
+    const document = { querySelector: () => ({ id: scr }), getElementById: () => btn,
+      body: { classList: { toggle: (k, v) => { cls[k] = v; } } } };
+    const Prefs = { d: { calc: pref } };
+    const C = new Function('document', 'Prefs', `return {shown:false, close(){},\n${rel},\n${fight}\n  },\n${sync}\n  }};`)(document, Prefs);
+    C.syncButton();
+    const want1 = scr === 's-train' && pref;
+    want((btn.style.display === '') === want1 && cls.calcRoom === want1, 'case', `corner button wrong on ${scr} with the pad ${pref ? 'on' : 'off'}`);
+  }
   return checks;
 })();
 const tomeFoldNotes = (() => {
@@ -29243,6 +29271,7 @@ console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)} 
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
+console.log(`  calc chip                 ${pad(calcChipNotes.toLocaleString(), 10)}  (in a fight the scratch pad is the bar's last chip; the corner button is for practice)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
 console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
