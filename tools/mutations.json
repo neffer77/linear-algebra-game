@@ -1,9 +1,11 @@
 {
-  "change": "Room for the scratch pad: the 🧮 button never sits on a skill, an item or the Retreat",
+  "change": "A shorter Tome: the workshop cards wait behind one counted line, so the lessons come up the page",
   "mutations": [
-    {"name": "no room under the button", "file": "index.html", "find": "body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}", "replace": "body.calcRoom .screen.on{}", "run": "verify"},
-    {"name": "the strip stays when the button goes", "file": "index.html", "find": "    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button\n", "replace": "    document.body.classList.add('calcRoom');\n", "run": "verify"},
-    {"name": "no room under the button, seen in play", "file": "index.html", "find": "body.calcRoom .screen.on{padding-bottom:calc(72px + env(safe-area-inset-bottom))}", "replace": "body.calcRoom .screen.on{}", "run": "play:calcroom"},
-    {"name": "the strip stays on the map, seen in play", "file": "index.html", "find": "    document.body.classList.toggle('calcRoom', on);   // the screen leaves room under the button\n", "replace": "    document.body.classList.add('calcRoom');\n", "run": "play:calcroom"}
+    {"name": "the cards unfolded", "file": "index.html", "find": "    return `<details class=\"tomeAll\" id=\"tomeAll\"${this.open?' open':''} ontoggle=\"TomeFold.open=this.open\"><summary>＋ What each of the ${n} workshops does</summary>${cards}</details>`;", "replace": "    return cards;", "run": "verify"},
+    {"name": "the fold forgets it was opened", "file": "index.html", "find": "id=\"tomeAll\"${this.open?' open':''} ontoggle", "replace": "id=\"tomeAll\" ontoggle", "run": "verify"},
+    {"name": "a miscount", "file": "index.html", "find": "    const n=(String(cards).match(/<div class=\"panel\"/g)||[]).length;", "replace": "    const n=(String(cards).match(/<div class=\"panel\"/g)||[]).length+1;", "run": "verify"},
+    {"name": "the lessons folded too", "file": "index.html", "find": "       </div>`) +\n      TOME.map(p=>`<div class=\"panel\"><h2 style=\"font-size:16px;color:var(--gold)\">${p.t}</h2>\n        <div class=\"sub\" style=\"margin-top:6px;font-size:14px\">${p.b}</div></div>`).join('');", "replace": "       </div>` +\n      TOME.map(p=>`<div class=\"panel\"><h2 style=\"font-size:16px;color:var(--gold)\">${p.t}</h2>\n        <div class=\"sub\" style=\"margin-top:6px;font-size:14px\">${p.b}</div></div>`).join(''));", "run": "verify"},
+    {"name": "the cards unfolded, seen in play", "file": "index.html", "find": "    return `<details class=\"tomeAll\" id=\"tomeAll\"${this.open?' open':''} ontoggle=\"TomeFold.open=this.open\"><summary>＋ What each of the ${n} workshops does</summary>${cards}</details>`;", "replace": "    return cards;", "run": "play:tomefold"},
+    {"name": "the fold forgets, seen in play", "file": "index.html", "find": "id=\"tomeAll\"${this.open?' open':''} ontoggle", "replace": "id=\"tomeAll\" ontoggle", "run": "play:tomefold"}
   ]
 }
