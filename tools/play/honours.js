@@ -26,19 +26,24 @@ const fight = (t, ri, fi, fresh) => t.ev(([ri, fi, fresh]) => {
 }, [ri, fi, fresh]);
 /* The killing blow, with a right answer; then what the victory card says.
    The answer is the step's own, since a fight can open on a step or a rite
-   whose answer is not the problem's, and it is struck until the foe falls. */
+   whose answer is not the problem's. A rite's rungs can take the foe to
+   nothing and still climb on to the finisher, so the fight is won only when
+   it says so: each open step is answered and each answer clicked through
+   until the fight is over. */
 const finish = async t => {
-  for (let i = 0; i < 6; i++) {
-    const won = await t.ev(() => {
-      if (Battle.over || Battle.ehp <= 0) return true;
-      const st = Battle.step && Battle.step(); if (!st) return false;
-      const cs = Combat.strike; Combat.strike = () => 5;
-      Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1;
-      Battle.answer(null, st.a);
-      Combat.strike = cs;
-      return Battle.ehp <= 0;
+  for (let i = 0; i < 14; i++) {
+    const over = await t.ev(() => {
+      if (Battle.over) return true;
+      const st = Battle.step && Battle.step();
+      if (st && !Battle.answered) {
+        const cs = Combat.strike; Combat.strike = () => 5;
+        Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = Math.min(Battle.ehp, 1);
+        Battle.answer(null, st.a);
+        Combat.strike = cs;
+      }
+      return !!Battle.over;
     });
-    if (won) break;
+    if (over) break;
     await sleep(900);
     await t.ev(() => { const b = document.querySelector('#explain button'); if (b && !Battle.over) b.click(); });
     await sleep(300);
