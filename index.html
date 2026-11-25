@@ -9257,7 +9257,7 @@ const Flourish = {
     if(!this.can(B)) return false;
     B.flourish=true; B.combo=0;
     Anim.float(220, H-260, 'FLOURISH READY', '#7fd4ff', true); Sfx.good();
-    B.updateBars(); if(B.renderPowers) B.renderPowers();
+    B.updateBars();   // which draws the power bar again too
     return true;
   },
   bonus(B){ return B && B.flourish ? this.MUL : 1; },

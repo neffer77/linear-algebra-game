@@ -4159,7 +4159,7 @@ const flourishNotes = (() => {
       want(F.label(B) === (flourish ? '💫 Flourish ready' : `💫 Flourish · spend ${combo}`), 'label ' + key, F.label(B));
       want(F.bonus(B) === (flourish ? 3 : 1), 'bonus ' + key, `a blow ×${F.bonus(B)}`);
       const nf = floats.length, ok = F.ready(B);
-      want(ok === can && (can ? B.flourish && B.combo === 0 && B.bars === 1 && B.pws === 1 && floats[nf] === 'FLOURISH READY'
+      want(ok === can && (can ? B.flourish && B.combo === 0 && B.bars === 1 && B.pws === 0 && floats[nf] === 'FLOURISH READY'
         : B.flourish === flourish && B.combo === combo && B.bars === 0 && B.pws === 0 && floats.length === nf), 'ready ' + key, JSON.stringify(B));
       if (can) {
         want(F.bonus(B) === 3, 'readied ' + key, 'a readied flourish does not land harder');

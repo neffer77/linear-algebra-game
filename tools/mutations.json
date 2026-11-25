@@ -74,8 +74,8 @@
     {
       "name": "in play, the bar is not drawn again",
       "file": "index.html",
-      "find": "B.updateBars(); if(B.renderPowers) B.renderPowers();",
-      "replace": "B.updateBars();",
+      "find": "    B.updateBars();   // which draws the power bar again too\n    return true;",
+      "replace": "    return true;",
       "run": "play:flourish"
     },
     {
