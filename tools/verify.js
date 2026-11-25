@@ -4890,6 +4890,27 @@ const sealFoldNotes = (() => {
   want(html.includes('details.sealAll>summary{list-style:none;') && !/Game\.s\.seal/.test(html), 'css', 'the fold shows its marker, or is saved');
   return checks;
 })();
+const roadStepNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('road step', key, msg); };
+  const s = html.indexOf('  realmPath(cur){'), road = html.slice(s, html.indexOf('\n  },', s));
+  const step = +(/\n  ROADSTEP: (\d+),\n  realmPath\(cur\)\{/.exec(html) || [])[1];
+  want(step === 54, 'step', 'the road\'s stones are not 54 apart');
+  want(road.includes('STEP=this.ROADSTEP, H=STEP*(n-1)+60;') && road.includes('const ys=REALMS.map((_,i)=>30+i*STEP);'), 'wired', 'the road does not lay its stones out by ROADSTEP');
+  // the room each needs, from the stylesheet: the glowing stone and a label of up to three lines
+  const px = re => +(re.exec(html) || [])[1];
+  const disc = px(/\.stone\.here \.sdisc\{width:(\d+)px/), small = px(/\.stone \.sdisc\{width:(\d+)px/);
+  const line = px(/\.stone \.slab\{[^}]*font-size:(\d+)px/) * 1.25, name = px(/\.stone \.slab b\{[^}]*font-size:(\d+)px/) * 1.25;
+  want(disc === 50 && small === 42 && line === 15 && name === 16.25, 'css', JSON.stringify([disc, small, line, name]));
+  for (const lines of [2, 3]) {
+    const lab = name * (lines - 1) + line;   // a name that wraps once, and the line under it
+    want(step >= lab, 'labels ' + lines, `two neighbouring labels of ${lines} lines overlap at a step of ${step}`);
+    want(step >= lab / 2 + disc / 2 + 2, 'stone ' + lines, `a label of ${lines} lines touches the glowing stone below it at a step of ${step}`);
+  }
+  want(2 * step >= disc + small, 'same side', 'two stones on the same side touch');
+  return checks;
+})();
 const titleWayNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const ts = html.indexOf('const TITLES = ['), te = html.indexOf('\n];\n', ts) + 4;
@@ -29209,6 +29230,7 @@ console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)} 
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
+console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);

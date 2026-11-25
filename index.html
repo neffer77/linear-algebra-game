@@ -17592,9 +17592,14 @@ const UI = {
   /* The road: every realm as a stone on a winding path, coloured by how far
      the knight has got. A realm whose champion is down is filled; the one being
      worked through glows and shows its fights as pips; one still sealed is
-     dark and says so. The path behind the knight is drawn in gold. */
+     dark and says so. The path behind the knight is drawn in gold.
+     The stones sit ROADSTEP apart down the page. They were 74 apart, which
+     made the road most of a phone's screen; since neighbours alternate sides,
+     only a label's two lines and the glowing stone need the room, and 54 is
+     enough for both with space between. */
+  ROADSTEP: 54,
   realmPath(cur){
-    const g=Game.s, n=REALMS.length, STEP=74, H=STEP*(n-1)+60;
+    const g=Game.s, n=REALMS.length, STEP=this.ROADSTEP, H=STEP*(n-1)+60;
     const xs=REALMS.map((_,i)=>i%2 ? 72 : 28);              // percent across
     const ys=REALMS.map((_,i)=>30+i*STEP);
     const pt=i=>`${xs[i]*3.6} ${ys[i]}`;                     // in a 360-wide box

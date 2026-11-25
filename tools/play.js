@@ -288,6 +288,7 @@ const SUITES = [
   require('./play/tomefold'),    // the Tome folds its workshop cards
   require('./play/titleway'),    // each locked title says how far off it is
   require('./play/sealfold'),    // the map folds the sealed realms past the next
+  require('./play/roadstep'),    // the campaign road's stones sit closer
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

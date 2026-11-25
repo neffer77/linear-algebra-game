@@ -1,54 +1,40 @@
 {
-  "change": "A shorter map: past the next realm to open, the sealed realms wait behind one line that counts and names them",
+  "change": "A shorter road: the campaign's stones sit closer, and no label or stone touches another",
   "mutations": [
     {
-      "name": "the next sealed realm is folded too",
+      "name": "the stones sit as far apart as before",
       "file": "index.html",
-      "find": "const folded = !unlocked && ri>firstSealed;",
-      "replace": "const folded = !unlocked && ri>=firstSealed;",
+      "find": "  ROADSTEP: 54,",
+      "replace": "  ROADSTEP: 74,",
       "run": "verify"
     },
     {
-      "name": "nothing is folded",
+      "name": "the stones crowd",
       "file": "index.html",
-      "find": "    if(far.length) realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt);",
-      "replace": "    if(far.length) realms=realms.slice(0,farAt)+far.join('')+realms.slice(farAt);",
+      "find": "  ROADSTEP: 54,",
+      "replace": "  ROADSTEP: 34,",
       "run": "verify"
     },
     {
-      "name": "the fold drops its last realm",
+      "name": "the road ignores its step",
       "file": "index.html",
-      "find": "    const p=(parts||[]).filter(x=>x&&String(x).trim());\n    if(p.length<2) return p.join('');   // one alone is shown, not folded",
-      "replace": "    const p=(parts||[]).filter(x=>x&&String(x).trim()).slice(0,-1);\n    if(p.length<2) return p.join('');   // one alone is shown, not folded",
+      "find": "STEP=this.ROADSTEP, H=STEP*(n-1)+60;",
+      "replace": "STEP=74, H=STEP*(n-1)+60;",
       "run": "verify"
     },
     {
-      "name": "the fold forgets it was opened",
+      "name": "the stones crowd, seen in play",
       "file": "index.html",
-      "find": "ontoggle=\"SealFold.open=this.open\"",
-      "replace": "ontoggle=\"\"",
-      "run": "verify"
+      "find": "  ROADSTEP: 54,",
+      "replace": "  ROADSTEP: 30,",
+      "run": "play:roadstep"
     },
     {
-      "name": "a stone no longer opens the fold",
+      "name": "the labels run wide, seen in play",
       "file": "index.html",
-      "find": "    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the next sealed realm is folded too, seen in play",
-      "file": "index.html",
-      "find": "const folded = !unlocked && ri>firstSealed;",
-      "replace": "const folded = !unlocked && ri>=firstSealed;",
-      "run": "play:sealfold"
-    },
-    {
-      "name": "a stone no longer opens the fold, seen in play",
-      "file": "index.html",
-      "find": "    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold\n",
-      "replace": "",
-      "run": "play:sealfold"
+      "find": ".stone .slab{position:absolute; top:50%; transform:translateY(-50%); width:120px;",
+      "replace": ".stone .slab{position:absolute; top:50%; transform:translateY(-50%); width:220px;",
+      "run": "play:roadstep"
     }
   ]
 }
