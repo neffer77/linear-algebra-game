@@ -45,9 +45,11 @@ module.exports = {
     // a stone tapped on the road opens the fold on its way to the realm
     await t.ev(() => document.querySelector('#realmPath .stone[data-realm="5"]').click());
     await sleep(500);
+    // read the realm as the tap left it: a read below draws the map again, which shuts every realm but the current one
+    const opened = await t.ev(() => { const d = document.getElementById('realm-5'), f = document.getElementById('sealAll'), b = d.getBoundingClientRect();
+      return { open: d.open, fold: f.open, top: Math.round(b.top), inView: b.top >= -2 && b.top < innerHeight }; });
     r = await read(t);
-    const opened = await t.ev(() => { const d = document.getElementById('realm-5'), b = d.getBoundingClientRect(); return { open: d.open, top: Math.round(b.top), inView: b.top >= -2 && b.top < innerHeight }; });
-    t.ok('a sealed stone further on opens the fold and its realm', r.open === true && opened.open && opened.inView, JSON.stringify([r.open, opened]));
+    t.ok('a sealed stone further on opens the fold and its realm', r.open === true && opened.fold && opened.open && opened.inView, JSON.stringify([r.open, opened]));
     t.ok('and the page grows to hold them', r.shown === 6 && r.tall > shut, JSON.stringify([r.shown, shut, r.tall]));
 
     // it stays open for the sitting
