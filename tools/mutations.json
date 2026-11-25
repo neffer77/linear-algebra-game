@@ -1,47 +1,54 @@
 {
-  "change": "A shorter Tome: the workshop cards wait behind one counted line, so the lessons come up the page",
+  "change": "Titles show the way: each locked title says how far off it is, and the nearest is marked",
   "mutations": [
     {
-      "name": "the cards unfolded",
+      "name": "the count overruns its title",
       "file": "index.html",
-      "find": "    return `<details class=\"tomeAll\" id=\"tomeAll\"${this.open?' open':''} ontoggle=\"TomeFold.open=this.open\"><summary>＋ What each of the ${n} workshops does</summary>${cards}</details>`;",
-      "replace": "    return cards;",
+      "find": "    const st=g.stats||{}, n=(v,of)=>({n:Math.max(0,Math.min(of,Math.floor(v||0))), of});",
+      "replace": "    const st=g.stats||{}, n=(v,of)=>({n:Math.max(0,Math.floor(v||0)), of});",
       "run": "verify"
     },
     {
-      "name": "the fold forgets it was opened",
+      "name": "Knight-Errant counts to the wrong mark",
       "file": "index.html",
-      "find": "id=\"tomeAll\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"tomeAll\" ontoggle",
+      "find": "      case 'errant':   return n(st.correct,250);",
+      "replace": "      case 'errant':   return n(st.correct,200);",
       "run": "verify"
     },
     {
-      "name": "a miscount",
+      "name": "the streak title reads the wrong stat",
       "file": "index.html",
-      "find": "    const n=(String(cards).match(/<div class=\"panel\"/g)||[]).length;",
-      "replace": "    const n=(String(cards).match(/<div class=\"panel\"/g)||[]).length+1;",
+      "find": "      case 'form':     return n(st.best,15);",
+      "replace": "      case 'form':     return n(st.correct,15);",
       "run": "verify"
     },
     {
-      "name": "the lessons folded too",
+      "name": "a finished count marked as next",
       "file": "index.html",
-      "find": "       </div>`) +\n      TOME.map(p=>`<div class=\"panel\"><h2 style=\"font-size:16px;color:var(--gold)\">${p.t}</h2>\n        <div class=\"sub\" style=\"margin-top:6px;font-size:14px\">${p.b}</div></div>`).join('');",
-      "replace": "       </div>` +\n      TOME.map(p=>`<div class=\"panel\"><h2 style=\"font-size:16px;color:var(--gold)\">${p.t}</h2>\n        <div class=\"sub\" style=\"margin-top:6px;font-size:14px\">${p.b}</div></div>`).join(''));",
+      "find": "      const x=w.n/w.of; if(x>f&&x<1){ f=x; best=t.id; }",
+      "replace": "      const x=w.n/w.of; if(x>f){ f=x; best=t.id; }",
       "run": "verify"
     },
     {
-      "name": "the cards unfolded, seen in play",
+      "name": "an earned title still counted",
       "file": "index.html",
-      "find": "    return `<details class=\"tomeAll\" id=\"tomeAll\"${this.open?' open':''} ontoggle=\"TomeFold.open=this.open\"><summary>＋ What each of the ${n} workshops does</summary>${cards}</details>`;",
-      "replace": "    return cards;",
-      "run": "play:tomefold"
+      "find": "    const got=g&&g.titles&&g.titles[t.id], w=got?null:this.of(t,g), near=!got&&this.near(g)===t.id;",
+      "replace": "    const got=g&&g.titles&&g.titles[t.id], w=this.of(t,g), near=!got&&this.near(g)===t.id;",
+      "run": "verify"
     },
     {
-      "name": "the fold forgets, seen in play",
+      "name": "the counts not shown, seen in play",
       "file": "index.html",
-      "find": "id=\"tomeAll\"${this.open?' open':''} ontoggle",
-      "replace": "id=\"tomeAll\" ontoggle",
-      "run": "play:tomefold"
+      "find": "${w?`<span class=\"tway\">${this.text(w)}</span>`:''}",
+      "replace": "${''}",
+      "run": "play:titleway"
+    },
+    {
+      "name": "the nearest not marked, seen in play",
+      "file": "index.html",
+      "find": "${near?' near':''}\" data-title",
+      "replace": "\" data-title",
+      "run": "play:titleway"
     }
   ]
 }

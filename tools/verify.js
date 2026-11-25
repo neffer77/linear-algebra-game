@@ -4859,6 +4859,46 @@ const tomeFoldNotes = (() => {
   want(html.includes('details.tomeAll>summary{list-style:none;') && !/Game\.s\.tomeAll|Game\.s\.tomeFold/.test(html), 'css', 'the fold shows its marker, or is saved');
   return checks;
 })();
+const titleWayNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const ts = html.indexOf('const TITLES = ['), te = html.indexOf('\n];\n', ts) + 4;
+  const s = html.indexOf('const TitleWay = {'), src = html.slice(s, html.indexOf('\n};\n', s) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('title way', key, msg); };
+  const REALMS = [{ foes: [1, 2, 3, 4], bg: { key: 'vale' } }, { foes: [1, 2, 3, 4, 5], bg: { key: 'citadel' } }];
+  let mastered = 0;
+  const Mastery = { all: () => Array.from({ length: 30 }, (_, i) => ({ r: { m: i < mastered ? 0.9 : 0.2 } })) };
+  const Grade = { countS: c => Object.values(c || {}).filter(v => v === 'S').length, crowned: () => false };
+  const TOPIC_LABEL = Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['k' + i, 'T' + i]));
+  const [TITLES, W] = new Function('REALMS', 'Mastery', 'Grade', 'TOPIC_LABEL', html.slice(ts, te) + src + ';return [TITLES, TitleWay];')(REALMS, Mastery, Grade, TOPIC_LABEL);
+  const by = id => TITLES.find(t => t.id === id);
+  const counted = { squire: 50, errant: 250, scholar: 1000, form: 15, arena10: 10, arena20: 20, poly: 10, magister: 30, devoted: 7, exemplar: 10 };
+  for (const v of [0, 1, 3, 9, 14, 15, 19, 40, 49, 50, 112, 249, 250, 999, 1000, 4000, -2, undefined]) {
+    mastered = Math.max(0, Math.min(30, v || 0));
+    const b = typeof v === 'number' ? v + 1 : v;   // the best streak runs one ahead, so a title reading the wrong stat shows
+    const g = { stats: { correct: v, best: b }, arenaBest: v, streak: { days: v }, cleared: Object.fromEntries(Array.from({ length: Math.max(0, Math.min(9, v || 0)) }, (_, i) => ['0:' + i, 'S'])), titles: {} };
+    for (const [id, of] of Object.entries(counted)) {
+      const u = id === 'form' ? b : v, w = W.of(by(id), g), want0 = id === 'exemplar' ? Math.min(9, Math.max(0, v || 0)) : Math.max(0, Math.min(of, Math.floor(u || 0)));
+      want(w && w.of === of && w.n === want0, id + ' ' + v, id + ' counts ' + JSON.stringify(w) + ' at ' + v);
+      want(W.text(w) === w.n + '/' + w.of, 'text ' + id + v, 'a count reads wrong');
+      // a title counted complete is earned by the same rule
+      if (id !== 'poly' && id !== 'magister' && id !== 'exemplar') want((w.n >= of) === !!by(id).t(Object.assign({ arenaBest: v }, g)), 'agree ' + id + ' ' + v, id + "'s count and its rule disagree at " + v);
+    }
+    const near = W.near(g);
+    const fr = Object.entries(counted).map(([id]) => { const w = W.of(by(id), g); return [id, w.n / w.of]; }).filter(x => x[1] < 1);
+    const top = fr.length ? Math.max(...fr.map(x => x[1])) : 0;
+    want(top > 0 ? fr.some(x => x[0] === near && x[1] === top) || (near === 'realm') : near === null || near === 'realm', 'near ' + v, 'the nearest title is not the one marked at ' + v);
+    for (const id of ['dragon', 'ascend', 'crowned', 'paragon']) want(W.of(by(id), g) === null, 'none ' + id + v, id + ' claims a count it cannot have');
+  }
+  // an earned title is never the nearest, and shows no count
+  const g = { stats: { correct: 40, best: 2 }, titles: { squire: 1 }, cleared: {}, streak: { days: 0 } };
+  want(W.near(g) !== 'squire' && !W.medal(by('squire'), g).includes('tway') && W.medal(by('errant'), g).includes('<span class="tway">40/250</span>'), 'earned', 'an earned title is counted or marked as next');
+  const realm = W.of(by('realm'), { cleared: { '1:0': 1, '1:1': 1, '1:2': 1, '0:0': 1 } });
+  want(realm && realm.n === 60 && W.text(realm) === '60%', 'realm', 'the nearest realm is not measured by its share cleared');
+  want(W.of(by('squire'), null) === null, 'empty', 'a missing save is counted');
+  want(html.includes('${TITLES.map(t=>TitleWay.medal(t,Game.s)).join(\'\')}') && html.includes('.medal.near{'), 'wired', 'the titles page does not show how far off each title is');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -29112,6 +29152,7 @@ console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 1
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
+console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
