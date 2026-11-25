@@ -273,6 +273,7 @@ const SUITES = [
   require('./play/road'),        // a win's road shows two and folds the rest
   require('./play/calcroom'),    // the scratch pad button never covers the bar
   require('./play/tomefold'),    // the Tome folds its workshop cards
+  require('./play/titleway'),    // each locked title says how far off it is
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

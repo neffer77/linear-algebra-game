@@ -901,6 +901,10 @@ The game is built so that losing teaches you as much as winning.
 - **🕸️ A shorter skills list.** Gear shows the skills carried and any with a use; the ones with no use yet
   wait behind one line that counts them ("＋ 7 more skills with no uses yet") and opens in place, where any of
   them can still be carried. A count of one topic now reads "1 needs work". Nothing new is saved.
+- **🏅 Titles show the way.** A locked title said what it asked for and nothing of how far off it was: "Solve 250
+  riddles" read the same at 3 as at 249. Every title that can be counted now says where the knight stands
+  ("40/250", "9/15", or a realm's share cleared), and the one nearest to earning gets a dashed gold edge, so the
+  next title is always in sight. Read from what the save already holds; nothing new is saved.
 - **📚 A shorter Tome.** Under its index of every workshop, the Tome went on to give each one a card of its
   own, forty-odd paragraphs, so the lessons at the foot of the page sat thirty screens down on a phone. Those cards
   now wait behind one line that counts them ("＋ What each of the 57 workshops does"), which opens in place and stays
@@ -3378,6 +3382,7 @@ Inside `index.html` the code is organised as:
 | `Road` | every mix of five road offers, each there or empty: the first two in view and in order, the rest behind one counted fold, never a road of three folded, no empty offer drawn or counted, none dropped or doubled; the fold stays as it was left and a new fight starts it folded; Fight again and the Smithy in one row |
 | calc room | the strip under the scratch pad button is in the stylesheet, comes and goes with the button, and the button is no taller than the strip |
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
+| `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Daze` | three gold stars circling a beaten foe's head, found by turning the crown by the angle a foe falls at, at the foe's own size; on a ring round the head, circling; the canvas state kept; drawn only on a won fight; the wiring |
 | `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Waymark` | every realm greeted with a line of its own, none alike; only campaign fights in a realm with no foe yet beaten, never a boss, never the daily, an arena or a dungeon; the name in capitals and the realm's colour; once, as the fight opens, after the herald; the wiring |
