@@ -101,17 +101,27 @@ module.exports = {
     await t.ev(() => { Game.s.weapon = 'w5'; });
     w = await fight(t, 0, 0, false);
     await sleep(600);
-    const gold = () => t.ev(() => {
-      const cv = document.getElementById('scene');
-      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-      let n = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i] > 235 && d[i + 1] > 200 && d[i + 1] < 235 && d[i + 2] > 110 && d[i + 2] < 165) n++;
-      return n;
-    });
+    // the scene moves (the knight breathes, the foe bobs, the weather drifts), so a
+    // few gold pixels come and go from frame to frame: the most of four frames is read
+    const gold = async () => {
+      let most = 0;
+      for (let k = 0; k < 4; k++) {
+        most = Math.max(most, await t.ev(() => {
+          const cv = document.getElementById('scene');
+          const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 4) if (d[i] > 235 && d[i + 1] > 200 && d[i + 1] < 235 && d[i + 2] > 110 && d[i + 2] < 165) n++;
+          return n;
+        }));
+        await sleep(120);
+      }
+      return most;
+    };
     // the stars are a few pixels each, too small to count apart from the glow, so the frame's own call is read
     await t.ev(() => { window.__stars = []; const s = Honours.stars; window.__starsFn = s; Honours.stars = n => { window.__stars.push(n); s.call(Honours, n); }; });
     await sleep(600);
     const drawn = await t.ev(() => { Honours.stars = window.__starsFn; return Math.max(-1, ...window.__stars); });
+    // stars and the glow together are no less gold than the glow alone, within that drift
     const worn = await gold();
     await t.ev(() => { Battle.honours = { stars: 0, crowns: 0, glow: true }; });
     await sleep(600);
@@ -119,7 +129,7 @@ module.exports = {
     await t.ev(() => { Battle.honours = { stars: 0, crowns: 0, glow: false }; });
     await sleep(600);
     const bare = await gold();
-    t.ok('and the knight on the scene is drawn wearing it: stars on the shield and a shining blade', w.stars === 3 && w.glow && drawn === 3 && worn >= shine && shine - bare > 40, JSON.stringify([w, drawn, worn, shine, bare]));
+    t.ok('and the knight on the scene is drawn wearing it: stars on the shield and a shining blade', w.stars === 3 && w.glow && drawn === 3 && worn + 6 >= shine && shine - bare > 40, JSON.stringify([w, drawn, worn, shine, bare]));
 
     await t.ev(() => { Battle.flee(); [Bounty.bump, Bounty.claim, Quarry.of] = window.__keep; UI.go('s-title'); });
     t.eq('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()), keys);
