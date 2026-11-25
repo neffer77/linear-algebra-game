@@ -90,6 +90,9 @@ const SUITES = [
   require('./play/herald'),      // a realm's boss arrives announced, its name across the screen
   require('./play/waymark'),     // a realm not yet won in is arrived in, its name across the screen
   require('./play/folio'),       // a foe's first fall opens its page in the Bestiary on the victory card
+  require('./play/haul'),        // the victory card leads with its totals as chips, a big win's bonuses folded
+  require('./play/topics'),      // a closed realm on the map names its first three topics and counts the rest
+  require('./play/nameplate'),   // a long foe nameplate wraps in its own half of the bars
   require('./play/reckon'),      // under every open fight, the blows that fell it and the blows that would fell you
   require('./play/arms'),        // the knight in the fight is drawn in the blade and armour they wear
   require('./play/scars'),       // a crack opens across the foe for each quarter of its health lost
