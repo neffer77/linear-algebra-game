@@ -1,75 +1,54 @@
 {
-  "change": "A shorter Bestiary: the foes still in the dark stand small side by side over one counted line, and a realm's tests are said once",
+  "change": "A shorter Saga: only the next chapter keeps its card, and the ones further on wait in one short list",
   "mutations": [
     {
-      "name": "the shadows count in figures",
+      "name": "every unread chapter gets a card again",
       "file": "index.html",
-      "find": "    return `Not yet beaten: ${WORD[n]||n} foes wait in ${nm}${boss?', the boss among them':''}.`;",
-      "replace": "    return `Not yet beaten: ${n} foes wait in ${nm}${boss?', the boss among them':''}.`;",
+      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
+      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
       "run": "verify"
     },
     {
-      "name": "the boss is not named among them",
+      "name": "the short list is never drawn",
       "file": "index.html",
-      "find": "    return `Not yet beaten: ${WORD[n]||n} foes wait in ${nm}${boss?', the boss among them':''}.`;",
-      "replace": "    return `Not yet beaten: ${WORD[n]||n} foes wait in ${nm}.`;",
+      "find": "      this.far(next);\n    this.paint(list);",
+      "replace": "      '';\n    this.paint(list);",
       "run": "verify"
     },
     {
-      "name": "a lone boss reads as any foe",
+      "name": "the next chapter is the first, read or not",
       "file": "index.html",
-      "find": "    if(n===1) return boss ? `Not yet beaten: the boss of ${nm}.` : `Not yet beaten: one foe waits in ${nm}.`;",
-      "replace": "    if(n===1) return `Not yet beaten: one foe waits in ${nm}.`;",
+      "find": "  next(){ return REALMS.findIndex((r,ri)=>!this.read(ri)); },",
+      "replace": "  next(){ return 0; },",
       "run": "verify"
     },
     {
-      "name": "an empty realm still gets a line",
+      "name": "the short list lists the next chapter too",
       "file": "index.html",
-      "find": "    if(n<1) return '';",
-      "replace": "    if(n<0) return '';",
+      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
+      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>!this.read(ri));",
       "run": "verify"
     },
     {
-      "name": "the line counts every foe, not those in the dark",
+      "name": "the short list lists chapters read",
       "file": "index.html",
-      "find": "${this.shadeLine(dark.length, dark.some(e=>e.f.boss), r.nm)}",
-      "replace": "${this.shadeLine(es.length, dark.some(e=>e.f.boss), r.nm)}",
+      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
+      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next);",
       "run": "verify"
     },
     {
-      "name": "a realm's tests go unsaid",
+      "name": "every unread chapter gets a card again, seen in play",
       "file": "index.html",
-      "find": "      if(seen.length) html+=`<div class=\"bestTests\"",
-      "replace": "      if(false) html+=`<div class=\"bestTests\"",
-      "run": "verify"
+      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
+      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
+      "run": "play:saga"
     },
     {
-      "name": "the shadows stack again",
+      "name": "the short list rows run tall, seen in play",
       "file": "index.html",
-      "find": ".bestShades{display:flex;flex-wrap:wrap;",
-      "replace": ".bestShades{display:block;flex-wrap:wrap;",
-      "run": "verify"
-    },
-    {
-      "name": "a realm's tests go unsaid, seen in play",
-      "file": "index.html",
-      "find": "      if(seen.length) html+=`<div class=\"bestTests\"",
-      "replace": "      if(false) html+=`<div class=\"bestTests\"",
-      "run": "play:bestiary"
-    },
-    {
-      "name": "the shadows stack again, seen in play",
-      "file": "index.html",
-      "find": ".bestShades{display:flex;flex-wrap:wrap;",
-      "replace": ".bestShades{display:block;flex-wrap:wrap;",
-      "run": "play:bestiary"
-    },
-    {
-      "name": "the line counts every foe, seen in play",
-      "file": "index.html",
-      "find": "${this.shadeLine(dark.length, dark.some(e=>e.f.boss), r.nm)}",
-      "replace": "${this.shadeLine(es.length, dark.some(e=>e.f.boss), r.nm)}",
-      "run": "play:bestiary"
+      "find": ".sagaFar{font-size:13px;padding:5px 0 0;",
+      "replace": ".sagaFar{font-size:13px;padding:40px 0 0;",
+      "run": "play:saga"
     }
   ]
 }

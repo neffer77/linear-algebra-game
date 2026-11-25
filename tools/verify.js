@@ -2653,7 +2653,8 @@ const sagaNotes = (() => {
   want(Saga.count() === 0 && r.count === '0 of 8 chapters read' && r.bar === '0%', 'new knight', `a new knight has read ${r.count}`);
   want(Saga.CH.every(c => !r.list.includes(c.t) && !r.list.includes(c.b)), 'new knight', 'a chapter is given away before its boss falls');
   want(OPENING.every(o => r.list.includes(o.b)) && r.list.indexOf('THE OPENING') < r.list.indexOf('CHAPTER 1'), 'opening', 'the opening does not come first');
-  want((r.list.match(/Beat the boss of /g) || []).length === 8, 'new knight', 'a chapter not read does not say how to read it');
+  want((r.list.match(/Beat the boss of /g) || []).length === 1 && r.list.includes('id="saga-0"') && r.list.indexOf('Beat the boss of Vale of Vectors') < r.list.indexOf('STILL TO COME'), 'new knight', 'the next chapter does not keep its card, or more than it do');
+  want(REALMS.every((x, ri) => !ri || r.list.includes(`<div class="sagaCh sagaFar" id="saga-${ri}">Chapter ${ri + 1} of 8 · after the boss of ${x.nm}</div>`)) && (r.list.match(/class="sagaCh sagaFar"/g) || []).length === 7, 'far', 'a chapter further on is missing from the short list, or has a card of its own');
   G.s.cleared = { '0:0': true, '0:1': true, '0:2': true };
   want(Saga.count() === 0, 'boss', 'a realm\'s foes without its boss read its chapter');
   G.s.cleared['0:3'] = true; G.s.cleared['2:3'] = true;
@@ -2661,9 +2662,11 @@ const sagaNotes = (() => {
   want(r.count === '2 of 8 chapters read' && r.bar === '25%', 'cleared', `with two bosses down it reads ${r.count}, ${r.bar}`);
   want(r.list.includes(Saga.CH[0].b) && r.list.includes(Saga.CH[2].b) && !r.list.includes(Saga.CH[1].b), 'cleared', 'the chapters read are not the bosses beaten');
   want(r.list.includes('id="saga-0"') && r.list.includes('The fall of The Vector Wyrm.') && r.list.includes('CHAPTER 3 OF 8 · CLIFFS OF CHANGE'), 'cleared', 'a chapter read is not headed by its realm and boss');
+  want(Saga.next() === 1 && r.list.includes('Beat the boss of Matrix Marches to read it.') && (r.list.match(/Beat the boss of /g) || []).length === 1 && (r.list.match(/class="sagaCh sagaFar"/g) || []).length === 5 && !r.list.includes('id="saga-2">Chapter'), 'cleared next', 'with chapters 1 and 3 read, chapter 2 does not keep the card, or the short list holds the wrong ones');
   want(painted.join() === 'The Vector Wyrm,true,The Tangent Wraith,true', 'portraits', `the portraits drawn are ${painted.join()}`);
   REALMS.forEach((x, ri) => { G.s.cleared[ri + ':' + (x.foes.length - 1)] = true; });
   r = render(); want(r.count === '8 of 8 chapters read · the whole saga 🏆' && r.bar === '100%', 'all', `every boss down reads ${r.count}`);
+  want(Saga.next() === -1 && !r.list.includes('STILL TO COME') && !r.list.includes('Beat the boss of '), 'all far', 'a saga read through still says what is to come');
   // told on the spot: a boss's first fall, and never a foe or a rematch
   const win = html.slice(html.indexOf('\n  win(){'), html.indexOf('\n  lose(){'));
   want(win.includes("${this.foe.boss&&first?Saga.card(this.ri):''}") && win.includes("if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));"), 'victory', 'a boss\'s first fall does not tell its chapter');

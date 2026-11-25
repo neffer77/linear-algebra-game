@@ -163,6 +163,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .bestShades{display:flex;flex-wrap:wrap;gap:6px 10px;padding:8px 0 4px;border-top:1px solid rgba(255,255,255,.08)}
 .bestShade{display:flex;flex-direction:column;align-items:center;gap:2px;width:60px;font-size:12px;font-weight:800;opacity:.6}
 .bestDark{font-size:13px;opacity:.6}
+.sagaFar{font-size:13px;padding:5px 0 0;margin-top:5px;border-top:1px solid rgba(255,255,255,.08)}
 details.tomeAll>summary{list-style:none;margin:6px 0 10px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:14px;font-weight:700;color:var(--gold);cursor:pointer}
 details.tomeAll>summary::-webkit-details-marker{display:none}
 details.tomeAll[open]>summary{color:var(--dim)}
@@ -9616,20 +9617,32 @@ const Saga = {
       <div class="sub" style="margin-top:6px;font-size:14px">Beat the boss of ${r.nm} to read it.</div>
     </div>`;
   },
+  // the first chapter not yet read, which keeps its card; -1 once all are read
+  next(){ return REALMS.findIndex((r,ri)=>!this.read(ri)); },
+  // the chapters past that one, not read either: one short line each in one panel, not a card apiece
+  far(next){
+    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));
+    if(!ris.length) return '';
+    return `<div class="panel sagaFarAll" id="sagaFar" style="text-align:left;opacity:.65">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em">📜 STILL TO COME</div>`+
+      ris.map(ri=>`<div class="sagaCh sagaFar" id="saga-${ri}">Chapter ${ri+1} of ${this.CH.length} · after the boss of ${REALMS[ri].nm}</div>`).join('')+
+    `</div>`;
+  },
   // the bosses into their canvases, once the html is in place
   paint(root){
     (root||document).querySelectorAll('canvas[data-saga]').forEach(c=>Bestiary.shot(c, this.boss(+c.dataset.saga), true));
   },
   render(){
     const list=document.getElementById('sagaList'); if(!list) return;
-    const n=this.count(), N=this.CH.length;
+    const n=this.count(), N=this.CH.length, next=this.next();
     document.getElementById('sagaCount').textContent=`${n} of ${N} chapters read`+(n===N?' · the whole saga 🏆':'');
     document.getElementById('sagaBar').style.width=(n/N*100)+'%';
     list.innerHTML=`<div class="panel" id="saga-open" style="text-align:left">
         <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--gold)">📜 THE OPENING</div>
         <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">${OPENING.map(o=>o.b).join(' ')}</div>
       </div>`+
-      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri)).join('');
+      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+
+      this.far(next);
     this.paint(list);
   }
 };
