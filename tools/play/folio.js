@@ -25,17 +25,20 @@ const fight = (t, ri, fi, fresh) => t.ev(([ri, fi, fresh]) => {
 }, [ri, fi, fresh]);
 /* The killing blow with the step's own right answer, then what the card says. */
 const finish = async t => {
-  for (let i = 0; i < 6; i++) {
-    const won = await t.ev(() => {
-      if (Battle.over || Battle.ehp <= 0) return true;
-      const st = Battle.step && Battle.step(); if (!st) return false;
-      const cs = Combat.strike; Combat.strike = () => 5;
-      Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1;
-      Battle.answer(null, st.a);
-      Combat.strike = cs;
-      return Battle.ehp <= 0;
+  // a win can lead on to a rite, a second wave or a last stand, so strike until the fight is over
+  for (let i = 0; i < 14; i++) {
+    const over = await t.ev(() => {
+      if (Battle.over) return true;
+      const st = Battle.step && Battle.step();
+      if (st && !Battle.answered) {
+        const cs = Combat.strike; Combat.strike = () => 5;
+        Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = Math.min(Battle.ehp, 1);
+        Battle.answer(null, st.a);
+        Combat.strike = cs;
+      }
+      return !!Battle.over;
     });
-    if (won) break;
+    if (over) break;
     await sleep(900);
     await t.ev(() => { const b = document.querySelector('#explain button'); if (b && !Battle.over) b.click(); });
     await sleep(300);

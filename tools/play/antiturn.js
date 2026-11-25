@@ -38,7 +38,8 @@ module.exports = {
     await t.newKnight('Enid');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each guess can be weighed', await t.ev(() =>
       /Or call it: see four guesses F, and say whether each is too steep, just right or too shallow for its f\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeAnti');
