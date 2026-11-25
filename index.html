@@ -160,6 +160,7 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .vs.up{color:var(--green)}
 .btnRow{display:flex;gap:8px}
 .btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+.btnRow.three>.btn{padding-left:6px;padding-right:6px;font-size:15px;white-space:nowrap;text-align:center}
 .bestShades{display:flex;flex-wrap:wrap;gap:6px 10px;padding:8px 0 4px;border-top:1px solid rgba(255,255,255,.08)}
 .bestShade{display:flex;flex-direction:column;align-items:center;gap:2px;width:60px;font-size:12px;font-weight:800;opacity:.6}
 .bestDark{font-size:13px;opacity:.6}
@@ -9532,6 +9533,19 @@ const SealFold = {
   }
 };
 
+/* The victory card's ways home. With a next fight waiting, the gold button is
+   that fight, and the map, a rematch and the Smithy are the quiet ways out: they
+   share one row of three, under the offers, instead of three full-width rows.
+   With no next fight the map is the way on, so it keeps its own gold button and
+   the row keeps its two. */
+const WinRow = {
+  html(B, nx){
+    const again=`Battle.begin(${B.ri},${B.fi})`;
+    const map = nx ? `<button class="btn ghost" id="mapBtn" onclick="UI.go('s-map')">🗺️ Map</button>` : '';
+    const aw = nx ? ' aria-label="Fight again">↻ Again' : '>↻ Fight again';
+    return `<div class="btnRow${nx?' three':''}" id="winRow">${map}<button class="btn" id="againBtn" onclick="${again}"${aw}</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>`;
+  }
+};
 const Road = {
   SHOW:2, open:false,
   group(parts){
@@ -12170,10 +12184,10 @@ const Battle = {
         ${Gauntlet.button(gnt)}
         ${NextFight.html(nx)}
         ${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}
-        <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
+        ${nx?'':`<button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>`}
         ${Rival.offer(this)}
         ${Heroic.button(this)}
-        <div class="btnRow" id="winRow"><button class="btn" id="againBtn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button><button class="btn ghost" id="smithyBtn" onclick="UI.go('s-shop')">🏪 Smithy</button></div>`;
+        ${WinRow.html(this, nx)}`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills

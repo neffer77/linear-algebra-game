@@ -37,7 +37,7 @@ const win = async (t, fi, hp = 1000) => {
   await sleep(400);
   return t.ev(() => {
     const txt = id => { const e = document.getElementById(id); return e ? e.innerText : null; };
-    const map = [...document.querySelectorAll('#resultBody button')].find(b => /map|Onward/.test(b.innerText));
+    const map = [...document.querySelectorAll('#resultBody button')].find(b => /Map|map|Onward/.test(b.innerText));
     const btns = [...document.querySelectorAll('#resultBody button')].map(b => b.id || b.innerText.trim());
     return { next: txt('nextFight'), go: txt('nextGo'), low: txt('nextLow'), rest: txt('nextRest'),
       map: map ? map.innerText.trim() : null, mapGold: map ? map.classList.contains('gold') : null, btns,
@@ -61,7 +61,7 @@ module.exports = {
     t.eq('a victory names the next fight on the road', r.next, `Next on the road: ${foes[1].nm} · ❤️ ${foes[1].hp} · ⚔️ ${foes[1].atk}. Win it for +10% gold on your war path.`);
     t.eq('as its first button', r.go, `⚔️ Fight ${foes[1].nm}`);
     t.ok('under it, the blows that fell it and the blows that fell you', r.reckon && r.reckon.after && r.reckon.blows === Math.ceil(foes[1].hp / r.reckon.dmg) && r.reckon.falls >= 1 && /plain blows? fells? it/.test(r.reckon.text), JSON.stringify(r.reckon));
-    t.ok('ahead of the map, which gives up its gold', r.btns[0] === 'nextGo' && r.map === '🗺️ To the map' && r.mapGold === false, JSON.stringify(r));
+    t.ok('ahead of the map, which gives up its gold', r.btns[0] === 'nextGo' && r.map === '🗺️ Map' && r.mapGold === false, JSON.stringify(r));
     t.ok('with no warning at full health', r.low === null && r.rest === null, JSON.stringify(r));
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));

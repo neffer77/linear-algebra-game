@@ -3014,8 +3014,8 @@ const nextFightNotes = (() => {
   want(at > win.indexOf("UI.go('s-result');") && at > win.indexOf('g.cleared[key]=true;'), 'win', 'the next fight is found before this one is counted as beaten');
   want(win.indexOf("if(this.mode==='arena')") < at && win.indexOf("if(this.mode==='dungeon')") < at, 'win', 'the arena or a descent reaches the next fight');
   const btns = win.indexOf('${NextFight.html(nx)}');
-  want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')"), 'win', 'the next fight is not the first button');
-  want(win.includes(`<button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>`), 'win', 'the map keeps the gold when there is a next fight');
+  want(btns > win.indexOf("Saga.card(this.ri)") && btns < win.indexOf("UI.go('s-map')") && btns < win.indexOf('${WinRow.html(this, nx)}'), 'win', 'the next fight is not the first button');
+  want(win.includes("${nx?'':`<button class=\"btn gold\" onclick=\"UI.go('s-map')\">🗺️ Onward</button>`}") && win.includes('${WinRow.html(this, nx)}'), 'win', 'the map keeps the gold when there is a next fight');
   want(!/(Game\.s|\bg|this\.s)\.next(Fight|Foe)\b/.test(html), 'save', 'the next fight is saved');
   return checks;
 })();
@@ -4817,7 +4817,7 @@ const roadNotes = (() => {
   want(html.includes('${Road.group([Scout.html(nx), Wayfarer.html(way), Campfire.html(this), Peddler.html(pd), Dicer.html(dc)])}')
     && !/\n\s*\$\{Scout\.html\(nx\)\}\n/.test(html), 'wired', 'the victory card stacks its road offers unfolded');
   want(/begin\(ri, fi, heroic, rival\)\{\n\s*if\(typeof Road!=='undefined'\) Road\.open=false;/.test(html), 'reset', 'a new fight keeps the last road opened');
-  want(html.includes('<div class="btnRow" id="winRow"><button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
+  want(html.includes('id="winRow">${map}<button class="btn" id="againBtn"') && html.includes('id="smithyBtn" onclick="UI.go(\'s-shop\')">🏪 Smithy</button></div>')
     && !html.includes('🏪 Visit the Smithy'), 'row', 'Fight again and the Smithy are not one row');
   want(html.includes('.btnRow{display:flex;gap:8px}') && html.includes('.btnRow>.btn{flex:1 1 0;min-width:0;'), 'css', 'the button row does not share its width');
   want(html.includes('details.road>summary{list-style:none;') && !/Game\.s\.road|g\.roadOpen/.test(html), 'saved', 'the fold shows its marker, or is saved');
@@ -4954,6 +4954,29 @@ const slimRowNotes = (() => {
   want(!/Reckon\.line|f\.hp|f\.atk/.test(slim), 'over', 'a short row still plans a fight that is over');
   want(full.includes('${open?Reckon.line(f, g):\'\'}') && !/done\?/.test(full.slice(0, full.indexOf('Gauntlet.node(ri)'))), 'full', 'the fight still to come loses its card, or the card still asks whether it was won');
   want(/\.node\.slim\{padding:6px 10px;/.test(html) && /\.node\.slim \.nm\{flex:1; min-width:0;/.test(html) && /\.node\.slim \.sgold\{[^}]*white-space:nowrap/.test(html), 'css', 'a short row is not drawn short, or its name cannot wrap');
+  return checks;
+})();
+const winRowNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const WinRow = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('win row', key, msg); };
+  const W = new Function(src + '\nreturn WinRow;')();
+  const B = { ri: 2, fi: 3 };
+  const ids = h => [...h.matchAll(/<button[^>]*id="(\w+)"/g)].map(m => m[1]);
+  const three = W.html(B, { ri: 2, fi: 4 }), two = W.html(B, null);
+  want(three.startsWith('<div class="btnRow three" id="winRow">') && ids(three).join() === 'mapBtn,againBtn,smithyBtn', 'three', 'with a next fight the map, a rematch and the Smithy are not one row of three');
+  want(three.includes(`onclick="UI.go('s-map')">🗺️ Map</button>`) && three.includes('onclick="Battle.begin(2,3)" aria-label="Fight again">↻ Again</button>')
+    && three.includes(`onclick="UI.go('s-shop')">🏪 Smithy</button>`), 'acts', 'a button in the row goes somewhere else');
+  want(!/class="btn gold"/.test(three), 'gold', 'a quiet way out took the gold from the next fight');
+  want(two.startsWith('<div class="btnRow" id="winRow">') && ids(two).join() === 'againBtn,smithyBtn' && !two.includes('mapBtn'), 'two', 'with no next fight the row is not the two it was');
+  want(two.includes('>↻ Fight again</button>') && two.includes('onclick="Battle.begin(2,3)"'), 'again', 'Fight again lost its words or its fight');
+  // the map shows once either way: in the row, or as the gold Onward
+  const Bt = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const win = Bt.slice(Bt.indexOf('\n  win(){'), Bt.indexOf('\n  lose(){'));
+  want(win.split("UI.go('s-map')").length === 2 && win.indexOf('${WinRow.html(this, nx)}') > win.indexOf('${Heroic.button(this)}'), 'once', 'the map shows twice, or the row is not last');
+  want(/\.btnRow\.three>\.btn\{[^}]*white-space:nowrap;[^}]*text-align:center\}/.test(html), 'css', 'a button in the row of three can wrap');
   return checks;
 })();
 const titleWayNotes = (() => {
@@ -29278,6 +29301,7 @@ console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 1
 console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
 console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
 console.log(`  slim rows                 ${pad(slimRowNotes.toLocaleString(), 10)}  (a won fight takes one short row with its name, best grade and gold; the fight to come keeps its card)`);
+console.log(`  win row                   ${pad(winRowNotes.toLocaleString(), 10)}  (with a next fight, the map, a rematch and the Smithy share one row of three at the foot of the victory card)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);

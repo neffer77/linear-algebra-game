@@ -5,7 +5,8 @@
  * the way back to the map, and on a phone the map button sat four screens
  * down. Now the first two stay in view and the rest wait behind one line that
  * counts them and opens in place, and stays open while the card redraws.
- * "Fight again" and "Smithy" share one row. These checks win a real fight on
+ * With a next fight waiting, the map, a rematch and the Smithy share one row
+ * of three at the bottom of the card. These checks win a real fight on
  * a phone. Nothing new is saved.
  */
 'use strict';
@@ -47,19 +48,22 @@ const read = t => t.ev(() => {
   const body = document.getElementById('resultBody'), d = document.getElementById('roadMore');
   const vis = el => !!el && !el.closest('details:not([open])') && el.getBoundingClientRect().height > 0;
   const ids = ['road1', 'road2', 'road3', 'road4', 'road5'];
-  const a = document.getElementById('againBtn'), s = document.getElementById('smithyBtn');
-  const ra = a ? a.getBoundingClientRect() : null, rs = s ? s.getBoundingClientRect() : null;
-  const map = [...body.querySelectorAll('button.btn')].find(b => /To the map|Onward/.test(b.innerText));
+  const a = document.getElementById('againBtn'), s = document.getElementById('smithyBtn'), m = document.getElementById('mapBtn');
+  const ra = a ? a.getBoundingClientRect() : null, rs = s ? s.getBoundingClientRect() : null, rm = m ? m.getBoundingClientRect() : null;
+  const map = m || [...body.querySelectorAll('button.btn')].find(b => /Onward/.test(b.innerText));
   return { here: ids.map(i => !!document.getElementById(i)), shown: ids.map(i => vis(document.getElementById(i))),
     summary: d ? d.querySelector('summary').innerText : null, open: d ? d.open : null,
-    row: ra && rs ? { sameTop: Math.abs(ra.top - rs.top) < 2, w: [Math.round(ra.width), Math.round(rs.width)], h: [Math.round(ra.height), Math.round(rs.height)],
-      fits: ra.left >= 0 && rs.right <= innerWidth + 1 } : null,
+    row: ra && rs && rm ? { sameTop: Math.abs(ra.top - rs.top) < 2 && Math.abs(rm.top - rs.top) < 2,
+      w: [rm, ra, rs].map(x => Math.round(x.width)), h: [rm, ra, rs].map(x => Math.round(x.height)),
+      order: [...document.getElementById('winRow').children].map(b => b.id),
+      fits: rm.left >= 0 && rs.right <= innerWidth + 1 } : null,
+    last: (() => { const kids = [...body.children].filter(e => e.getBoundingClientRect().height > 0); return kids.length ? kids[kids.length - 1].id : null; })(),
     mapH: map ? Math.round(map.getBoundingClientRect().height) : 0, wide: body.scrollWidth <= innerWidth + 1 };
 });
 
 module.exports = {
   name: 'road',
-  title: 'Road · a win that meets the whole road shows two and folds the rest; Fight again and Smithy share a row',
+  title: 'Road · a win that meets the whole road shows two and folds the rest; the map, a rematch and the Smithy share a row',
   viewport: { width: 390, height: 844 },
   async run(t) {
     await t.newKnight('Ada');
@@ -83,8 +87,10 @@ module.exports = {
     const kept = await t.ev(() => Road.open === true && /id="roadMore" open /.test(Road.group(['a', 'b', 'c', 'd'])));
     t.ok('and a redraw of the card keeps it open', kept, 'the fold forgets it was opened');
 
-    t.ok('Fight again and Smithy share one row on a phone', !!r.row && r.row.sameTop && r.row.fits && r.row.w.every(w => w > 140), JSON.stringify(r.row));
-    t.ok('neither wraps to a second line', !!r.row && r.row.h.every(h => h <= r.mapH + 2) && r.wide, JSON.stringify([r.row && r.row.h, r.mapH]));
+    t.ok('the map, a rematch and the Smithy share one row on a phone', !!r.row && r.row.sameTop && r.row.fits && r.row.w.every(w => w > 90)
+      && r.row.order.join() === 'mapBtn,againBtn,smithyBtn', JSON.stringify(r.row));
+    t.ok('none wraps to a second line', !!r.row && r.row.h.every(h => h <= 54) && r.wide, JSON.stringify(r.row && r.row.h));
+    t.ok('the row is the last thing on the card', r.last === 'winRow', String(r.last));
 
     // a road of three folds nothing: one more is shown, not hidden
     await t.ev(() => { Dicer.html = () => ''; Peddler.html = () => ''; });

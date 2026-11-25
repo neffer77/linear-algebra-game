@@ -921,6 +921,10 @@ The game is built so that losing teaches you as much as winning.
   card on the map, with its health, strike, gold and reckoning of blows, so three of them stood between the realm's
   heading and the fight still to come. A won fight now takes one short row with its name, its best grade and its
   gold, still a tap away; the fight still to come keeps its card, a few rows under the heading.
+- **🧭 One row of ways home.** A victory card with a next fight waiting ended in four full-width buttons under
+  the fight: To the map, a rival's duel, a heroic rematch, then Fight again beside the Smithy. The quiet ways out
+  now share one row of three at the very foot of the card ("🗺️ Map", "↻ Again", "🏪 Smithy"), so the next fight
+  and the offers stand alone above them. With no next fight the map is still the gold "Onward". Nothing new is saved.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
   each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
@@ -3558,6 +3562,7 @@ Inside `index.html` the code is organised as:
 | `SealFold` | every count of sealed realms from none to ten, folded or opened: two or more inside one fold with a line that counts them and names the first and last, in order, none dropped; one alone shown unfolded; blanks not counted; the fold stays as it was left; on the map only the realms past the next to open are folded; a stone on the road opens the fold before its realm |
 | `UI.ROADSTEP` | the campaign road's stones 54 apart and laid out by it; from the stylesheet, enough room between neighbours for two- and three-line labels, for a label beside the glowing stone, and for two stones on the same side |
 | `slim rows` | a won fight takes its own short row before the full card: it still begins its fight and is locked with its realm; it names the foe, its best grade or a tick, and its gold, and keeps the quarry and debt marks; no health, strike or reckoning; the fight to come keeps its card and reckoning; drawn short with a name that can wrap |
+| `WinRow` | with a next fight, the map, a rematch and the Smithy are one row of three, in that order, going where they say and none gold; with none, the row is Fight again and the Smithy; the map shows once on the card, and the row is last; no button in the row can wrap |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
 | `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |

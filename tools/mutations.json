@@ -1,25 +1,39 @@
 {
-  "change": "Map fixes: a sealed stone opens its fold, a short row stays one line",
+  "change": "One row of ways home",
   "mutations": [
     {
-      "name": "stone leans on the toggle again",
+      "name": "map back as a full button",
       "file": "index.html",
-      "find": "if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri); if(!d) return; }",
-      "replace": "if(fold){ fold.open=true; }",
+      "find": "${nx?'':`<button class=\"btn gold\" onclick=\"UI.go('s-map')\">🗺️ Onward</button>`}",
+      "replace": "<button class=\"btn${nx?'':' gold'}\" onclick=\"UI.go('s-map')\">🗺️ ${nx?'To the map':'Onward'}</button>",
       "run": "verify"
     },
     {
-      "name": "a detached fold can close it",
+      "name": "row of three always",
       "file": "index.html",
-      "find": "ontoggle=\"if(this.isConnected) SealFold.open=this.open\"",
-      "replace": "ontoggle=\"SealFold.open=this.open\"",
+      "find": "    const map = nx ? `<button",
+      "replace": "    const map = true ? `<button",
       "run": "verify"
     },
     {
-      "name": "short rows wrap",
+      "name": "row out of order",
       "file": "index.html",
-      "find": "font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}",
-      "replace": "font-size:14px;}",
+      "find": "id=\"winRow\">${map}<button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>",
+      "replace": "id=\"winRow\"><button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>${map}",
+      "run": "verify"
+    },
+    {
+      "name": "row buttons wrap",
+      "file": "index.html",
+      "find": "font-size:15px;white-space:nowrap;text-align:center}",
+      "replace": "font-size:15px;text-align:center}",
+      "run": "verify"
+    },
+    {
+      "name": "row before the offers",
+      "file": "index.html",
+      "find": "        ${Rival.offer(this)}\n        ${Heroic.button(this)}\n        ${WinRow.html(this, nx)}`;",
+      "replace": "        ${WinRow.html(this, nx)}\n        ${Rival.offer(this)}\n        ${Heroic.button(this)}`;",
       "run": "verify"
     }
   ]
