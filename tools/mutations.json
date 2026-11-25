@@ -1,89 +1,89 @@
 {
-  "change": "A campfire: a wounded knight goes over a slip from earlier by the fire, and a right answer mends half the wounds",
+  "change": "A flourish: eight right in a row can be spent for one blow three times as hard",
   "mutations": [
     {
-      "name": "a slip from the arena is kept",
+      "name": "a flourish from seven in a row",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || B.rite || !B.cur || !GEN[B.cur.key]) return false;",
-      "replace": "    if(!B || !B.cur || !GEN[B.cur.key]) return false;",
+      "find": "  AT: 8, MUL: 3,",
+      "replace": "  AT: 7, MUL: 3,",
       "run": "verify"
     },
     {
-      "name": "a topic is kept twice",
+      "name": "a flourish lands twice as hard",
       "file": "index.html",
-      "find": "    this.slips=this.slips.filter(s=>s.key!==k);\n    this.slips.push",
-      "replace": "    this.slips.push",
+      "find": "  AT: 8, MUL: 3,",
+      "replace": "  AT: 8, MUL: 2,",
       "run": "verify"
     },
     {
-      "name": "slips are kept without end",
+      "name": "a flourish in the arena too",
       "file": "index.html",
-      "find": "    if(this.slips.length>this.MAX) this.slips.shift();\n",
-      "replace": "",
+      "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
+      "replace": "!B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
       "run": "verify"
     },
     {
-      "name": "a whole knight is offered a camp",
+      "name": "a flourish after the answer",
       "file": "index.html",
-      "find": "return this.slips.length>0 && !!g && g.hp>0 && g.hp<g.maxHp; },",
-      "replace": "return this.slips.length>0 && !!g && g.hp>0; },",
+      "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish",
+      "replace": "B.mode==='campaign' && !B.over && !B.flourish",
       "run": "verify"
     },
     {
-      "name": "a camp mends all the wounds",
+      "name": "a flourish keeps the streak",
       "file": "index.html",
-      "find": "  MEND: 0.5, MAX: 8,",
-      "replace": "  MEND: 1, MAX: 8,",
+      "find": "    B.flourish=true; B.combo=0;\n",
+      "replace": "    B.flourish=true;\n",
       "run": "verify"
     },
     {
-      "name": "the camp goes over the oldest slip",
+      "name": "a flourish is never spent",
       "file": "index.html",
-      "find": "const s=this.cur=this.slips[this.slips.length-1],",
-      "replace": "const s=this.cur=this.slips[0],",
+      "find": "    if(!B || !B.flourish) return false;\n    B.flourish=false;\n",
+      "replace": "    if(!B || !B.flourish) return false;\n",
       "run": "verify"
     },
     {
-      "name": "a camp asks at the easiest",
+      "name": "a miss keeps the flourish",
       "file": "index.html",
-      "find": "    const q=this.q=buildQuestion(s.key, s.diff);",
-      "replace": "    const q=this.q=buildQuestion(s.key, 1);",
+      "find": "    if(!ok) this.flourish=false;",
+      "replace": "    if(!ok) {}",
       "run": "verify"
     },
     {
-      "name": "a miss by the fire mends too",
+      "name": "a fight starts with the last flourish",
       "file": "index.html",
-      "find": "    if(ok){\n      const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n);\n      this.slips=",
-      "replace": "    { const n=this.mend(); g.hp=Math.min(g.maxHp, g.hp+n); }\n    if(ok){\n      this.slips=",
+      "find": "    this.flourish=false;   // nor any flourish\n",
+      "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "a slip gone over is kept",
+      "name": "the blow ignores the flourish",
       "file": "index.html",
-      "find": "      this.slips=this.slips.filter(x=>x.key!==s.key);\n      Sfx.good();",
-      "replace": "      Sfx.good();",
+      "find": "* Flourish.bonus(this) * Phase.bonus(this)",
+      "replace": "* Phase.bonus(this)",
       "run": "verify"
     },
     {
-      "name": "a miss is never a slip",
+      "name": "in play, the bar offers no flourish",
       "file": "index.html",
-      "find": "    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n",
-      "replace": "",
-      "run": "play:campfire"
+      "find": "if(Flourish.can(this) || this.flourish) add('flourish'",
+      "replace": "if(false) add('flourish'",
+      "run": "play:flourish"
     },
     {
-      "name": "the card offers no camp",
+      "name": "in play, the bar is not drawn again",
       "file": "index.html",
-      "find": "        ${Campfire.html(this)}\n",
-      "replace": "",
-      "run": "play:campfire"
+      "find": "    B.updateBars();   // which draws the power bar again too\n    return true;",
+      "replace": "    return true;",
+      "run": "play:flourish"
     },
     {
-      "name": "a miss by the fire shows no answer",
+      "name": "in play, a flourish is spent at once",
       "file": "index.html",
-      "find": "said=`🔥 Not yet. The answer was <b>${q.a}</b>. ",
-      "replace": "said=`🔥 Not yet. ",
-      "run": "play:campfire"
+      "find": "  bonus(B){ return B && B.flourish ? this.MUL : 1; },",
+      "replace": "  bonus(B){ return 1; },",
+      "run": "play:flourish"
     }
   ]
 }

@@ -140,6 +140,12 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .node .ico{width:44px;height:44px;flex:none;border-radius:10px;background:#171129;display:grid;place-items:center}
 .node .nm{font-weight:800;font-size:15px}
 .node .dt{font-size:12px;color:var(--dim)}
+.gauntlet{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;cursor:pointer;
+  border:1px solid #ffb347;border-left:3px solid #ffb347;background:linear-gradient(180deg,#2b2247,#211a39);box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.gauntlet:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.gauntlet .ico{width:44px;height:44px;flex:none;border-radius:10px;display:grid;place-items:center;border:1px solid var(--gold-dk);background:linear-gradient(180deg,#1d1633,#120d24)}
+.gauntlet .nm{font-weight:800;font-size:15px}
+.gauntlet .dt{font-size:12px;color:var(--dim)}
 .realmhdr{display:flex;align-items:center;gap:8px;margin-top:14px}
 .realmhdr .dot{width:10px;height:10px;border-radius:50%}
 
@@ -8751,7 +8757,9 @@ const Talk = {
    Armoured shrugs off half of every blow until three answers in a row crack
    its armour. Vampiric drinks back the blow it lands when you miss. Swift
    winds up its slam a turn sooner, so bracing matters more. Frenzied hits
-   half again as hard on a quarter less health. An elite has a quarter more
+   half again as hard on a quarter less health. Cunning asks its riddles two
+   steps harder, as hard as the knight is ready for, and every right
+   answer against it lands half again as hard. An elite has a quarter more
    health than the foe it was, and beating one pays the first-clear reward
    again with a sure chest, where a plain rematch pays under half and drops
    loot only sometimes. Nothing is saved: the twist is rolled as the fight
@@ -8759,12 +8767,14 @@ const Talk = {
 const Elite = {
   CHANCE:0.25,
   force:null,          // a twist to roll next instead of the dice; spent on use
-  ORDER:['armoured','vampiric','swift','frenzied'],
+  ORDER:['armoured','vampiric','swift','frenzied','cunning'],
+  HARD:2, SHARP:1.5,
   KINDS:{
     armoured:{ic:'🛡️', nm:'Armoured', say:'it shrugs off half of every blow until you land three answers in a row.'},
     vampiric:{ic:'🩸', nm:'Vampiric', say:'every miss feeds it, healing it by the blow it lands.'},
     swift:   {ic:'💨', nm:'Swift',    say:'it winds up its slam a turn sooner, so brace for it.'},
-    frenzied:{ic:'🔥', nm:'Frenzied', say:'it hits half again as hard, on a quarter less health.'}
+    frenzied:{ic:'🔥', nm:'Frenzied', say:'it hits half again as hard, on a quarter less health.'},
+    cunning: {ic:'🎭', nm:'Cunning',  say:'its riddles come two steps harder, but every right answer lands half again as hard.'}
   },
   // the foe to fight: itself on a first meeting, sometimes an elite once beaten
   roll(foe, beaten){
@@ -8777,6 +8787,9 @@ const Elite = {
     const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));
     return Object.assign({}, foe, {hp, atk:k==='frenzied' ? Math.round(foe.atk*1.5) : foe.atk, elite:k});
   },
+  // a cunning elite: how many steps harder its riddles come, and what a right answer lands for
+  hard(B){ return B && B.foe && B.foe.elite==='cunning' ? this.HARD : 0; },
+  bonus(B){ return B && B.foe && B.foe.elite==='cunning' ? this.SHARP : 1; },
   label(f){ const K=f && this.KINDS[f.elite]; return K ? `${K.ic} ${K.nm}` : ''; },
   // the line that opens an elite fight
   intro(f){ const K=this.KINDS[f.elite]; return `⭐ Elite! ${K.ic} ${K.nm} ${f.nm}: ${K.say}`; },
@@ -9226,6 +9239,156 @@ const NextFight = {
     if(!Game.rest()) return false;
     btn.remove(); const l=document.getElementById('nextLow'); if(l) l.remove();
     return true;
+  }
+};
+
+/* A flourish. A streak counts toward the blow up to seven in a row and no
+   further, so from the eighth the bar offers a flourish: spend the streak,
+   and the next right answer lands three times as hard. It is a choice
+   between a run kept for its steady multiplier, and the parries it feeds,
+   and one great blow now. A miss before it lands loses it, as it loses the
+   streak. Campaign fights only; it is the fight's, and nothing is saved. */
+const Flourish = {
+  AT: 8, MUL: 3,
+  can(B){ return !!B && B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT; },
+  label(B){ return B.flourish ? '💫 Flourish ready' : `💫 Flourish · spend ${B.combo}`; },
+  // the streak spent: the next right answer lands three times as hard
+  ready(B){
+    if(!this.can(B)) return false;
+    B.flourish=true; B.combo=0;
+    Anim.float(220, H-260, 'FLOURISH READY', '#7fd4ff', true); Sfx.good();
+    B.updateBars();   // which draws the power bar again too
+    return true;
+  },
+  bonus(B){ return B && B.flourish ? this.MUL : 1; },
+  // after a right answer's blow, the flourish is spent
+  spend(B){
+    if(!B || !B.flourish) return false;
+    B.flourish=false;
+    Anim.float(220, H-330, 'FLOURISH ×'+this.MUL, '#7fd4ff', true);
+    return true;
+  }
+};
+
+/* The gauntlet. A realm whose every foe is beaten offers, on the map, its
+   gauntlet: every one of its foes again, first to last, with health carried
+   from each fight to the next. The victory card leads on to the next foe and
+   the map keeps its place; a fall, a flight from a live fight, or any other
+   fight begun breaks it off, and it can be run again from the start. A greedy
+   foe that gets away counts as passed. Beating the last pays a purse worth
+   every first-clear purse of the realm, once a realm a sitting, with a banner.
+   It is the campaign's fights again, back to back, for a knight who wants to
+   prove a realm's topics hold up under pressure. Nothing is saved. */
+const Gauntlet = {
+  run: null, paid: {},
+  purse(ri){ return REALMS[ri].foes.reduce((a,f)=>a+f.gold, 0); },
+  can(ri){
+    const g=Game.s, r=REALMS[ri];
+    return !!g && !!r && !this.paid[ri] && r.foes.every((f,fi)=>!!g.cleared[ri+':'+fi]);
+  },
+  on(ri){ return !!this.run && (ri==null || this.run.ri===ri); },
+  start(ri){
+    if(!this.can(ri)) return false;
+    this.run={ri, i:0};
+    Battle.begin(ri, 0);
+    return true;
+  },
+  // a fight begun: any but the gauntlet's next foe, plain, breaks it off
+  meet(ri, fi, extra){ if(this.run && (extra || ri!==this.run.ri || fi!==this.run.i)) this.run=null; },
+  end(){ this.run=null; },
+  // a campaign fight over, won or fled from by a greedy foe: the next step, or the purse
+  won(B){
+    const r=this.run, g=Game.s;
+    if(!r || !B || B.mode!=='campaign' || B.ri!==r.ri || B.fi!==r.i || !g) return null;
+    const n=REALMS[r.ri].foes.length;
+    if(++r.i<n) return {ri:r.ri, step:r.i, n};
+    const gold=this.purse(r.ri);
+    this.run=null; this.paid[r.ri]=1; g.gold+=gold;
+    Celebrate.banner('GAUNTLET RUN', `${REALMS[r.ri].nm}, every foe back to back`, '#ffb347', ()=>Sfx.milestone());
+    return {ri:r.ri, done:true, gold, n};
+  },
+  say(t){
+    if(!t) return '';
+    return t.done ? `⚔️ The gauntlet of ${REALMS[t.ri].nm} is run: all ${t.n} foes back to back, +${t.gold} gold.`
+      : `⚔️ Gauntlet: ${t.step} of ${t.n} beaten. Next, ${REALMS[t.ri].foes[t.step].nm}.`;
+  },
+  line(t){ return t ? `<div id="${t.done?'gauntletWon':'gauntletStep'}" style="color:#ffb347;font-weight:800;margin-top:6px">${this.say(t)}</div>` : ''; },
+  // the card's way on to the next foe of a run under way
+  button(t){
+    if(!t || t.done || !this.on(t.ri)) return '';
+    const f=REALMS[t.ri].foes[t.step];
+    return `<button class="btn gold" id="gauntletGo" onclick="Battle.begin(${t.ri},${t.step})">⚔️ On to ${f.nm} · ${t.step+1} of ${t.n}</button>`;
+  },
+  // the map's place for it under a realm: a run to go on with, or one to start
+  node(ri){
+    const r=REALMS[ri];
+    if(this.on(ri)){
+      const i=this.run.i, f=r.foes[i];
+      return `<div class="gauntlet" id="gauntletNode-${ri}" onclick="Battle.begin(${ri},${i})">
+          <div class="ico" style="font-size:24px">⚔️</div>
+          <div style="flex:1"><div class="nm">The gauntlet: ${i} of ${r.foes.length} beaten</div>
+            <div class="dt">Next, ${f.nm} · health carries on · 🪙 ${this.purse(ri)} at the end</div></div>
+          <div style="font-size:20px;color:var(--dim)">▶</div>
+        </div>`;
+    }
+    if(!this.can(ri)) return '';
+    return `<div class="gauntlet" id="gauntletNode-${ri}" onclick="Gauntlet.start(${ri})">
+        <div class="ico" style="font-size:24px">⚔️</div>
+        <div style="flex:1"><div class="nm">Run the gauntlet</div>
+          <div class="dt">All ${r.foes.length} foes back to back, health carried on, for 🪙 ${this.purse(ri)}</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>`;
+  }
+};
+
+/* A treasure map. A campaign victory graded A or better turns up a scrap of
+   a treasure map, said on the victory card. Three scraps make the map whole,
+   and X marks one of the realms the knight has opened and fought in, an old
+   one rather than the one just won where there is a choice. The map heads
+   that realm with the mark, and the next campaign victory there, over any of
+   its foes, digs up a hoard worth that realm's boss's gold; then the scraps
+   begin again. No scrap turns up while a map is whole. It rewards fighting
+   well, and it sends the knight back to old ground, whose topics are the
+   ones most worth keeping fresh. Nothing is saved. */
+const Treasure = {
+  NEED: 3,
+  n: 0, at: null,
+  // the realms the knight can reach and has beaten a foe in
+  open(g){
+    return REALMS.map((r,ri)=>ri).filter(ri=>{
+      const prev=REALMS[ri-1], key=prev ? (ri-1)+':'+(prev.foes.length-1) : null;
+      return (ri===0 || !!g.cleared[key]) && REALMS[ri].foes.some((f,fi)=>!!g.cleared[ri+':'+fi]);
+    });
+  },
+  // where X falls: any of those but the realm just won in, unless it is the only one
+  mark(g, here){
+    const all=this.open(g), away=all.filter(ri=>ri!==here), pick=away.length ? away : all;
+    return pick.length ? R.pick(pick) : null;
+  },
+  hoard(ri){ const f=REALMS[ri] && REALMS[ri].foes; return f ? f[f.length-1].gold : 0; },
+  // after a campaign victory and its grade: the hoard dug up, a scrap found, or nothing
+  won(B, grade){
+    const g=Game.s;
+    if(!B || B.mode!=='campaign' || !g) return null;
+    if(this.at!==null){
+      if(B.ri!==this.at) return null;
+      const ri=this.at, gold=this.hoard(ri);
+      this.at=null; this.n=0; g.gold+=gold;
+      return {dug:ri, gold};
+    }
+    if(grade!=='S' && grade!=='A') return null;
+    if(++this.n<this.NEED) return {scrap:this.n};
+    const at=this.mark(g, B.ri);
+    if(at===null){ this.n=this.NEED-1; return null; }
+    this.at=at;
+    return {whole:at};
+  },
+  tag(ri){ return this.at===ri ? '<span class="tag treasureTag">❌ treasure</span>' : ''; },
+  line(t){
+    if(!t) return '';
+    if(t.dug!=null) return `<div id="treasureWon" style="color:#ffd479;font-weight:800;margin-top:6px">🗺️ X marked the spot: you dig up the hoard of ${REALMS[t.dug].nm}, +${t.gold} gold.</div>`;
+    if(t.whole!=null) return `<div id="treasureWhole" style="color:#ffd479;font-weight:800;margin-top:6px">🗺️ The map is whole! X marks ${REALMS[t.whole].nm}: win any fight there to dig up its hoard of 🪙 ${this.hoard(t.whole)}.</div>`;
+    return `<div id="treasureScrap" class="small" style="margin-top:6px">🗺️ A scrap of a treasure map, ${t.scrap}/${this.NEED}. Win at A or better to find the rest.</div>`;
   }
 };
 
@@ -9860,6 +10023,7 @@ const Battle = {
   begin(ri, fi, heroic, rival){
     this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
+    Gauntlet.meet(ri, fi, heroic || rival);   // any other fight breaks off a gauntlet run
     // A foe already beaten here may come back as an elite with one twist.
     // ...or, not an elite, as a greedy foe with a fat purse that flees.
     // ...or, asked for, as a heroic rematch: the hardest riddles for double gold.
@@ -9925,6 +10089,7 @@ const Battle = {
     this.gilded=false; this.gildGold=0;   // nor any gilded question
     this.sworn=false; this.oathBroken=false;   // nor any oath
     this.asked=0;   // questions asked this fight, which a greedy foe counts
+    this.flourish=false;   // nor any flourish
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -10014,6 +10179,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
+    if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));
     add('potion', `${ITEMS.potion.ic} Draught ×${it.potion}`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',`${ITEMS.insight.ic} Insight ×${it.insight}`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
     add('rage',   `${ITEMS.rage.ic} Rune ×${it.rage}`, it.rage>0 && !this.rage, ()=>Battle.useRage());
@@ -10151,7 +10317,7 @@ const Battle = {
                       (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null));
       key=Mastery.pick(pool, prefer);
       const base = (this.mode==='arena' || Heroic.on(this) ? 3
-                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3))
+                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0) + Elite.hard(this), 1, 3))
                  // The Library's stacks reach into fights too — it would be a
                  // strange shelf where only the chests got older.
                  + (this.mode==='dungeon' ? Dungeon.stacks() : 0);
@@ -10500,6 +10666,7 @@ const Battle = {
     this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
       ? {key:this.cur.key, diff:this.curDiff} : null;
     if(!ok) Campfire.note(this);   // a slip to go over at the next camp
+    if(!ok) this.flourish=false;   // a miss before it lands loses the flourish
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -10518,12 +10685,13 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * SecondWind.bonus(this);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
+      Flourish.spend(this);   // a flourish lands once
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       const hit=Coup.through(this, Elite.through(this, dmg)), was=this.ehp;
@@ -10924,6 +11092,12 @@ const Battle = {
     // now and then someone on the road asks a question for a small prize
     const way=Wayfarer.roll(this);
     const rival=Rival.won(this);
+    // a scrap of a treasure map for a win at A or better, or the hoard dug up where X marks
+    const tr=Treasure.won(this, Grade.of(marks));
+    if(tr && tr.gold && counted) Sitting.gold+=tr.gold;
+    // a gauntlet run steps on to its next foe, or pays its purse at the last
+    const gnt=Gauntlet.won(this);
+    if(gnt && gnt.gold && counted) Sitting.gold+=gnt.gold;
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -10955,6 +11129,8 @@ const Battle = {
           ${Greedy.line(this)}
           ${Heroic.line(this)}
           ${Rival.line(rival)}
+          ${Treasure.line(tr)}
+          ${Gauntlet.line(gnt)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10971,6 +11147,7 @@ const Battle = {
           ${this.learnedHtml()}
         </div>
         ${this.foe.boss&&first?Saga.card(this.ri):''}
+        ${Gauntlet.button(gnt)}
         ${NextFight.html(nx)}
         ${Scout.html(nx)}
         ${Wayfarer.html(way)}
@@ -11004,6 +11181,7 @@ const Battle = {
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
     const path=WarPath.broke(); March.broke();
+    Gauntlet.end();   // a fall breaks off a gauntlet run
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
     const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;
@@ -11043,6 +11221,8 @@ const Battle = {
     clearInterval(this.timer); this.over='escape'; Anim.stop(); this.tension(1); Talk.hide();
     UI.go('s-map');
     UI.toast(Greedy.fled(nm));
+    const run=Gauntlet.won(this);   // in a gauntlet, a foe that gets away counts as passed
+    if(run) UI.toast(Gauntlet.say(run));
   },
   flee(){
     const live=!this.over;
@@ -11052,6 +11232,7 @@ const Battle = {
     UI.go('s-map');
     const path=live && this.mode==='campaign' ? WarPath.broke() : 0;
     if(live && this.mode==='campaign') March.broke();
+    if(live) Gauntlet.end();   // so does a flight from a live fight
     UI.toast(path>=2 ? `🏃 You slip away into the trees, and your war path of ${path} victories ends.` : '🏃 You slip away into the trees.');
   }
 };
@@ -16547,7 +16728,7 @@ const UI = {
       realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
+            <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
@@ -16562,6 +16743,7 @@ const UI = {
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;
       });
+      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
       realms+='</details>';
     });
     /* A knight who never finished the cellar is offered it back before anything
