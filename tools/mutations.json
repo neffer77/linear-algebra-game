@@ -1,89 +1,89 @@
 {
-  "change": "A flourish: eight right in a row can be spent for one blow three times as hard",
+  "change": "A ballad: every victory card sings the fight in a line of its own",
   "mutations": [
     {
-      "name": "a flourish from seven in a row",
+      "name": "the brink is never sung",
       "file": "index.html",
-      "find": "  AT: 8, MUL: 3,",
-      "replace": "  AT: 7, MUL: 3,",
+      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n",
+      "replace": "    if(false) return 'brink';\n",
       "run": "verify"
     },
     {
-      "name": "a flourish lands twice as hard",
+      "name": "a miss still sings flawless",
       "file": "index.html",
-      "find": "  AT: 8, MUL: 3,",
-      "replace": "  AT: 8, MUL: 2,",
+      "find": "    if(B.missed===0) return 'flawless';",
+      "replace": "    if((B.missed||0)<=1) return 'flawless';",
       "run": "verify"
     },
     {
-      "name": "a flourish in the arena too",
+      "name": "overkill comes before a flawless fight",
       "file": "index.html",
-      "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
-      "replace": "!B.over && !B.answered && !B.flourish && (B.combo||0)>=this.AT",
+      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(B.missed===0) return 'flawless';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';",
+      "replace": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';\n    if(B.missed===0) return 'flawless';",
       "run": "verify"
     },
     {
-      "name": "a flourish after the answer",
+      "name": "a short run is a streak",
       "file": "index.html",
-      "find": "B.mode==='campaign' && !B.over && !B.answered && !B.flourish",
-      "replace": "B.mode==='campaign' && !B.over && !B.flourish",
+      "find": "  STREAK: 5, GRIT: 3,",
+      "replace": "  STREAK: 3, GRIT: 3,",
       "run": "verify"
     },
     {
-      "name": "a flourish keeps the streak",
+      "name": "a guarded stance is not sung",
       "file": "index.html",
-      "find": "    B.flourish=true; B.combo=0;\n",
-      "replace": "    B.flourish=true;\n",
+      "find": "    if(st==='bold' || st==='guarded') return st;",
+      "replace": "    if(st==='bold') return st;",
       "run": "verify"
     },
     {
-      "name": "a flourish is never spent",
+      "name": "the omen is forgotten",
       "file": "index.html",
-      "find": "    if(!B || !B.flourish) return false;\n    B.flourish=false;\n",
-      "replace": "    if(!B || !B.flourish) return false;\n",
+      "find": "    if(Sky.on(B)) return 'omen';\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a miss keeps the flourish",
+      "name": "the words never turn with the foe",
       "file": "index.html",
-      "find": "    if(!ok) this.flourish=false;",
-      "replace": "    if(!ok) {}",
+      "find": "    return vs[h%vs.length];",
+      "replace": "    return vs[0];",
       "run": "verify"
     },
     {
-      "name": "a fight starts with the last flourish",
+      "name": "the streak's length is left out",
       "file": "index.html",
-      "find": "    this.flourish=false;   // nor any flourish\n",
-      "replace": "\n",
+      "find": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))",
+      "replace": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, 'many')",
       "run": "verify"
     },
     {
-      "name": "the blow ignores the flourish",
+      "name": "the line loses its kind",
       "file": "index.html",
-      "find": "* Flourish.bonus(this) * Phase.bonus(this)",
-      "replace": "* Phase.bonus(this)",
+      "find": "data-k=\"${song.k}\" class=\"small\"",
+      "replace": "data-k=\"song\" class=\"small\"",
       "run": "verify"
     },
     {
-      "name": "in play, the bar offers no flourish",
+      "name": "the ballad is read after the level-up mends",
       "file": "index.html",
-      "find": "if(Flourish.can(this) || this.flourish) add('flourish'",
-      "replace": "if(false) add('flourish'",
-      "run": "play:flourish"
+      "find": "    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);",
+      "replace": "    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);\n    const song=Ballad.of(this, over, g.hp, g.maxHp);",
+      "run": "verify"
     },
     {
-      "name": "in play, the bar is not drawn again",
+      "name": "the card does not sing",
       "file": "index.html",
-      "find": "    B.updateBars();   // which draws the power bar again too\n    return true;",
-      "replace": "    return true;",
-      "run": "play:flourish"
+      "find": "          ${Ballad.line(song)}\n",
+      "replace": "",
+      "run": "play:ballad"
     },
     {
-      "name": "in play, a flourish is spent at once",
+      "name": "a hard win is sung as plain",
       "file": "index.html",
-      "find": "  bonus(B){ return B && B.flourish ? this.MUL : 1; },",
-      "replace": "  bonus(B){ return 1; },",
-      "run": "play:flourish"
+      "find": "    if((B.missed||0)>=this.GRIT) return 'grit';\n",
+      "replace": "",
+      "run": "play:ballad"
     }
   ]
 }

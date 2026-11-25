@@ -9261,6 +9261,179 @@ const NextFight = {
   }
 };
 
+/* A ballad. Every victory is sung in a line of verse about how it was won,
+   read from the fight itself: a win from the brink of falling, a fight with
+   no miss in it, a killing blow far past what was needed, a long streak, a
+   bold or a guarded stance, an omen overhead, or a win that was hard work.
+   The moment most worth remembering is sung, and the wording turns with the
+   foe, so the same feat reads fresh against the next one. It gives the fight
+   a story to look back on. It is only words: it pays nothing, changes no
+   fight, and nothing is saved. */
+const Ballad = {
+  VERSES: {
+    brink:    ['Bloodied and one blow from the dust, you stood, and {f} did not.',
+               'They will say you were beaten. Then {f} fell, and you were not.',
+               'With nothing left but nerve, you outlasted {f}.'],
+    flawless: ['Not one answer wrong: {f} never laid a finger on your doubt.',
+               'A clean fight, every question met. {f} learns what a scholar knight is.',
+               'Flawless from the first word to the last, and {f} is a story now.'],
+    overkill: ['You did not stop at enough: {f} was struck far past its last breath.',
+               'One blow, more than {f} could ever hold. The bards will exaggerate it, barely.',
+               'The last strike was a lesson in excess, and {f} took all of it.'],
+    streak:   ['{n} right in a row, and {f} could not find a gap in any of them.',
+               'Answer after answer, {n} unbroken, until {f} gave way.',
+               'A run of {n} and the tide never turned back toward {f}.'],
+    bold:     ['You came in bold and hit hard, and {f} paid for every opening.',
+               'All fire and no fear: the bold stance carried you past {f}.',
+               'Bold, and right about it. {f} never saw the patience behind the fury.'],
+    guarded:  ['Shield up, mind sharp: {f} broke itself against your guard.',
+               'Patient and guarded, you let {f} wear itself out.',
+               'You gave {f} nothing to hit and everything to fear.'],
+    omen:     ['{o} watched as {f} fell.',
+               'Under {o}, {f} met its end, and the sky seemed pleased.',
+               '{o} hung over the field, and {f} will not see another.'],
+    grit:     ['It took {m} wrong turns to find the way, and you found it: {f} is beaten.',
+               'Not pretty, but every miss taught you something, and {f} fell to what you learned.',
+               '{m} stumbles and still the win. That is how a knight is made, {f} or no.'],
+    plain:    ['Steel and sense together, and {f} is no more.',
+               'Another foe for the songs: {f}, beaten fair.',
+               'You read {f} like a proof and closed it out.']
+  },
+  STREAK: 5, GRIT: 3, OVER: 0.5, BRINK: 0.25,
+  // the moment of the fight most worth singing, in that order
+  kind(B, over, hp, maxHp){
+    if(!B || !B.foe) return 'plain';
+    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';
+    if(B.missed===0) return 'flawless';
+    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';
+    if((B.runBest||0)>=this.STREAK) return 'streak';
+    const st=Stance.of(B);
+    if(st==='bold' || st==='guarded') return st;
+    if(Sky.on(B)) return 'omen';
+    if((B.missed||0)>=this.GRIT) return 'grit';
+    return 'plain';
+  },
+  // the same feat turns its words with the foe
+  pick(k, nm){
+    const vs=this.VERSES[k]||this.VERSES.plain;
+    let h=0; for(const c of String(nm||'')) h=(h*31+c.charCodeAt(0))%997;
+    return vs[h%vs.length];
+  },
+  of(B, over, hp, maxHp){
+    const k=this.kind(B, over, hp, maxHp), sky=Sky.on(B);
+    const nm=B && B.foe && B.foe.nm || 'the foe';
+    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))
+      .replace(/\\{m\\}/g, String(B && B.missed||0)).replace(/\\{o\\}/g, sky ? sky.nm : 'The sky');
+    return { k, text: text.charAt(0).toUpperCase()+text.slice(1) };
+  },
+  line(song){
+    return song ? \`<div id="ballad" data-k="\${song.k}" class="small" style="font-style:italic;color:#e8d9b0;margin-top:6px">🎶 \${song.text}</div>\` : '';
+  }
+};
+
+/* The sky. Each sitting every realm has its own sky, rolled the first time
+   it is looked at and kept for the sitting: most often an omen, now and then
+   nothing at all. A gold moon pays a quarter more gold for every victory
+   there; a fair wind lands the knight's blows a fifth harder; a mist has the
+   foes strike a fifth lighter. The map shows each realm's omen on its
+   heading and a fight under one says so as it starts, so a sitting begins
+   with a reason to pick one road over another, and the next sitting another.
+   Campaign fights only; the sky is the sitting's, and nothing is saved. */
+const Sky = {
+  CHANCE: 0.6,
+  ORDER: ['moon', 'wind', 'mist'],
+  KINDS: {
+    moon: { ic:'🌕', nm:'A gold moon', say:'a quarter more gold for every victory', deal:1,   take:1,   gold:1.25 },
+    wind: { ic:'🌬️', nm:'A fair wind', say:'your blows land a fifth harder',      deal:1.2, take:1,   gold:1    },
+    mist: { ic:'🌫️', nm:'A mist',      say:'foes strike a fifth lighter',        deal:1,   take:0.8, gold:1    }
+  },
+  sky: {},
+  // a realm's omen this sitting, or null for a plain sky; no chance, no omens
+  of(ri){
+    if(!(ri in this.sky)) this.sky[ri] = Math.random()<this.CHANCE ? this.ORDER[Math.floor(Math.random()*this.ORDER.length)] : null;
+    return this.CHANCE>0 && this.KINDS[this.sky[ri]] ? this.sky[ri] : null;
+  },
+  on(B){ return B && B.mode==='campaign' ? this.KINDS[this.of(B.ri)] || null : null; },
+  deal(B){ const k=this.on(B); return k ? k.deal : 1; },
+  take(B, dmg){ const k=this.on(B); return !k || k.take===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*k.take)); },
+  gold(B){ const k=this.on(B); return k ? k.gold : 1; },
+  say(B){ const k=this.on(B); return k ? \`\${k.ic} \${k.nm} over \${B.realm.nm}: \${k.say}.\` : ''; },
+  greet(B){ const w=this.say(B); if(w) UI.toast(w); return w; },
+  tag(ri){ const k=this.KINDS[this.of(ri)]; return k ? \`<span class="tag skyTag" title="\${k.nm}: \${k.say}">\${k.ic}</span>\` : ''; },
+  line(B){ const k=this.on(B); return k && k.gold>1 ? \`<div id="skyLine" style="color:#ffe08a;font-weight:800;margin-top:6px">\${k.ic} Under a gold moon: a quarter more gold.</div>\` : ''; }
+};
+
+/* A peddler. On the third victory of a sitting, and every fifth after it,
+   midway between the sitting's milestones, a peddler waits on the road with
+   one thing to sell at half its price in the shop: whichever of a draught, an
+   insight or a rune the knight carries fewest of. One sale to a meeting, from
+   the victory card, if the purse will stand it. It is a surprise worth coming
+   back for, and it buys only what the shop already sells, so it is help with
+   a fight and never a short cut past a lesson. The offer is the sitting's;
+   what is bought goes in the pack as any shop purchase does. */
+const Peddler = {
+  AT: 3, EVERY: 5, OFF: 0.5, KINDS: ['potion', 'insight', 'rage'],
+  sold: 0,   // the meeting already sold at, so one meeting is one sale
+  meet(wins){
+    if(!(wins>0 && wins%this.EVERY===this.AT) || this.sold===wins) return null;
+    const it=(Game.s && Game.s.items) || {};
+    const id=this.KINDS.slice().sort((a,b)=>(it[a]||0)-(it[b]||0))[0];
+    return { id, cost: Math.round(ITEMS[id].cost*this.OFF), at: wins };
+  },
+  html(p){
+    if(!p) return '';
+    const it=ITEMS[p.id], can=Game.s.gold>=p.cost;
+    return \`<div class="panel" id="peddler" style="margin-top:8px;border-color:#c9a36b">
+        <div style="font-weight:800">🧳 A peddler on the road</div>
+        <div class="small" id="peddlerSays">“\${it.ic} \${it.nm}, half what the shop asks. \${it.ds}”</div>
+        <button class="btn\${can?' gold':''}" id="peddlerBuy" \${can?'':'disabled'} onclick="Peddler.buy(this,'\${p.id}',\${p.cost},\${p.at})">\${can?\`Buy · 🪙 \${p.cost}\`:\`🪙 \${p.cost}: more than your purse\`}</button>
+      </div>\`;
+  },
+  buy(btn, id, cost, at){
+    const g=Game.s;
+    if(!ITEMS[id] || this.sold===at || g.gold<cost) return false;
+    g.gold-=cost; g.items[id]=(g.items[id]||0)+1; this.sold=at;
+    Sfx.coin(0); Haptic.tap(); Game.save();
+    if(btn){ btn.disabled=true; btn.classList.remove('gold'); btn.textContent=\`Bought: \${ITEMS[id].ic} ×\${g.items[id]} in your pack\`; }
+    return true;
+  }
+};
+
+/* A stance. Before the first answer of a campaign fight the power bar lets
+   the knight choose how to fight it, one tap at a time round three stances:
+   even, as ever; bold, every blow landing a third harder but the foe's landing
+   half again as hard; guarded, the foe's blows halved but the knight's own a
+   fifth lighter. It is a read of the fight ahead: a foe you know cold is worth
+   going in bold against, one you are shaky on is worth guarding against. Once
+   anything is answered the stance is set for the fight. Campaign fights only;
+   it is the fight's, and nothing is saved. */
+const Stance = {
+  ORDER: ['even', 'bold', 'guarded'],
+  KINDS: {
+    even:    { ic:'⚖️', nm:'Even',    deal:1,   take:1   },
+    bold:    { ic:'🔥', nm:'Bold',    deal:4/3, take:1.5 },
+    guarded: { ic:'🛡️', nm:'Guarded', deal:0.8, take:0.5 }
+  },
+  of(B){ return B && B.mode==='campaign' && this.KINDS[B.stance] ? B.stance : 'even'; },
+  can(B){ return !!(B && B.mode==='campaign' && !B.over && !B.missed && !B.runBest && !B.combo); },
+  // round the three, one tap at a time, while nothing is answered
+  turn(B){
+    if(!this.can(B)) return false;
+    const i = this.ORDER.indexOf(this.of(B));
+    B.stance = this.ORDER[(i+1) % this.ORDER.length];
+    const k = this.KINDS[B.stance];
+    UI.toast(B.stance==='bold' ? '🔥 Bold: your blows land a third harder, and the foe\\'s half again as hard.'
+           : B.stance==='guarded' ? '🛡️ Guarded: the foe\\'s blows are halved, and yours a fifth lighter.'
+           : '⚖️ Even: blows land as ever.');
+    if(B.renderPowers) B.renderPowers();
+    return k;
+  },
+  deal(B){ return this.KINDS[this.of(B)].deal; },
+  // the foe's blow, at least one health, through the stance
+  take(B, dmg){ const m=this.KINDS[this.of(B)].take; return m===1 || dmg<=0 ? dmg : Math.max(1, Math.round(dmg*m)); },
+  label(B){ const k=this.KINDS[this.of(B)]; return \`\${k.ic} \${k.nm}\`; }
+};
+
 /* A flourish. A streak counts toward the blow up to seven in a row and no
    further, so from the eighth the bar offers a flourish: spend the streak,
    and the next right answer lands three times as hard. It is a choice
@@ -10050,6 +10223,7 @@ const Battle = {
     if(rival){ this._start(Rival.make(ri)); return; }   // asked for: a duel with the rival
     this._start(heroic && beaten ? Heroic.make(this.realm.foes[fi])
       : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));
+    Sky.greet(this);   // a fight under an omen says so
   },
   beginDaily(){
     this.mode='daily';
@@ -10109,6 +10283,7 @@ const Battle = {
     this.sworn=false; this.oathBroken=false;   // nor any oath
     this.asked=0;   // questions asked this fight, which a greedy foe counts
     this.flourish=false;   // nor any flourish
+    this.stance='even';   // and every fight starts even
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -10198,6 +10373,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
+    if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));
     if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));
     add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
@@ -10703,7 +10879,7 @@ const Battle = {
       const crit = R.chance(w.crit + this.combo*0.02);
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
-      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
+      const bonus = Stance.deal(this) * (this.perfect?3:1) * (this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)
                   * (staked?3:1) * (this.nudged?0.5:1) * Flourish.bonus(this) * Phase.bonus(this) * Weak.bonus(this) * Riposte.bonus(this) * Elite.bonus(this) * SecondWind.bonus(this);
       const weak=Weak.hit(this), riposte=this.lastRiposte=Riposte.hit(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
@@ -10790,7 +10966,7 @@ const Battle = {
       this.diceUp=false;
       let dmg=0;
       for(let i=0;i<blows;i++)
-        dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
+        dmg += this.takeHit(Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3))));
       dmg=SecondWind.hold(this, Game.s.hp, dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Comeback.note(this);
@@ -11071,7 +11247,7 @@ const Battle = {
     // A second phase got through without a miss pays a quarter more gold.
     // Victories in a row this sitting pay a tenth more each, up to half again.
     const wp=this.mode==='campaign' ? WarPath.won() : 1;
-    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp);
+    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp*Sky.gold(this));
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
     // graded on the health left as the foe falls, before a level-up restores it
@@ -11095,10 +11271,13 @@ const Battle = {
     const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
+    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones
     // the first victory of a sitting pays its experience twice
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
     const march=March.won(this);
+    // the fight sung in a line, read before a level-up restores the knight's health
+    const song=Ballad.of(this, over, g.hp, g.maxHp);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
@@ -11130,6 +11309,7 @@ const Battle = {
         <div class="panel center">
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
+          \${Ballad.line(song)}
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${WarPath.line()}
           \${Grade.sLine(sGold)}
@@ -11150,6 +11330,7 @@ const Battle = {
           \${Rival.line(rival)}
           \${Treasure.line(tr)}
           \${Gauntlet.line(gnt)}
+          \${Sky.line(this)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11171,6 +11352,7 @@ const Battle = {
         \${Scout.html(nx)}
         \${Wayfarer.html(way)}
         \${Campfire.html(this)}
+        \${Peddler.html(pd)}
         <button class="btn\${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ \${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         \${Rival.offer(this)}
@@ -16747,7 +16929,7 @@ const UI = {
       realms+=\`<details class="realm" id="realm-\${ri}"\${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
             <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}
-            <span class="rcount">\${beaten}/\${r.foes.length}</span>\${March.tag(ri, r.foes.length)}\${Treasure.tag(ri)}\${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
+            <span class="rcount">\${beaten}/\${r.foes.length}</span>\${March.tag(ri, r.foes.length)}\${Treasure.tag(ri)}\${Sky.tag(ri)}\${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
             <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>\`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];

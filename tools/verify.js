@@ -2761,7 +2761,7 @@ const warPathNotes = (() => {
   const flee = B.slice(B.indexOf('\n  flee(){'), B.indexOf('\n  }', B.indexOf('\n  flee(){')) + 4);
   const wp = win.indexOf("const wp=this.mode==='campaign' ? WarPath.won() : 1;");
   want(wp > win.indexOf("if(this.mode==='dungeon')") && wp < win.indexOf('const gold='), 'win', 'a victory is not counted once, for the campaign alone, before its gold');
-  want(/const gold=Math\.round\(this\.foe\.gold\*\(full\?1:0\.45\)\*\(Phase\.flawless\(this\)\?1\.25:1\)\*wp\);/.test(win), 'win', 'the gold is not paid at the war path\'s rate');
+  want(/const gold=Math\.round\(this\.foe\.gold\*\(full\?1:0\.45\)\*\(Phase\.flawless\(this\)\?1\.25:1\)\*wp\*Sky\.gold\(this\)\);/.test(win), 'win', 'the gold is not paid at the war path\'s rate');
   want(!/const xp=[^\n]*wp/.test(win), 'win', 'the war path pays experience too, not gold alone');
   want(win.includes('${WarPath.line()}') && win.indexOf('${WarPath.line()}') < win.indexOf('<hr>'), 'win', 'the victory does not say how long the path runs');
   want(win.includes("else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH'"), 'win', 'six in a row has no banner, or one on top of a level-up');
@@ -4181,6 +4181,240 @@ const flourishNotes = (() => {
   want(/^[^]*?const dmg = Combat\.strike[^]*?\n      Flourish\.spend\(this\);/.test(ans) && ans.indexOf('Flourish.spend(this);') < ans.indexOf('} else'), 'spent', 'the blow does not spend the flourish');
   want(html.includes("    if(!ok) Campfire.note(this);   // a slip to go over at the next camp\n    if(!ok) this.flourish=false;"), 'miss', 'a miss does not lose the flourish');
   want(html.includes("if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));"), 'bar', 'the bar does not offer the flourish');
+  return checks;
+})();
+
+/* A stance. Every state a fight can be in against whether the bar lets the
+   stance turn: only in the campaign, and only while nothing is answered. The
+   three stances in their order, round and round; what each does to the
+   knight's blow and to the foe's, never under one health; and that bold is
+   a real gamble and guarded a real cover: bold always ahead on the blow and
+   behind on the guard, guarded the other way about, so neither is simply
+   better. Then the wiring where it lives. */
+const stanceNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Stance = {'), html.indexOf('/* A flourish. A streak counts'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('stance', key, msg); };
+  const toasts = [];
+  const S = new Function('UI', src + ';return Stance;')({ toast: t => toasts.push(t) });
+  want(S.ORDER.join() === 'even,bold,guarded', 'order', S.ORDER.join());
+  const K = S.KINDS;
+  want(K.even.deal === 1 && K.even.take === 1, 'even', JSON.stringify(K.even));
+  want(K.bold.deal > 1 && K.bold.take > K.bold.deal, 'bold', 'bold is not a gamble: ' + JSON.stringify(K.bold));
+  want(K.guarded.deal < 1 && K.guarded.take < K.guarded.deal, 'guarded', 'guarded is not a cover: ' + JSON.stringify(K.guarded));
+  for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const over of [null, 'win']) for (const missed of [0, 1])
+    for (const runBest of [0, 3]) for (const combo of [0, 2]) for (const stance of [undefined, 'even', 'bold', 'guarded', 'odd']) {
+      const B = { mode, over, missed, runBest, combo, stance, pws: 0, renderPowers() { this.pws++; } };
+      const key = JSON.stringify({ mode, over, missed, runBest, combo, stance });
+      const of = mode === 'campaign' && ['even', 'bold', 'guarded'].includes(stance) ? stance : 'even';
+      const can = mode === 'campaign' && !over && !missed && !runBest && !combo;
+      want(S.of(B) === of, 'of ' + key, S.of(B));
+      want(S.can(B) === can, 'can ' + key, `turnable ${S.can(B)}`);
+      want(S.deal(B) === K[of].deal, 'deal ' + key, S.deal(B));
+      want(S.label(B) === `${K[of].ic} ${K[of].nm}`, 'label ' + key, S.label(B));
+      for (const d of [0, 1, 2, 3, 7, 40, 333]) {
+        const m = K[of].take, want_ = m === 1 || d <= 0 ? d : Math.max(1, Math.round(d * m));
+        want(S.take(B, d) === want_, 'take ' + key + d, `${d} lands as ${S.take(B, d)}`);
+        want(d === 0 || S.take(B, d) >= 1, 'floor ' + key + d, 'a blow through a stance lands as nothing');
+      }
+      const nt = toasts.length, r = S.turn(B);
+      const next = S.ORDER[(S.ORDER.indexOf(of) + 1) % 3];
+      want(can ? r === K[next] && B.stance === next && B.pws === 1 && toasts.length === nt + 1
+               : r === false && B.stance === stance && B.pws === 0 && toasts.length === nt, 'turn ' + key, JSON.stringify(B));
+    }
+  // three turns go round to where they began, each said in its own words
+  const B = { mode: 'campaign', over: null, missed: 0, runBest: 0, combo: 0, stance: 'even' }, said = [];
+  for (let i = 0; i < 3; i++) { S.turn(B); said.push(toasts[toasts.length - 1]); }
+  want(B.stance === 'even' && new Set(said).size === 3, 'round', JSON.stringify(said));
+  want(said[0].includes('third harder') && said[1].includes('halved') && said[2].includes('as ever'), 'words', JSON.stringify(said));
+  want(S.of(null) === 'even' && S.deal(null) === 1 && S.take(null, 9) === 9 && S.can(null) === false, 'none', 'no fight at all has a stance');
+  // the wiring
+  want(html.includes("    this.flourish=false;   // nor any flourish\n    this.stance='even';"), 'start', 'a fight starts in the last one\'s stance');
+  want(html.includes('const bonus = Stance.deal(this) * (this.perfect?3:1)') && html.split('Stance.deal(').length === 2, 'blow', 'the stance is not on the knight\'s blow');
+  want(html.includes('this.takeHit(Stance.take(this, Sky.take(this, Combat.foeHit(Phase.atk(this, this.foe.atk)') && html.split('Stance.take(').length === 2, 'guard', 'the stance is not on the foe\'s blow');
+  want(html.includes("if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));"), 'bar', 'the bar does not offer the stance');
+  return checks;
+})();
+
+/* A peddler. Every count of a sitting's victories against whether the
+   peddler waits: at the third and every fifth after, midway between the
+   milestones, and never at one already sold at. What is offered for every
+   pack: whichever of draught, insight and rune is carried fewest, the first
+   of them on a tie, at half the shop's price and so always cheaper than the
+   shop. A sale only once a meeting, only with the gold, and only of what the
+   shop sells; the card says so. Then the wiring. */
+const peddlerNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A stance. Before the first answer'));
+  const items = html.slice(html.indexOf('const ITEMS = {'), html.indexOf('};', html.indexOf('const ITEMS = {')) + 2);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('peddler', key, msg); };
+  const ITEMS = new Function(items + ';return ITEMS;')();
+  const Game = { s: { gold: 0, items: {} }, saves: 0, save() { this.saves++; } };
+  const P = new Function('Game', 'ITEMS', 'Sfx', 'Haptic', src + ';return Peddler;')(Game, ITEMS, { coin() {} }, { tap() {} });
+  want(P.KINDS.join() === 'potion,insight,rage' && P.KINDS.every(k => ITEMS[k]), 'kinds', P.KINDS.join());
+  for (let w = 0; w <= 40; w++) {
+    P.sold = 0; Game.s.items = {};
+    const at = w > 0 && w % 5 === 3, p = P.meet(w);
+    want(!!p === at, 'when ' + w, `a peddler at win ${w}: ${!!p}`);
+    want(!at || (w - 3) % 5 === 0 && w % 5 !== 0, 'midway ' + w, 'a peddler on a milestone');
+    if (p) { P.sold = w; want(P.meet(w) === null, 'sold ' + w, 'a peddler sells twice at one meeting'); }
+  }
+  const counts = [0, 1, 2, 5];
+  for (const a of counts) for (const b of counts) for (const c of counts) {
+    P.sold = 0; Game.s.items = { potion: a, insight: b, rage: c };
+    const p = P.meet(3), least = Math.min(a, b, c), id = a === least ? 'potion' : b === least ? 'insight' : 'rage';
+    const key = JSON.stringify(Game.s.items);
+    want(p && p.id === id && p.at === 3, 'pick ' + key, JSON.stringify(p));
+    want(p && p.cost === Math.round(ITEMS[id].cost / 2) && p.cost < ITEMS[id].cost && p.cost > 0, 'price ' + key, JSON.stringify(p));
+    for (const gold of [0, p.cost - 1, p.cost, p.cost + 50]) {
+      P.sold = 0; Game.s.gold = gold; Game.saves = 0;
+      const had = Game.s.items[id], card = P.html(p);
+      const can = gold >= p.cost;
+      want(card.includes(`${ITEMS[id].ic} ${ITEMS[id].nm}, half what the shop asks.`) && card.includes('id="peddlerBuy"')
+        && card.includes('disabled') !== can && card.includes(`Buy · 🪙 ${p.cost}`) === can, 'card ' + key + gold, card);
+      const btn = { disabled: false, textContent: '', classList: { remove() {} } };
+      const ok = P.buy(btn, id, p.cost, 3);
+      want(ok === can && Game.s.gold === (can ? gold - p.cost : gold) && Game.s.items[id] === had + (can ? 1 : 0) && Game.saves === (can ? 1 : 0)
+        && btn.disabled === can, 'buy ' + key + gold, JSON.stringify({ ok, gold: Game.s.gold, items: Game.s.items }));
+      if (can) {
+        want(P.buy(btn, id, p.cost, 3) === false && Game.s.items[id] === had + 1, 'once ' + key + gold, 'one meeting sells twice');
+        want(P.meet(3) === null, 'gone ' + key + gold, 'the peddler stays after the sale');
+      }
+    }
+  }
+  P.sold = 0; Game.s.gold = 999;
+  want(P.buy(null, 'nonsense', 1, 3) === false && P.html(null) === '', 'none', 'the peddler sells what the shop does not');
+  // the wiring
+  want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
+  want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  return checks;
+})();
+
+/* The sky. A realm's sky is rolled once and kept for the sitting, and with
+   no chance at all every sky is plain. Every omen on every fight: what it
+   does to the knight's blow, the foe's and the gold, and only in the campaign
+   and only in its own realm; every omen a help and none a cost, each of a
+   different kind. What the map, the fight and the card say. A thousand
+   sittings rolled: every omen comes up, and so does a plain sky. Then the
+   wiring. */
+const skyNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Sky = {'), html.indexOf('/* A peddler. On the third victory'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('sky', key, msg); };
+  const toasts = [];
+  const make = () => new Function('UI', src + ';return Sky;')({ toast: t => toasts.push(t) });
+  const S = make(), K = S.KINDS;
+  want(S.ORDER.join() === 'moon,wind,mist' && S.ORDER.every(k => K[k]), 'order', S.ORDER.join());
+  for (const k of S.ORDER) {
+    const o = K[k], helps = [o.deal > 1, o.take < 1, o.gold > 1].filter(Boolean).length;
+    want(helps === 1 && o.deal >= 1 && o.take <= 1 && o.gold >= 1, 'help ' + k, 'an omen is not one plain help: ' + JSON.stringify(o));
+  }
+  want(new Set(S.ORDER.map(k => [K[k].deal > 1, K[k].take < 1, K[k].gold > 1].indexOf(true))).size === 3, 'kinds', 'two omens do the same');
+  const realm = { nm: 'Vale of Vectors' };
+  for (const sky of [null, 'moon', 'wind', 'mist', 'nonsense']) for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const ri of [0, 1]) {
+    S.sky = { 0: sky, 1: null }; S.CHANCE = 0.6;
+    const B = { mode, ri, realm }, key = JSON.stringify({ sky, mode, ri });
+    const o = mode === 'campaign' && ri === 0 && K[sky] ? K[sky] : null;
+    want(S.on(B) === o, 'on ' + key, JSON.stringify(S.on(B)));
+    want(S.deal(B) === (o ? o.deal : 1), 'deal ' + key, S.deal(B));
+    want(S.gold(B) === (o ? o.gold : 1), 'gold ' + key, S.gold(B));
+    for (const d of [0, 1, 2, 5, 33, 400]) {
+      const t = !o || o.take === 1 || d <= 0 ? d : Math.max(1, Math.round(d * o.take));
+      want(S.take(B, d) === t && (d === 0 || S.take(B, d) >= 1), 'take ' + key + d, `${d} lands as ${S.take(B, d)}`);
+    }
+    const nt = toasts.length, w = S.greet(B);
+    want(o ? w === `${o.ic} ${o.nm} over Vale of Vectors: ${o.say}.` && toasts.length === nt + 1 : w === '' && toasts.length === nt, 'greet ' + key, w);
+    const l = S.line(B);
+    want(o && o.gold > 1 ? l.includes('id="skyLine"') && l.includes('a quarter more gold') : l === '', 'line ' + key, l);
+    const tg = S.tag(ri), ok = ri === 0 && K[sky];
+    want(ok ? tg.includes('class="tag skyTag"') && tg.includes(K[sky].ic) && tg.includes(K[sky].say) : tg === '', 'tag ' + key, tg);
+    S.CHANCE = 0;
+    want(S.of(ri) === null && S.tag(ri) === '' && S.deal(B) === 1 && S.gold(B) === 1 && S.take(B, 9) === 9, 'plain ' + key, 'an omen with no chance of one');
+  }
+  // rolled once, kept, and every outcome comes up
+  const seen = {};
+  const real = Math.random;
+  for (let i = 0; i < 1000; i++) {
+    const T = make(); const a = T.of(i % 7);
+    want(T.of(i % 7) === a && T.of(i % 7) === a, 'kept ' + i, 'a realm\'s sky changes within a sitting');
+    seen[a] = (seen[a] || 0) + 1;
+  }
+  want(['moon', 'wind', 'mist', 'null'].every(k => seen[k] > 50) && seen.null > 250 && seen.null < 550, 'dice', JSON.stringify(seen));
+  Math.random = real;
+  // the wiring
+  want(html.includes("      : Greedy.roll(Elite.roll(this.realm.foes[fi], beaten), beaten));\n    Sky.greet(this);"), 'begin', 'a fight under an omen does not say so');
+  want(html.includes('(Phase.flawless(this)?1.25:1)*wp*Sky.gold(this));'), 'goldwire', 'a gold moon does not pay');
+  want(html.includes('(this.unassisted?2:1) * Sky.deal(this) * (this.finisher||1)') && html.split('Sky.deal(').length === 2, 'blow', 'a fair wind does not carry the blow');
+  want(html.includes('Stance.take(this, Sky.take(this, Combat.foeHit(') && html.split('Sky.take(').length === 2, 'guard', 'a mist does not lighten the foe\'s blow');
+  want(html.includes('${Treasure.tag(ri)}${Sky.tag(ri)}'), 'map', 'the map does not show the sky');
+  want(html.includes('          ${Gauntlet.line(gnt)}\n          ${Sky.line(this)}\n'), 'card', 'the card does not say what the moon paid');
+  return checks;
+})();
+
+/* A ballad. Every victory is sung in a line, and the line is the fight's own:
+   the moment most worth singing is picked in a fixed order, a fall barely
+   dodged first and a plain win last, each kind has verses that name the foe
+   and every number they use, the wording turns with the foe and never with
+   anything else, and the line pays nothing. The wiring is checked where it
+   lives: it is read before a level-up mends the knight, and drawn under the
+   foe's fall on the card. */
+const balladNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Ballad = {'), html.indexOf('/* The sky. Each sitting every realm'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('ballad', key, msg); };
+  let st = 'even', sky = null;
+  const Stance = { of: () => st }, Sky = { on: () => sky };
+  const Bd = new Function('Stance', 'Sky', src + ';return Ballad;')(Stance, Sky);
+  const KINDS = ['brink', 'flawless', 'overkill', 'streak', 'bold', 'guarded', 'omen', 'grit', 'plain'];
+  want(Object.keys(Bd.VERSES).join() === KINDS.join(), 'kinds', Object.keys(Bd.VERSES).join());
+  for (const k of KINDS) {
+    const vs = Bd.VERSES[k];
+    want(vs.length === 3 && new Set(vs).size === 3, 'three ' + k, 'a kind of verse wants three ways to say it');
+    for (const v of vs) {
+      want(v.includes('{f}'), 'foe ' + k, 'a verse does not name the foe: ' + v);
+      want(k !== 'streak' || v.includes('{n}'), 'count ' + v, 'a streak verse does not say how long');
+      want(k !== 'omen' || v.includes('{o}'), 'sky ' + v, 'an omen verse does not name the sky');
+      want(!/[—–]/.test(v) && v.length < 110, 'plain ' + v, 'a verse is too long or has a dash');
+    }
+  }
+  const foes = ['Bramble Goblin', 'Slime of Equal Length', 'the Determinant Drake', 'Ogre', '', 'Lich of Limits'];
+  const order = (o) => o.brink ? 'brink' : o.flaw ? 'flawless' : o.over ? 'overkill' : o.streak ? 'streak'
+    : o.st === 'bold' || o.st === 'guarded' ? o.st : o.sky ? 'omen' : o.grit ? 'grit' : 'plain';
+  for (const hp of [0, 1, 25, 26, 60, 100]) for (const missed of [0, 1, 2, 3, 7]) for (const runBest of [0, 4, 5, 12])
+  for (const over of [0, 10, 49, 50, 400]) for (const stance of ['even', 'bold', 'guarded']) for (const omen of [null, { nm: 'A gold moon' }])
+  for (const nm of foes) {
+    st = stance; sky = omen;
+    const B = { foe: { nm }, emax: 100, missed, runBest };
+    const key = JSON.stringify({ hp, missed, runBest, over, stance, omen: !!omen, nm });
+    const want_k = order({ brink: hp > 0 && hp <= 25, flaw: missed === 0, over: over >= 50, streak: runBest >= 5, st: stance, sky: !!omen, grit: missed >= 3 });
+    const song = Bd.of(B, over, hp, 100);
+    want(song.k === want_k, 'kind ' + key, song.k + ' over ' + want_k);
+    want(!/\{[fnmo]\}/.test(song.text) && song.text.toLowerCase().includes((nm || 'the foe').toLowerCase()), 'filled ' + key, song.text);
+    want(song.k !== 'streak' || song.text.includes(String(runBest)), 'n ' + key, song.text);
+    want(song.k !== 'grit' || !Bd.pick('grit', nm).includes('{m}') || song.text.includes(String(missed)), 'm ' + key, song.text);
+    want(song.k !== 'omen' || song.text.includes('A gold moon'), 'o ' + key, song.text);
+    want(song.text.charAt(0) === song.text.charAt(0).toUpperCase(), 'cap ' + key, song.text);
+    want(Bd.of(B, over, hp, 100).text === song.text, 'steady ' + key, 'the same fight sings two ways');
+    const l = Bd.line(song);
+    want(l.includes('id="ballad"') && l.includes(`data-k="${song.k}"`) && l.includes(song.text), 'line ' + key, l);
+  }
+  want(Bd.line(null) === '' && Bd.of(null, 0, 1, 1).k === 'plain' && Bd.kind({}, 0, 1, 1) === 'plain', 'none', 'no fight still sings');
+  // the foe turns the words: across foes every verse of a kind comes up
+  for (const k of KINDS) {
+    const seen = new Set();
+    for (let i = 0; i < 60; i++) seen.add(Bd.pick(k, 'Foe ' + i));
+    want(seen.size === 3, 'turns ' + k, `${seen.size} of 3 verses come up`);
+  }
+  // only words: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'the ballad does more than sing');
+  // the wiring
+  want(html.includes("    const march=March.won(this);\n    // the fight sung in a line, read before a level-up restores the knight's health\n    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned="), 'read', 'the ballad is not read before the level-up');
+  want(html.includes("falls before your blade.</div>\n          ${Ballad.line(song)}\n"), 'card', 'the card does not sing');
+  want(html.split('Ballad.of(').length === 2 && html.split('Ballad.line(').length === 2, 'once', 'the ballad is sung more than once');
   return checks;
 })();
 
@@ -27897,6 +28131,10 @@ console.log(`  campfires checked          ${pad(campNotes.toLocaleString(), 10)}
 console.log(`  treasure maps checked      ${pad(treasureNotes.toLocaleString(), 10)}  (a scrap for a campaign win at A or better, the map whole at the third, X on a realm opened and fought in and not the one just won where there is another, nothing found while it waits, the hoard of its boss's gold paid once there)`);
 console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 10)}  (offered only for a realm all beaten and not run this sitting, stepped on only by the foe it waits on, broken off by any other fight, a fall or a flight, and paying the realm's every first-clear purse once at the last)`);
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
+console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
+console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
+console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
+console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
