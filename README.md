@@ -850,6 +850,13 @@ The game is built so that losing teaches you as much as winning.
   sitting's milestones, a peddler waits on the victory card with one thing at half the shop's price: whichever
   of a draught, an insight or a rune you carry fewest of. One sale to a meeting, if your purse will stand it.
   It sells only what the shop sells, so it helps with a fight and never skips a lesson.
+- **🎲 A dicer.** On the fourth victory of a sitting, and every fifth after it, a dicer at the roadside
+  offers double or nothing on the fight's purse: one question on the topic the fight ended on. Answer it right
+  and he pays the purse again; miss, and he keeps it and you see the answer with its working. It is your
+  choice to throw, once a meeting, and it wagers only gold, so knowing the mathematics is the way to win.
+- **🔥 The hearth.** Your day streak now pays: the first campaign victory of each sitting pays a tenth more
+  gold for every day in a row you have come back, up to seven tenths at a week. The victory card says what it
+  paid and the title says what tomorrow would pay. It reads the streak the game already keeps.
 - **🌕 The sky.** Each sitting every realm has its own sky, shown on its heading on the map and said as a
   fight there starts: a gold moon pays a quarter more gold for every victory, a fair wind lands your blows a
   fifth harder, a mist has foes strike a fifth lighter, and now and then the sky is plain. It is kept for the
@@ -858,6 +865,13 @@ The game is built so that losing teaches you as much as winning.
   the brink, a fight with no miss, a killing blow far past need, a long streak, a bold or guarded stance, an
   omen overhead, or a win that was hard work, whichever is most worth remembering. The words turn with the
   foe, so the same feat reads fresh next time. It is only words: it pays nothing and nothing is saved.
+- **📖 The sitting's tale.** Every campaign victory's ballad is written into the tale of the sitting, with
+  the foe and the grade it was won at, kept folded on the map under the sitting's tally. Opened, it reads newest
+  verse first as the story of the session so far: the last twelve verses, and a count of the rest. Nothing is saved.
+- **⭐ Honours.** Your knight wears what you have done: a gold star in the ring on the shield for every
+  realm whose boss has fallen, a gold circlet on the helm (with a gem for each) once a realm is beaten at S foe
+  by foe, and a shining blade from the third boss on. The victory card says when a win adds one. It is worked
+  out from the foes you have beaten, so nothing new is saved.
 - **🔥 Second wind.** Once a campaign fight, a blow that would fell the knight leaves them
   standing at 1 health instead, with SECOND WIND on the scene. The question after it is a last
   stand ("You are hanging on at 1 health. Answer correctly to strike twice as hard!"), and a
@@ -3433,6 +3447,8 @@ Inside `index.html` the code is organised as:
 | `Flourish` | offered only in a campaign fight from the eighth right answer in a row, before the answer and while none is held; spending it ends the streak and readies one blow three times as hard, said and shown on the bar; spent by that blow and lost to a miss; worth more than the streak it spends and less than three of its blows; the wiring; session-only |
 | `Stance` | turned only in a campaign fight before anything is answered, round even, bold and guarded, each said; even leaves both blows as ever, bold puts the knight's ahead and the foe's further ahead, guarded the other way about; the foe's blow never under one health; the wiring; session-only |
 | `Peddler` | met at the third victory of a sitting and every fifth after, never on a milestone and never twice at one meeting; offering whichever of draught, insight and rune the pack holds fewest of, the first on a tie, at half the shop's price; one sale a meeting, only with the gold, only of what the shop sells; what the card says; the wiring |
+| `Dicer` | met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, only with a purse to stake and a met topic; the fight's last topic where it can be; the purse paid again on a right answer and lost on a miss, never past an empty purse, the sitting's tally moved the same; one throw a meeting, counted toward its topic; what the card says; the wiring |
+| `Hearth` | the day streak paying the first campaign victory of a sitting a tenth more gold a day, up to seven, in no other mode and on no later victory; counted in on the card and in the sitting's tally; what the card and the title say; the wiring |
 | `Sky` | each realm's sky rolled once and kept for the sitting, plain with no chance of an omen; a gold moon, a fair wind and a mist, each one plain help of its own kind and none a cost; only in the campaign and its own realm; the foe's blow never under one health; a thousand sittings roll every omen and plain skies; what the map, the fight and the card say; the wiring |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |

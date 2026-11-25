@@ -3233,7 +3233,7 @@ const overkillNotes = (() => {
   for (const over of [0, 1, 40]) want(O.gold(over, 0, 52) === 0, `no health ${over}`, `a foe with no health pays ${O.gold(over, 0, 52)}`);
   const at = html.indexOf("this.over='win'"), win = html.slice(at, html.indexOf('Anim.stop();\n    },1200);', at));
   want(win.includes("const over=this.mode==='campaign' ? this.overkill||0 : 0, oGold=Overkill.gold(over, this.emax, this.foe.gold);\n    g.gold+=oGold;"), 'paid', 'the overkill gold is not paid, or not in the campaign only');
-  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
+  want(win.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);"), 'count', 'the gold counted up on the card leaves the overkill out');
   want(win.includes('${Overkill.line(over, oGold)}'), 'card', 'the victory card does not say the overkill');
   const strike = html.slice(html.indexOf('const rallied=Phase.check(this, was);'), html.indexOf("if(this.ehp<=0) Talk.say('fall');"));
   want(strike.includes('if(this.ehp<=0){ this.overkill=Overkill.of(hit, was);'), 'strike', 'the killing blow does not keep its overkill, or keeps it after a rally');
@@ -3292,7 +3292,7 @@ const quarryNotes = (() => {
   want(win.includes('const full=first || !!this.foe.elite || quarry;'), 'full', 'the quarry does not pay its full gold');
   want(win.includes('${Quarry.line(quarry && !this.foe.elite)}'), 'card', 'the victory card does not say the quarry');
   const map = html.slice(html.indexOf('  renderMap(){'), html.indexOf("realms+='</details>';"));
-  want(map.includes('Quarry.node(quarry)+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
+  want(map.includes('Quarry.node(quarry)+Tale.html()+this.realmPath(cur);') && map.includes('const quarry=Quarry.today();'), 'map', 'the map does not show the quarry');
   want(map.includes("${Quarry.tag(quarry===ri+':'+fi)}") && map.includes("${Quarry.dt(quarry===ri+':'+fi)}"), 'mapnode', 'the quarry\'s own place on the map is not marked');
   return checks;
 })();
@@ -3434,7 +3434,7 @@ const revengeNotes = (() => {
   want(V.line('Goblin', 12).includes('id="revengeWon"') && V.line('Goblin', 12).includes('12 gold') && V.line('Goblin', 0) === '', 'line', 'the card does not say the revenge');
   want(html.includes("const held=this.mode==='campaign' ? Revenge.mark(this.ri+':'+this.fi, lost) : 0;"), 'held', 'a fall in the campaign does not hold the gold lost');
   want(html.includes("const rGold=this.mode==='campaign' ? Revenge.claim(key) : 0;\n    g.gold+=rGold;"), 'paid', 'a win does not pay the gold back, or not in the campaign only');
-  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold, 900)'), 'counted', 'the card does not count the gold won back');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900)'), 'counted', 'the card does not count the gold won back');
   want(html.includes('${Revenge.line(this.foe.nm, rGold)}') && html.includes('${Revenge.fell(this.foe.nm, held)}'), 'said', 'the cards do not say the revenge');
   want(html.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marked', 'the map does not mark the foe');
   return checks;
@@ -3550,7 +3550,7 @@ const boonNotes = (() => {
   want(html.includes("const ups=Game.gainXp(xp+fXp);\n    Boon.offer(this, ups);"), 'offered', 'a level-up does not offer a boon');
   want(html.includes("satchel || boon==='find' || march || mile || vow ? 1 :"), 'drop', 'a lucky find does not drop a sure chest');
   want(html.includes('${Boon.line(boon, bGold)}') && html.includes("${this.mode==='campaign'?Boon.card():''}"), 'said', 'the card does not show the boon');
-  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold, 900)'), 'counted', 'the card does not count the purse');
+  want(html.includes('gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900)'), 'counted', 'the card does not count the purse');
   return checks;
 })();
 
@@ -3563,7 +3563,7 @@ const boonNotes = (() => {
    whole spread of the chest's draw a march never finds less than epic. */
 const marchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const src = html.slice(html.indexOf('const March = {'), html.indexOf('/* A level-up boon.'));
+  const src = html.slice(html.indexOf('const March = {'), html.indexOf('/* The hearth. The title keeps'));
   const M = new Function(src + ';return March;')();
   let checks = 0;
   const want = (ok, key, msg) => { checks++; if (!ok) fail('march', key, msg); };
@@ -3656,7 +3656,7 @@ const comebackNotes = (() => {
   want(C.line(25).includes('+25 gold') && C.line(25).includes('id="comebackLine"') && C.line(0) === '', 'line', 'the card does not say the comeback');
   want(html.includes('      Game.s.hp=Math.max(0,Game.s.hp-dmg);\n      Comeback.note(this);') && html.includes('      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);\n      Comeback.note(this);'), 'blows', 'a blow does not mark the comeback');
   want(html.includes('this.overkill=0; this.low=false;'), 'fresh', 'a fight starts with a comeback marked');
-  want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold+vGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
+  want(html.includes('const cGold=Comeback.gold(this, gold);\n    g.gold+=cGold;') && html.includes('${Comeback.line(cGold)}') && html.includes('+bGold+cGold+vGold+eGold, 900)'), 'paid', 'the comeback is not paid, said or counted');
   return checks;
 })();
 
@@ -3688,7 +3688,7 @@ const sittingNotes = (() => {
     want(h.includes(`<b>${wins}</b> ${wins === 1 ? 'victory' : 'victories'}`) && h.includes(`<b>${gold}</b> gold`) && h.includes(`best streak <b>${best}</b>`), `html ${step}`, h);
   }
   want(S.won(null, 10) === false && S.wins === wins, 'none', 'a win with no fight counts');
-  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold)'), 'fed', 'the tally is not fed the gold the card counts');
+  want(html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold)'), 'fed', 'the tally is not fed the gold the card counts');
   want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)'), 'shown', 'the map does not show the tally');
   return checks;
 })();
@@ -3722,7 +3722,7 @@ const mileNotes = (() => {
     want(on ? l.includes('id="sittingMile"') && l.includes(`Your ${S.nth(w)} victory this sitting`) && l.includes('a sure chest') : l === '', `line ${w}`, l);
   }
   want(seen === Math.floor(S.wins / 5), 'count', `${seen} milestones in ${S.wins} victories`);
-  want(html.includes('const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);\n    // every fifth victory this sitting is a milestone with a sure chest\n    const mile=counted && Sitting.mile();'), 'won', 'the win does not ask for its milestone');
+  want(html.includes('const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold);\n    // every fifth victory this sitting is a milestone with a sure chest\n    const mile=counted && Sitting.mile();'), 'won', 'the win does not ask for its milestone');
   want(html.includes("march || mile || vow ? 1 : Sweep.odds(this, .5))") && html.includes('satchel, march, mile, vow, tier:'), 'drop', 'a milestone does not drop a sure chest');
   want(html.includes("if((ctx.satchel || ctx.mile) && (rar==='common' || rar==='uncommon')) rar='rare';"), 'rarity', 'a milestone can find something plain');
   want(html.includes('${Comeback.line(cGold)}\n          ${Sitting.line(mile)}'), 'card', 'the card does not say the milestone');
@@ -3860,7 +3860,7 @@ const oathNotes = (() => {
   want(html.includes("    if(Oath.check(this)) setTimeout(()=>this.renderPowers(), 60);\n    // Crossing a topic"), 'check', 'an answer does not check the oath');
   want(html.includes('const vow=Oath.kept(this), vGold=Oath.gold(this, gold);\n    g.gold=Math.max(0, g.gold+vGold);'), 'paid', 'the oath is not paid at the victory');
   want(html.includes('march || mile || vow ? 1 :') && html.includes('satchel, march, mile, vow, tier:'), 'drop', 'a kept oath drops no sure chest');
-  want(html.includes('${Oath.line(vGold)}') && html.includes('+bGold+cGold+vGold, 900)') && html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold)'), 'card', 'the oath is not said or counted');
+  want(html.includes('${Oath.line(vGold)}') && html.includes('+bGold+cGold+vGold+eGold, 900)') && html.includes('Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold)'), 'card', 'the oath is not said or counted');
   return checks;
 })();
 
@@ -4246,7 +4246,7 @@ const stanceNotes = (() => {
    shop sells; the card says so. Then the wiring. */
 const peddlerNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A stance. Before the first answer'));
+  const src = html.slice(html.indexOf('const Peddler = {'), html.indexOf('/* A dicer. On the fourth victory'));
   const items = html.slice(html.indexOf('const ITEMS = {'), html.indexOf('};', html.indexOf('const ITEMS = {')) + 2);
   let checks = 0;
   const want = (ok, key, msg) => { checks++; if (!ok) fail('peddler', key, msg); };
@@ -4289,6 +4289,128 @@ const peddlerNotes = (() => {
   // the wiring
   want(html.includes("    const mile=counted && Sitting.mile();\n    const pd=counted && Peddler.meet(Sitting.wins);"), 'meet', 'the peddler is not met on a counted victory');
   want(html.includes("        ${Campfire.html(this)}\n        ${Peddler.html(pd)}\n") && html.split('Peddler.html(').length === 2, 'card', 'the victory card does not show the peddler');
+  return checks;
+})();
+
+/* The dicer. Met at the fourth victory of a sitting and every fifth after,
+   never on a milestone nor at a peddler, and only with a purse to stake and a
+   topic of the realm met. The topic is the one the fight ended on where it
+   can be, and another met one where not. A throw pays the stake again or loses
+   it, never past an empty purse, and feeds the sitting's tally the same; one
+   throw to a meeting, counted toward its topic either way. Then the wiring. */
+const dicerNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Dicer = {'), html.indexOf('/* A stance. Before the first answer'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('dicer', key, msg); };
+  const Game = { s: { gold: 0 }, saves: 0, save() { this.saves++; }, said: [], recordAnswer(k, ok, n) { this.said.push([k, ok, n]); } };
+  const Sitting = { gold: 0 };
+  let met = ['vec', 'dot'];
+  const Wayfarer = { topics: () => met.slice() };
+  const els = {}, el = id => (els[id] = els[id] || { id, innerHTML: '', remove() { els[id].gone = true; } });
+  const document = { getElementById: el, querySelectorAll: () => [], createElement: () => ({ dataset: {}, classList: { add() {}, remove() {} } }) };
+  el('dicerAsk'); el('dicerChoices').appendChild = () => {};
+  const Q = { key: 'vec', topic: 'Vectors', q: 'q?', a: 'right', choices: ['right', 'wrong'], ex: 'Because.', why: { wrong: 'Not so.' }, fig: null };
+  const asked = [];
+  const D = new Function('Game', 'Sitting', 'Wayfarer', 'TOPIC_LABEL', 'Sfx', 'Haptic', 'document', 'buildQuestion', 'Lesson', 'Mastery', 'Figure', src + ';return Dicer;')(
+    Game, Sitting, Wayfarer, { vec: 'Vectors', dot: 'Dot products' }, { coin() {}, bad() {} }, { hit() {} }, document,
+    (k, d) => { asked.push([k, d]); return Object.assign({}, Q, { key: k }); }, { diff: (k, d) => d }, { adjustDiff: (k, d) => d }, { render() {} });
+  const B = k => ({ cur: k ? { key: k } : null });
+  // when the dicer is met
+  for (let w = 0; w <= 40; w++) {
+    D.played = 0;
+    const at = w > 0 && w % 5 === 4, d = D.meet(w, 50, B('vec'));
+    want(!!d === at, 'when ' + w, `a dicer at win ${w}: ${!!d}`);
+    want(!at || (w % 5 !== 0 && w % 5 !== 3), 'apart ' + w, 'a dicer on a milestone or at a peddler');
+    if (d) {
+      want(d.at === w && d.stake === 50 && d.key === 'vec', 'meet ' + w, JSON.stringify(d));
+      D.played = w; want(D.meet(w, 50, B('vec')) === null, 'played ' + w, 'a dicer throws twice at one meeting');
+    }
+  }
+  for (const purse of [-5, 0, NaN, undefined, 1, 300]) {
+    D.played = 0;
+    want(!!D.meet(4, purse, B('vec')) === purse > 0, 'purse ' + purse, 'a dicer with no purse to stake');
+  }
+  // the topic
+  for (const [mt, k, out] of [[['vec', 'dot'], 'dot', 'dot'], [['vec', 'dot'], 'vec', 'vec'], [['vec', 'dot'], 'det', 'vec'], [['dot'], null, 'dot'], [[], 'vec', null]]) {
+    met = mt; D.played = 0;
+    const d = D.meet(4, 20, B(k));
+    want(D.topic(B(k)) === out && (out ? d && d.key === out : d === null), 'topic ' + JSON.stringify([mt, k]), JSON.stringify(d));
+  }
+  met = ['vec', 'dot'];
+  // the card
+  want(D.html(null) === '' && D.cur === null, 'none', 'a card with no dicer');
+  const card = D.html({ at: 4, stake: 37, key: 'dot' });
+  want(card.includes('id="dicer"') && card.includes('id="dicerGo"') && card.includes('Throw for 🪙 37') && card.includes('Double or nothing on your purse, 🪙 37?')
+    && card.includes('<b>Dot products</b>') && D.cur && D.cur.stake === 37, 'card', card);
+  // the purse, right or wrong
+  for (const gold of [0, 5, 37, 100]) for (const stake of [1, 37, 80]) for (const ok of [true, false]) {
+    Game.s.gold = gold; Sitting.gold = 40;
+    const n = D.settle(ok, stake), lost = Math.min(stake, gold);
+    want(ok ? n === stake && Game.s.gold === gold + stake && Sitting.gold === 40 + stake
+            : n === lost && Game.s.gold === gold - lost && Game.s.gold >= 0 && Sitting.gold === Math.max(0, 40 - lost), 'settle ' + [gold, stake, ok], JSON.stringify({ n, gold: Game.s.gold, sit: Sitting.gold }));
+  }
+  // a throw: asked once, counted once, saved once, said once
+  for (const ok of [true, false]) {
+    D.played = 0; asked.length = 0; Game.said = []; Game.saves = 0; Game.s.gold = 60; Sitting.gold = 60;
+    delete els.dicerGo; el('dicerGo'); el('dicerOut').innerHTML = '';
+    D.html(D.meet(9, 25, B('dot')));
+    D.ask();
+    want(asked.length === 1 && asked[0][0] === 'dot' && asked[0][1] === 2 && els.dicerGo.gone && D.played === 9 && D.meet(9, 25, B('dot')) === null,
+      'ask ' + ok, JSON.stringify({ asked, played: D.played }));
+    D.ask(); want(asked.length === 1, 'ask once ' + ok, 'the question is asked twice');
+    const btn = { classList: { add() {}, remove() {} } };
+    D.answer(btn, ok ? 'right' : 'wrong');
+    want(Game.said.length === 1 && Game.said[0][0] === 'dot' && Game.said[0][1] === ok && Game.saves === 1, 'count ' + ok, JSON.stringify(Game.said));
+    want(Game.s.gold === (ok ? 85 : 35) && Sitting.gold === (ok ? 85 : 35), 'gold ' + ok, JSON.stringify({ g: Game.s.gold, s: Sitting.gold }));
+    const out = els.dicerOut.innerHTML;
+    want(out.includes(`data-ok="${ok ? 1 : 0}"`) && (ok ? out.includes('+🪙 25') : out.includes('−🪙 25') && out.includes('<b>right</b>') && out.includes('Because.') && out.includes('Not so.')), 'said ' + ok, out);
+    D.answer(btn, 'right');
+    want(Game.said.length === 1 && Game.saves === 1 && Game.s.gold === (ok ? 85 : 35), 'once ' + ok, 'a second throw at one meeting');
+  }
+  // the wiring
+  want(html.includes("    const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones\n    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, this);"), 'meet', 'the dicer is not met on a counted victory, with the purse the card counts');
+  want(html.includes("        ${Peddler.html(pd)}\n        ${Dicer.html(dc)}\n") && html.split('Dicer.html(').length === 2, 'card', 'the victory card does not show the dicer');
+  return checks;
+})();
+
+/* The hearth. A day streak pays the first campaign victory of a sitting a
+   tenth more gold for each day in a row, up to seven: every streak, every
+   mode, every purse, and the first victory only. What the card and the title
+   say. Then the wiring: read before the sitting counts the win, counted in
+   with the rest of the card's gold, and said on the card and the title. */
+const hearthNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Hearth = {'), html.indexOf('/* A level-up boon.'));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('hearth', key, msg); };
+  const Sitting = { wins: 0 };
+  const H = new Function('Sitting', src + ';return Hearth;')(Sitting);
+  want(H.STEP === 0.1 && H.CAP === 7, 'rate', JSON.stringify([H.STEP, H.CAP]));
+  for (const days of [undefined, null, -3, 0, 1, 2, 3, 6, 7, 8, 12, 400]) {
+    const g = days === undefined ? {} : { streak: { days, last: 'x' } }, d = Math.max(0, Math.min(7, days | 0));
+    want(H.days(g) === d, 'days ' + days, H.days(g));
+    for (const mode of ['campaign', 'arena', 'daily', 'dungeon']) for (const wins of [0, 1, 4]) for (const gold of [0, 1, 9, 45, 333]) {
+      Sitting.wins = wins;
+      const n = H.gold({ mode }, g, gold), key = JSON.stringify({ days, mode, wins, gold });
+      const e = mode === 'campaign' && wins === 0 ? Math.round(gold * 0.1 * d) : 0;
+      want(n === e && n >= 0 && n <= gold * 0.7 + 1, 'gold ' + key, `${n}, not ${e}`);
+      const l = H.line(n, g);
+      want(n > 0 ? l.includes('id="hearthLine"') && l.includes(`Day ${days} in a row: your first victory this sitting pays ${d * 10}% more gold, +${n}.`) : l === '', 'line ' + key, l);
+    }
+    const tip = H.tip(days);
+    want(d <= 0 ? tip === '' : tip.startsWith(`Your first victory each sitting pays +${d * 10}% gold. `)
+      && (d < 7 ? tip.endsWith(`Come back tomorrow for +${(d + 1) * 10}%.`) : tip.endsWith('The most the fire pays: keep it lit.')), 'tip ' + days, tip);
+  }
+  Sitting.wins = 0;
+  want(H.gold(null, { streak: { days: 3 } }, 100) === 0, 'none', 'a hearth with no fight');
+  H.STEP = 0;
+  want(H.tip(3) === '' && H.gold({ mode: 'campaign' }, { streak: { days: 3 } }, 100) === 0, 'off', 'a hearth with no fire still pays or speaks');
+  // the wiring
+  want(html.includes("    g.gold=Math.max(0, g.gold+vGold);\n    // the first victory of a sitting pays a tenth more gold for each day in a row, up to seven\n    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold);"), 'read', 'the hearth is not read before the sitting counts the win, or not paid');
+  want(html.includes("countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);"), 'counted', 'the card does not count the hearth in');
+  want(html.includes('          ${Sitting.freshLine(fXp)}\n          ${Hearth.line(eGold, g)}\n'), 'card', 'the card does not say what the hearth paid');
+  want(html.includes('id="hearthTip" style="color:#ff9c3d">${Hearth.tip(st.days)}</div>'), 'title', 'the title does not say what the streak pays');
   return checks;
 })();
 
@@ -4415,6 +4537,128 @@ const balladNotes = (() => {
   want(html.includes("    const march=March.won(this);\n    // the fight sung in a line, read before a level-up restores the knight's health\n    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned="), 'read', 'the ballad is not read before the level-up');
   want(html.includes("falls before your blade.</div>\n          ${Ballad.line(song)}\n"), 'card', 'the card does not sing');
   want(html.split('Ballad.of(').length === 2 && html.split('Ballad.line(').length === 2, 'once', 'the ballad is sung more than once');
+  return checks;
+})();
+
+/* The sitting's tale. Every campaign victory's verse is written in, with
+   its foe and grade, and nothing else is: the newest verse first, the last
+   twelve kept, the count of all of them on the fold, and a line for the ones
+   that fell off the end. With nothing sung there is nothing on the map. The
+   wiring is checked where it lives: a verse is written once a victory, after
+   the ballad is read, and the tale sits under the tally on the map. */
+const taleNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Tale = {'), html.indexOf("/* A comeback. A campaign fight won after the knight's health"));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('tale', key, msg); };
+  const Grade = { COL: { S: 'gold', A: 'green', B: 'blue', C: 'dim' } };
+  const T = new Function('Grade', src + ';return Tale;')(Grade);
+  want(T.html() === '' && T.n === 0 && T.log.length === 0, 'empty', 'an empty tale shows on the map');
+  const modes = ['campaign', 'arena', 'daily', 'dungeon', 'campaign'];
+  const grades = ['S', 'A', 'B', 'C'];
+  let n = 0; const kept = [];
+  for (let i = 0; i < 40; i++) {
+    const mode = modes[i % modes.length], song = i % 9 === 4 ? null : { k: 'k' + (i % 5), text: 'Verse ' + i };
+    const B = { mode, foe: i % 11 === 6 ? null : { nm: 'Foe ' + i } };
+    const ok = mode === 'campaign' && !!B.foe && !!song;
+    want(T.add(B, song, grades[i % 4]) === ok, 'add ' + i, JSON.stringify({ mode, song: !!song, foe: !!B.foe }));
+    if (ok) { n++; kept.push({ nm: 'Foe ' + i, grade: grades[i % 4], text: 'Verse ' + i, k: 'k' + (i % 5) }); }
+    const last = kept.slice(-12);
+    want(T.n === n && T.log.length === last.length && T.log.every((e, j) => e.nm === last[j].nm && e.grade === last[j].grade && e.text === last[j].text && e.k === last[j].k), 'log ' + i, JSON.stringify(T.log.map(e => e.nm)));
+    const h = T.html();
+    if (!n) { want(h === '', 'none ' + i, h); continue; }
+    want(h.startsWith('<details id="tale"') && h.includes(`📖 This sitting's tale · ${n} ${n === 1 ? 'verse' : 'verses'}</summary>`), 'fold ' + i, h.slice(0, 200));
+    const rows = h.split('class="taleRow"').length - 1;
+    want(rows === last.length, 'rows ' + i, rows + ' rows for ' + last.length);
+    const at = last.slice().reverse().map(e => h.indexOf(`<b>${e.nm}</b>: <i>${e.text}</i>`));
+    want(at.every(x => x > 0) && at.every((x, j) => j === 0 || x > at[j - 1]), 'newest first ' + i, JSON.stringify(at));
+    want(last.every(e => h.includes(`<b style="color:${Grade.COL[e.grade]}">${e.grade}</b>`)), 'grades ' + i, 'a grade is not shown in its colour');
+    const off = n - last.length;
+    want(off > 0 ? h.includes(`and ${off} earlier ${off === 1 ? 'verse' : 'verses'} before these`) : !h.includes('earlier'), 'off ' + i, String(off));
+  }
+  want(T.add(null, { k: 'a', text: 'x' }, 'S') === false && T.add({ mode: 'campaign', foe: { nm: 'X' } }, { k: 'a', text: 'y' }) === true && T.log[T.log.length - 1].grade === 'C', 'odd', 'a verse with no grade is not set at C');
+  // only words: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'the tale does more than keep words');
+  // the wiring
+  want(html.includes("    Boon.offer(this, ups);\n    Tale.add(this, song, Grade.of(marks));") && html.split('Tale.add(').length === 2, 'write', 'a victory does not write its verse in, once');
+  want(html.indexOf('const song=Ballad.of(') < html.indexOf('Tale.add(this, song'), 'after', 'the verse is written before it is sung');
+  want(html.includes('let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);'), 'map', 'the map does not keep the tale');
+  return checks;
+})();
+
+/* Honours. What the knight wears is worked out from the foes already beaten
+   and nothing else: a star for each realm whose boss is down, a circlet once
+   a realm is beaten at S foe by foe with a gem for each such realm, and a
+   shining blade from the third boss on. A win says exactly what it added, in
+   that order, and a win that adds nothing says nothing. The drawing puts one
+   star per realm in its ring, never more, and the wiring is checked where it
+   lives: worn from the fight's start, read before and after the win, drawn
+   on the helm, the shield and the sword. */
+const honourNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Honours = {'), html.indexOf('/* A ballad. Every victory is sung'));
+  let seed = 77;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const rnd = n => Math.floor(rand() * n);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('honours', key, msg); };
+  const Grade = { best: v => typeof v === 'string' && 'SABC'.includes(v) ? v : null,
+    crowned(c, ri, n) { for (let fi = 0; fi < n; fi++) if (this.best((c || {})[ri + ':' + fi]) !== 'S') return false; return n > 0; } };
+  const calls = { path: 0, fill: 0, round: 0, dot: 0 };
+  const cx = { beginPath() { calls.path++; }, lineTo() {}, closePath() {}, fill() { calls.fill++; } };
+  for (let step = 0; step < 3000; step++) {
+    const REALMS = [...Array(1 + rnd(9))].map(() => ({ foes: [...Array(1 + rnd(5))].map((_, i, a) => ({ boss: i === a.length - 1 })) }));
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')(
+      REALMS, Grade, cx, () => {}, () => { calls.round++; }, () => { calls.dot++; });
+    const cleared = {};
+    REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { const v = rnd(6); if (v) cleared[ri + ':' + fi] = v === 5 ? true : 'SSABC'[v - 1]; }));
+    const stars = REALMS.filter((r, ri) => r.foes.some((f, fi) => f.boss && cleared[ri + ':' + fi])).length;
+    const crowns = REALMS.filter((r, ri) => r.foes.every((f, fi) => cleared[ri + ':' + fi] === 'S')).length;
+    const a = H.of({ cleared }), k = `step ${step}`;
+    want(a.stars === stars && a.crowns === crowns && a.glow === (stars >= 3), 'of ' + k, JSON.stringify([a, stars, crowns]));
+    // a win: one foe beaten, at some grade
+    const ri = rnd(REALMS.length), fi = rnd(REALMS[ri].foes.length), after = Object.assign({}, cleared);
+    after[ri + ':' + fi] = 'SABC'[rnd(4)];
+    const b = H.of({ cleared: after }), gains = H.gain(a, b);
+    const expect = [b.stars > a.stars && 'star', b.crowns > a.crowns && 'crown', b.glow && !a.glow && 'glow'].filter(Boolean);
+    want(gains.map(h => h.k).join() === expect.join(), 'gain ' + k, JSON.stringify([a, b, gains]));
+    want(b.stars >= a.stars || cleared[ri + ':' + fi], 'never less ' + k, 'a win took a star away');
+    const l = H.line(gains);
+    want(gains.length ? l.includes('id="honours"') && gains.every(h => l.includes(`data-k="${h.k}"`) && l.includes(H.say(h))) : l === '', 'line ' + k, l);
+    for (const h of gains) {
+      const w = H.say(h);
+      want(h.k === 'star' ? w === `⭐ A new star on your shield: ${h.n} of ${REALMS.length} realms' bosses beaten.`
+        : h.k === 'crown' ? w.startsWith('👑') && w.includes(h.n === 1 ? 'circlet' : `${h.n} realms`)
+        : w === `✨ Your blade shines now: ${h.n} bosses beaten.`, 'say ' + k, w);
+    }
+    // drawn: one star a realm, a circlet only once crowned, a gem a crown up to five
+    calls.path = calls.round = calls.dot = 0;
+    H.stars(a.stars); H.circlet(a.crowns);
+    want(calls.path === a.stars && a.stars <= REALMS.length, 'drawn stars ' + k, JSON.stringify(calls));
+    want(calls.round === (a.crowns ? 1 : 0) && calls.dot === Math.min(a.crowns, 5), 'drawn circlet ' + k, JSON.stringify(calls));
+  }
+  {
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')([{ foes: [{ boss: true }] }], Grade, cx, () => {}, () => {}, () => {});
+    want(H.of(null).stars === 0 && H.of({}).crowns === 0 && H.gain(null, H.of({})).length === 0 && H.line([]) === '' && H.line(null) === '', 'none', 'no knight still wears honours');
+  }
+  // the stars sit on the shield, inside its rim
+  {
+    const pts = [];
+    const H = new Function('REALMS', 'Grade', 'cx', 'setFill', 'fillRR', 'circle', src + ';return Honours;')([...Array(8)].map(() => ({ foes: [{ boss: true }] })), Grade,
+      { beginPath() {}, lineTo(x, y) { pts.push([x, y]); }, closePath() {}, fill() {} }, () => {}, () => {}, () => {});
+    H.stars(8);
+    want(pts.length === 80 && pts.every(([x, y]) => Math.abs(x) <= 14 && y >= -20 && y <= 12), 'rim', 'a star falls off the shield');
+  }
+  // only drawn and said: nothing in it touches gold, health or the save
+  want(!/Game|gold\s*[+-]?=|hp\s*[+-]?=|save\(|cleared\[[^\]]*\]\s*=/.test(src.replace(/\/\*[\s\S]*?\*\//g, '')), 'words', 'honours do more than show');
+  // the wiring
+  want(html.includes("    this.plumeCol = me ? col_(me) : null;\n    this.honours  = Honours.of(Game.s);"), 'worn', 'a fight does not wear the honours');
+  want(html.indexOf('const hon0=Honours.of(g);') > 0 && html.indexOf('const hon0=Honours.of(g);') < html.indexOf('g.cleared[key]=true; g.stats.wins++;'), 'before', 'the honours before the win are read after it');
+  want(html.includes('const hon=Honours.gain(hon0, this.honours=Honours.of(g));') && html.indexOf('const hon=Honours.gain(') > html.indexOf('g.cleared[key]=Grade.keep('), 'after', 'the win\'s honours are not read after it');
+  want(html.includes('          ${Sky.line(this)}\n          ${Honours.line(hon)}\n'), 'card', 'the card does not say what the win added');
+  const dk = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(dk.includes('Honours.circlet(hon.crowns);') && dk.includes("fillText('λ',0,2);\n  Honours.stars(hon.stars);\n  cx.restore();") && dk.includes("if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }"), 'drawn', 'the knight does not wear the honours');
   return checks;
 })();
 
@@ -28133,7 +28377,11 @@ console.log(`  gauntlets checked          ${pad(gauntletNotes.toLocaleString(), 
 console.log(`  flourishes checked         ${pad(flourishNotes.toLocaleString(), 10)}  (offered only in the campaign from the eighth in a row before the answer, spending the streak for one blow three times as hard, spent by that blow and lost to a miss, and worth more than the streak it spends)`);
 console.log(`  stances checked           ${pad(stanceNotes.toLocaleString(), 10)}  (turned only in the campaign before anything is answered, round even, bold and guarded, each a real trade on the knight's blow against the foe's, a blow never under one health)`);
 console.log(`  peddlers checked          ${pad(peddlerNotes.toLocaleString(), 10)}  (met at the third victory of a sitting and every fifth after, never on a milestone, selling whichever of draught, insight and rune is carried fewest at half the shop's price, once a meeting and only with the gold)`);
+console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}  (met at the fourth victory of a sitting and every fifth after, never on a milestone nor at a peddler, on the fight's last topic where it can be, paying the purse again on a right answer and losing it on a miss, never past an empty purse, once a meeting)`);
+console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
+console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
+console.log(`  honours checked           ${pad(honourNotes.toLocaleString(), 10)}  (a star on the shield for each realm's boss beaten, a circlet with a gem for each realm beaten at S, a shining blade from the third boss, worked out from the foes beaten, drawn on the knight and said on the card when a win adds one)`);
 console.log(`  skies checked             ${pad(skyNotes.toLocaleString(), 10)}  (each realm's sky rolled once a sitting, a gold moon, a fair wind or a mist, each one plain help of its own kind, only in the campaign and its own realm, said on the map, at the fight and on the card)`);
 console.log(`  overkill checked           ${pad(overkillNotes.toLocaleString(), 10)}  (the killing blow's part past the foe's last health pays its share of the foe's health, of up to half its gold, for foes and blows of every size, said and counted on the card, the campaign only)`);
 console.log(`  grade titles checked       ${pad(gradeTitleNotes.toLocaleString(), 10)}  (Exemplar at ten foes on S, Crowned for one realm all at S, Paragon for every realm, on 4,000 knights' maps and an old save's, last in the list so a moved save keeps its titles)`);

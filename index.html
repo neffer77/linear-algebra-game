@@ -7363,6 +7363,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   fillRR(-19,-118,38,40,13,skin);
   setFill('#1a1622'); cx.fillRect(-14,-106,28,8);
   setFill('#5ad1ff'); cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
+  const hon = Battle.honours || {stars:0, crowns:0, glow:false};
+  Honours.circlet(hon.crowns);
   // plume
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
@@ -7374,6 +7376,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.beginPath(); cx.moveTo(-14,-20); cx.lineTo(14,-20); cx.lineTo(14,8); cx.quadraticCurveTo(0,24,-14,8); cx.closePath();
   setFill('#3f6bb5'); cx.fill(); cx.lineWidth=3; setStroke('#f2c14e'); cx.stroke();
   setFill('#f2c14e'); cx.font='bold 15px serif'; cx.textAlign='center'; cx.fillText('λ',0,2);
+  Honours.stars(hon.stars);
   cx.restore();
 
   // sword (right arm) — swings with the lunge
@@ -7383,7 +7386,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
   setFill('#f2c14e'); cx.fillRect(-13,-10,28,7);        // crossguard
   const g=cx.createLinearGradient(0,-70,0,-8);
-  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#dfe8f5'); g.addColorStop(1,'#93a3ba');
+  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,hon.glow?'#fff1c2':'#dfe8f5'); g.addColorStop(1,hon.glow?'#e9c46a':'#93a3ba');
+  if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }
   setFill(g);
   cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
   cx.restore();
@@ -9242,6 +9246,57 @@ const NextFight = {
   }
 };
 
+/* Honours. The knight wears what they have done, worked out from the foes
+   already beaten, so nothing new is saved. Every realm whose boss has fallen
+   sets a gold star in the ring around the lambda on the shield; a realm with
+   every foe beaten at S sets a gold circlet on the helm, with a gem for each
+   such realm; and once three bosses have fallen the sword's blade shines.
+   The victory card says when a win adds one, so the knight on screen grows
+   with the campaign and a player can see how far they have come. */
+const Honours = {
+  GLOW: 3,
+  of(g){
+    const c=(g && g.cleared) || {};
+    let stars=0, crowns=0;
+    REALMS.forEach((r, ri)=>{
+      if(r.foes.some((f, fi)=>f.boss && c[ri+':'+fi])) stars++;
+      if(Grade.crowned(c, ri, r.foes.length)) crowns++;
+    });
+    return { stars, crowns, glow: stars>=this.GLOW };
+  },
+  // what a win added, in the order the card says it
+  gain(a, b){
+    if(!a || !b) return [];
+    const out=[];
+    if(b.stars>a.stars) out.push({ k:'star', n:b.stars });
+    if(b.crowns>a.crowns) out.push({ k:'crown', n:b.crowns });
+    if(b.glow && !a.glow) out.push({ k:'glow', n:b.stars });
+    return out;
+  },
+  say(h){
+    return h.k==='star' ? `⭐ A new star on your shield: ${h.n} of ${REALMS.length} realms' bosses beaten.`
+         : h.k==='crown' ? (h.n===1 ? '👑 A gold circlet for your helm: a realm beaten at S, foe by foe.' : `👑 A new gem in your circlet: ${h.n} realms beaten at S.`)
+         : `✨ Your blade shines now: ${h.n} bosses beaten.`;
+  },
+  line(gains){
+    return gains && gains.length ? `<div id="honours" style="color:#ffe08a;font-weight:800;margin-top:6px">${gains.map(h=>`<div data-k="${h.k}">${this.say(h)}</div>`).join('')}</div>` : '';
+  },
+  // the stars, drawn on the shield in its own frame, the lambda at its middle
+  stars(n){
+    for(let i=0; i<n; i++){
+      const a=-Math.PI/2 + i*2*Math.PI/REALMS.length, x=Math.cos(a)*11, y=-3+Math.sin(a)*11;
+      cx.beginPath();
+      for(let j=0; j<10; j++){ const r=j%2 ? 1.2 : 2.8, b=-Math.PI/2+j*Math.PI/5; cx.lineTo(x+Math.cos(b)*r, y+Math.sin(b)*r); }
+      cx.closePath(); setFill('#ffe08a'); cx.fill();
+    }
+  },
+  circlet(n){
+    if(!n) return;
+    fillRR(-19,-119,38,5,2,'#f2c14e');
+    for(let i=0; i<Math.min(n, 5); i++) circle(-12+i*6, -116.5, 1.8, '#ff6f91');
+  }
+};
+
 /* A ballad. Every victory is sung in a line of verse about how it was won,
    read from the fight itself: a win from the brink of falling, a fight with
    no miss in it, a killing blow far past what was needed, a long streak, a
@@ -9377,6 +9432,87 @@ const Peddler = {
     Sfx.coin(0); Haptic.tap(); Game.save();
     if(btn){ btn.disabled=true; btn.classList.remove('gold'); btn.textContent=`Bought: ${ITEMS[id].ic} ×${g.items[id]} in your pack`; }
     return true;
+  }
+};
+
+/* A dicer. On the fourth victory of a sitting, and every fifth after it, a
+   dicer at the roadside rattles his cup and offers double or nothing on the
+   fight's purse: one question on the topic the fight ended on, or another of
+   the realm the knight has met, at the hardest they are ready for. Answer it
+   right and the dicer pays the purse again; miss, and he keeps it, and the
+   answer is shown with its working. It is asked for, never forced, and once
+   the cup is thrown that meeting is over. It wagers only gold, which buys
+   convenience, so knowing the mathematics is the only way to beat the dice.
+   Nothing is saved. */
+const Dicer = {
+  AT: 4, EVERY: 5,
+  played: 0, cur: null, q: null,
+  // the topic the fight ended on where the realm's met topics include it
+  topic(B){
+    const ks=Wayfarer.topics(B), k=B && B.cur && B.cur.key;
+    return ks.includes(k) ? k : ks[0] || null;
+  },
+  meet(wins, purse, B){
+    if(!(wins>0 && wins%this.EVERY===this.AT) || this.played===wins || !(purse>0)) return null;
+    const key=this.topic(B); if(!key) return null;
+    return { at: wins, stake: purse, key };
+  },
+  html(d){
+    this.cur=d||null; this.q=null;
+    if(!d) return '';
+    const nm=TOPIC_LABEL[d.key]||d.key;
+    return `<div class="panel" id="dicer" style="text-align:left;margin:6px 0;border-color:#b98cff">
+        <div class="small" id="dicerSays">🎲 A dicer at the roadside rattles his cup. “Double or nothing on your purse, 🪙 ${d.stake}? One question on <b>${nm}</b>. Answer it right and I pay it again. Miss, and it is mine.”</div>
+        <button class="btn" id="dicerGo" style="margin-top:6px" onclick="Dicer.ask()">🎲 Throw for 🪙 ${d.stake}</button>
+        <div id="dicerAsk"></div>
+      </div>`;
+  },
+  ask(){
+    const d=this.cur, el=document.getElementById('dicerAsk'); if(!d || !el || this.q) return;
+    this.played=d.at;   // the cup is thrown: this meeting is over whatever comes of it
+    const go=document.getElementById('dicerGo'); if(go) go.remove();
+    const q=this.q=buildQuestion(d.key, Lesson.diff(d.key, Mastery.adjustDiff(d.key, 2)));
+    el.innerHTML=`<div class="crar" style="margin-top:6px">${q.topic}</div>
+      <div id="dicerQ" style="font-size:16px;text-align:center;line-height:1.5">${q.q}</div>
+      <div id="dicerFig"></div><div id="dicerChoices" style="margin-top:8px"></div><div id="dicerOut"></div>`;
+    Figure.render(q.fig, document.getElementById('dicerFig'));
+    const cb=document.getElementById('dicerChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      cb.appendChild(b);
+    });
+  },
+  // what a throw does to the purse: the stake paid again, or the stake lost, never below nothing
+  settle(ok, stake){
+    const g=Game.s, n=ok ? stake : Math.min(stake, g.gold);
+    g.gold += ok ? n : -n;
+    Sitting.gold = Math.max(0, Sitting.gold + (ok ? n : -n));
+    return n;
+  },
+  answer(btn, c){
+    const q=this.q, d=this.cur; if(!q || !d) return;
+    this.cur=null;     // one throw to a meeting
+    const ok=(c===q.a);
+    document.querySelectorAll('#dicerChoices .choice').forEach(b=>{
+      b.onclick=null; b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);      // counted toward the topic either way
+    const n=this.settle(ok, d.stake);
+    let said;
+    if(ok){
+      Sfx.coin(0); Sfx.coin(1); Haptic.hit();
+      said=`<span style="color:#d7b8ff;font-weight:800">🎲 Right! The dicer pays up with a grumble: +🪙 ${n}.</span>`;
+    } else {
+      Sfx.bad();
+      said=`🎲 The dice go his way, −🪙 ${n}. The answer was <b>${q.a}</b>. ${q.ex||''}${q.why[c] ? `<div style="margin-top:4px">${q.why[c]}</div>` : ''}`;
+    }
+    Game.save();
+    document.getElementById('dicerOut').innerHTML=`<div id="dicerDone" class="small" data-ok="${ok?1:0}" style="margin-top:6px">${said}</div>`;
   }
 };
 
@@ -10080,6 +10216,31 @@ const Sitting = {
   }
 };
 
+/* The sitting's tale. Each campaign victory's ballad is written into the
+   tale of the sitting, with the foe and the grade it was won at, and the map
+   keeps the tale folded under the sitting's tally: the newest verse first,
+   the last twelve kept, and the count of every verse sung. Opened, it reads
+   as the story of the session so far, so a sitting ends with something to
+   look back over and a reason to add one more verse. It is only words and
+   it lasts the sitting: nothing is saved. */
+const Tale = {
+  MAX: 12, log: [], n: 0,
+  add(B, song, grade){
+    if(!B || B.mode!=='campaign' || !B.foe || !song) return false;
+    this.n++;
+    this.log.push({ nm: B.foe.nm, grade: grade || 'C', k: song.k, text: song.text });
+    if(this.log.length>this.MAX) this.log.shift();
+    return true;
+  },
+  html(){
+    if(!this.log.length) return '';
+    const rows=this.log.slice().reverse().map(e=>
+      `<div class="taleRow" data-k="${e.k}" style="margin-top:6px;text-align:left"><b style="color:${Grade.COL[e.grade]||'var(--dim)'}">${e.grade}</b> · <b>${e.nm}</b>: <i>${e.text}</i></div>`).join('');
+    const more=this.n>this.log.length ? `<div class="small" style="margin-top:6px;color:var(--dim)">and ${this.n-this.log.length} earlier ${this.n-this.log.length===1?'verse':'verses'} before these</div>` : '';
+    return `<details id="tale" class="small" style="margin:0 0 8px;color:var(--dim)"><summary style="cursor:pointer">📖 This sitting's tale · ${this.n} ${this.n===1?'verse':'verses'}</summary>${rows}${more}</details>`;
+  }
+};
+
 /* A comeback. A campaign fight won after the knight's health fell to a
    quarter or less pays a quarter more gold, said on the victory card. Health
    that low is when quitting is most tempting, and this is a reason to stay
@@ -10113,6 +10274,34 @@ const March = {
     return !this.paid[ri] && c>0 && c<n ? `<span class="tag marchTag">🥾 ${c}/${n} in a row</span>` : '';
   },
   line(on, nm){ return on ? `<div id="marchWon" style="color:#c792ea;font-weight:800;margin-top:6px">🥾 Realm march: every foe of ${nm} beaten with no fall between, for a sure chest with an epic find at the least.</div>` : ''; }
+};
+
+/* The hearth. The title keeps a day streak, the days in a row the knight has
+   come back, and now the streak pays: the first campaign victory of a sitting
+   pays a tenth more gold for each day in a row, up to seven, so a week of
+   coming back pays seven tenths more. The victory card says what it paid and
+   counts it in, and the title says what tomorrow's would pay. It reads the
+   streak the game already keeps, so nothing new is saved, and it pays only
+   gold. */
+const Hearth = {
+  STEP: 0.1, CAP: 7,
+  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, Math.min(this.CAP, d)); },
+  pct(d){ return Math.round(this.STEP*Math.max(0, Math.min(this.CAP, d|0))*100); },
+  // the first campaign victory of a sitting, read before the sitting counts it
+  gold(B, g, gold){
+    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;
+    return Math.max(0, Math.round((gold|0)*this.STEP*this.days(g)));
+  },
+  line(n, g){
+    return n>0 ? `<div id="hearthLine" style="color:#ff9c3d;font-weight:800;margin-top:6px">🔥 Day ${g.streak.days} in a row: your first victory this sitting pays ${this.pct(this.days(g))}% more gold, +${n}.</div>` : '';
+  },
+  // the title's word on what the streak pays now, and tomorrow
+  tip(days){
+    const d=days|0;
+    if(d<=0 || this.STEP<=0) return '';
+    const now=this.pct(d), next=this.pct(d+1);
+    return `Your first victory each sitting pays +${now}% gold. ${next>now ? `Come back tomorrow for +${next}%.` : 'The most the fire pays: keep it lit.'}`;
+  }
 };
 
 /* A level-up boon. When a campaign win lifts the knight a level, the victory
@@ -10234,6 +10423,7 @@ const Battle = {
     const me=Profiles.active();
     this.capeCol  = me ? shadeCol(col_(me), -70) : null;
     this.plumeCol = me ? col_(me) : null;
+    this.honours  = Honours.of(Game.s);   // and what they have done, worn where it shows
     this.learned={};                 // what moved in the mastery model, this fight
     this.redo=null;                  // a miss's second go does not follow it out
     // Skill abilities recharge every fight — they are what you know, not what
@@ -11220,6 +11410,7 @@ const Battle = {
     const quarry=this.mode==='campaign' && !first && Quarry.of(g.cleared, dayKey(new Date()))===key;
     // whether the realm was crowned is read before this win marks its clear
     const nfoes=this.realm.foes.length, wasCrowned=Grade.crowned(g.cleared, this.ri, nfoes);
+    const hon0=Honours.of(g);   // the honours worn before this win, read before it is marked
     g.cleared[key]=true; g.stats.wins++;
     Bounty.bump('wins',1);
     if(this.missed===0) Bounty.bump('flaw',1);
@@ -11249,10 +11440,14 @@ const Battle = {
     // a kept oath pays half again; a broken one costs a quarter
     const vow=Oath.kept(this), vGold=Oath.gold(this, gold);
     g.gold=Math.max(0, g.gold+vGold);
-    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold);
+    // the first victory of a sitting pays a tenth more gold for each day in a row, up to seven
+    const eGold=Hearth.gold(this, g, gold);
+    g.gold+=eGold;
+    const counted=Sitting.won(this, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold);
     // every fifth victory this sitting is a milestone with a sure chest
     const mile=counted && Sitting.mile();
     const pd=counted && Peddler.meet(Sitting.wins);   // a peddler midway between milestones
+    const dc=counted && Dicer.meet(Sitting.wins, gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, this);   // a dicer: double or nothing on the purse
     // the first victory of a sitting pays its experience twice
     const fXp=counted && Sitting.fresh() ? xp : 0;
     // the last foe of a realm beaten with no fall between is a realm march
@@ -11262,6 +11457,8 @@ const Battle = {
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
+    Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
+    const hon=Honours.gain(hon0, this.honours=Honours.of(g));   // and any honour the win adds
 
     // loot — rolled now, revealed by the chest once the victory panel is up
     const sweep=Sweep.on(this), satchel=this.mode==='campaign' && Satchel.spend();
@@ -11304,6 +11501,7 @@ const Battle = {
           ${Comeback.line(cGold)}
           ${Sitting.line(mile)}
           ${Sitting.freshLine(fXp)}
+          ${Hearth.line(eGold, g)}
           ${Gild.line(this.gildGold)}
           ${Oath.line(vGold)}
           ${Greedy.line(this)}
@@ -11312,6 +11510,7 @@ const Battle = {
           ${Treasure.line(tr)}
           ${Gauntlet.line(gnt)}
           ${Sky.line(this)}
+          ${Honours.line(hon)}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -11334,6 +11533,7 @@ const Battle = {
         ${Wayfarer.html(way)}
         ${Campfire.html(this)}
         ${Peddler.html(pd)}
+        ${Dicer.html(dc)}
         <button class="btn${nx?'':' gold'}" onclick="UI.go('s-map')">🗺️ ${nx?'To the map':'Onward'}</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         ${Rival.offer(this)}
@@ -11341,9 +11541,9 @@ const Battle = {
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       if(drop) setTimeout(()=>Chest.open(drop), 700);
-      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);
+      countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
-      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold+vGold)/25));i++) Sfx.coin(i);
+      for(let i=0;i<Math.min(8,Math.ceil((gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold)/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
@@ -16902,7 +17102,7 @@ const UI = {
     const ahead=this.nextFoe(), cur = ahead ? ahead.ri : REALMS.length-1;
     const quarry=Quarry.today();
     // today's quarry heads the campaign, above the road
-    let realms=Sitting.html()+Quarry.node(quarry)+this.realmPath(cur);
+    let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
@@ -43188,7 +43388,7 @@ const Cheats = {
     document.getElementById('streakRow').innerHTML = st.days>0
       ? `<div class="streakbox"><div class="n">${st.days}</div>
          <div><div style="font-weight:800;font-size:14px">day${st.days===1?'':'s'} in a row</div>
-         <div class="small">${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div></div></div>`
+         <div class="small">${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div><div class="small" id="hearthTip" style="color:#ff9c3d">${Hearth.tip(st.days)}</div></div></div>`
       : '';
     if(days && days>1) setTimeout(()=>Celebrate.banner('🔥 '+days+' DAY STREAK','welcome back','#ff9c3d',
       ()=>{Sfx.milestone(); Haptic.win();}), 400);

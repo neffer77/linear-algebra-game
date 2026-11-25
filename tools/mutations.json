@@ -1,89 +1,82 @@
 {
-  "change": "A ballad: every victory card sings the fight in a line of its own",
+  "change": "Hearth: a day streak pays the first victory of each sitting a tenth more gold a day, up to seven",
   "mutations": [
     {
-      "name": "the brink is never sung",
+      "name": "a later victory of the sitting pays the hearth",
       "file": "index.html",
-      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n",
-      "replace": "    if(false) return 'brink';\n",
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || B.mode!=='campaign') return 0;",
       "run": "verify"
     },
     {
-      "name": "a miss still sings flawless",
+      "name": "every mode pays the hearth",
       "file": "index.html",
-      "find": "    if(B.missed===0) return 'flawless';",
-      "replace": "    if((B.missed||0)<=1) return 'flawless';",
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
       "run": "verify"
     },
     {
-      "name": "overkill comes before a flawless fight",
+      "name": "the streak pays past a week",
       "file": "index.html",
-      "find": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(B.missed===0) return 'flawless';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';",
-      "replace": "    if(hp>0 && maxHp>0 && hp<=maxHp*this.BRINK) return 'brink';\n    if(over>0 && B.emax>0 && over>=B.emax*this.OVER) return 'overkill';\n    if(B.missed===0) return 'flawless';",
+      "find": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, Math.min(this.CAP, d)); },",
+      "replace": "  days(g){ const d=(g && g.streak && g.streak.days)|0; return Math.max(0, d); },",
       "run": "verify"
     },
     {
-      "name": "a short run is a streak",
+      "name": "a fifth more a day",
       "file": "index.html",
-      "find": "  STREAK: 5, GRIT: 3,",
-      "replace": "  STREAK: 3, GRIT: 3,",
+      "find": "  STEP: 0.1, CAP: 7,\n  days(g)",
+      "replace": "  STEP: 0.2, CAP: 7,\n  days(g)",
       "run": "verify"
     },
     {
-      "name": "a guarded stance is not sung",
+      "name": "the hearth is not paid",
       "file": "index.html",
-      "find": "    if(st==='bold' || st==='guarded') return st;",
-      "replace": "    if(st==='bold') return st;",
+      "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
+      "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
       "run": "verify"
     },
     {
-      "name": "the omen is forgotten",
+      "name": "the card does not count the hearth in",
       "file": "index.html",
-      "find": "    if(Sky.on(B)) return 'omen';\n",
+      "find": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);",
+      "replace": "countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold, 900);",
+      "run": "verify"
+    },
+    {
+      "name": "the card does not say the hearth",
+      "file": "index.html",
+      "find": "          ${Hearth.line(eGold, g)}\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the words never turn with the foe",
+      "name": "the title promises more forever",
       "file": "index.html",
-      "find": "    return vs[h%vs.length];",
-      "replace": "    return vs[0];",
+      "find": "    return `Your first victory each sitting pays +${now}% gold. ${next>now ?",
+      "replace": "    return `Your first victory each sitting pays +${now}% gold. ${true ?",
       "run": "verify"
     },
     {
-      "name": "the streak's length is left out",
+      "name": "the line says the capped days, not the streak",
       "file": "index.html",
-      "find": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, String(B && B.runBest||0))",
-      "replace": "    const text=this.pick(k, nm).replace(/\\{f\\}/g, nm).replace(/\\{n\\}/g, 'many')",
+      "find": "🔥 Day ${g.streak.days} in a row",
+      "replace": "🔥 Day ${this.days(g)} in a row",
       "run": "verify"
     },
     {
-      "name": "the line loses its kind",
+      "name": "the hearth is not paid [play]",
       "file": "index.html",
-      "find": "data-k=\"${song.k}\" class=\"small\"",
-      "replace": "data-k=\"song\" class=\"small\"",
-      "run": "verify"
+      "find": "    const eGold=Hearth.gold(this, g, gold);\n    g.gold+=eGold;\n",
+      "replace": "    const eGold=Hearth.gold(this, g, gold);\n",
+      "run": "play:hearth"
     },
     {
-      "name": "the ballad is read after the level-up mends",
+      "name": "every victory pays the hearth [play]",
       "file": "index.html",
-      "find": "    const song=Ballad.of(this, over, g.hp, g.maxHp);\n    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);",
-      "replace": "    const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);\n    const ups=Game.gainXp(xp+fXp);\n    const song=Ballad.of(this, over, g.hp, g.maxHp);",
-      "run": "verify"
-    },
-    {
-      "name": "the card does not sing",
-      "file": "index.html",
-      "find": "          ${Ballad.line(song)}\n",
-      "replace": "",
-      "run": "play:ballad"
-    },
-    {
-      "name": "a hard win is sung as plain",
-      "file": "index.html",
-      "find": "    if((B.missed||0)>=this.GRIT) return 'grit';\n",
-      "replace": "",
-      "run": "play:ballad"
+      "find": "    if(!B || B.mode!=='campaign' || (typeof Sitting!=='undefined' && Sitting.wins>0)) return 0;",
+      "replace": "    if(!B || B.mode!=='campaign') return 0;",
+      "run": "play:hearth"
     }
   ]
 }
