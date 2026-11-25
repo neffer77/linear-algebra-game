@@ -388,7 +388,8 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .node.done{border-left-color:#3f6a46;}
 .node.slim{padding:6px 10px; margin:5px 0; gap:8px;}
 .node.slim .ico{width:30px; height:30px; font-size:17px; border-radius:8px;}
-.node.slim .nm{flex:1; min-width:0; font-size:14px;}
+.node.slim .nm{flex:1; min-width:0; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.node.slim .tag{font-size:10px; padding:1px 6px;}
 .node.slim .sgold{font-size:12px; color:var(--dim); white-space:nowrap;}
 .node .ico{border:1px solid var(--gold-dk); background:linear-gradient(180deg,#1d1633,#120d24);}
 .realmhdr h2{font-family:var(--serif);}
@@ -9527,7 +9528,7 @@ const SealFold = {
     if(p.length<2) return p.join('');   // one alone is shown, not folded
     const nm=(names||[]).filter(Boolean);
     const span=nm.length>1?`${nm[0]} to ${nm[nm.length-1]}`:(nm[0]||'');
-    return `<details class="sealAll" id="sealAll"${this.open?' open':''} ontoggle="SealFold.open=this.open"><summary>＋ ${p.length} more sealed realms${span?` <span class="sealSpan">${span}</span>`:''}</summary>${p.join('')}</details>`;
+    return `<details class="sealAll" id="sealAll"${this.open?' open':''} ontoggle="if(this.isConnected) SealFold.open=this.open"><summary>＋ ${p.length} more sealed realms${span?` <span class="sealSpan">${span}</span>`:''}</summary>${p.join('')}</details>`;
   }
 };
 
@@ -17643,10 +17644,13 @@ const UI = {
   },
   // Open a realm's fights and bring them into view.
   toRealm(ri){
-    const d=document.getElementById('realm-'+ri);
+    let d=document.getElementById('realm-'+ri);
     if(!d) return;
+    /* A sealed realm further on is reached through its fold. The fold's state is
+       SealFold.open, so set that and draw the map again from it, rather than
+       opening the old fold and trusting its toggle event to say so later. */
     const fold=d.parentElement && d.parentElement.closest('details.sealAll');
-    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold
+    if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri); if(!d) return; }
     d.open=true;
     d.scrollIntoView({block:'start', behavior: Prefs.d.motion ? 'smooth' : 'auto'});
   },

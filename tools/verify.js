@@ -4905,7 +4905,7 @@ const sealFoldNotes = (() => {
     if (n < 2) { want(h === parts.join(''), 'alone ' + n, 'a lone sealed realm is folded, or dropped'); continue; }
     want(h.startsWith('<details class="sealAll" id="sealAll"') && h.endsWith(parts.join('') + '</details>'), 'all ' + n, 'a realm is dropped, reordered, or sits outside the fold');
     want(h.includes('<summary>＋ ' + n + ' more sealed realms <span class="sealSpan">' + names[0] + ' to ' + names[n - 1] + '</span></summary>'), 'count ' + n, 'the fold does not count and name the realms behind it');
-    want(h.includes('ontoggle="SealFold.open=this.open"') && h.includes('id="sealAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
+    want(h.includes('ontoggle="if(this.isConnected) SealFold.open=this.open"') && h.includes('id="sealAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
   }
   F.open = false;
   want(F.wrap(['<p>a</p>', '', null, '<p>b</p>'], ['A', 'B']).includes('＋ 2 more sealed realms'), 'blank', 'an empty part is counted as a realm');
@@ -4914,7 +4914,9 @@ const sealFoldNotes = (() => {
     && map.includes('realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt)'), 'wired', 'the realms past the next sealed one are not folded together, or the next one is folded with them');
   want(map.includes("const unlocked = !sealedAt[ri];") && map.includes("const firstSealed=sealedAt.indexOf(true)"), 'sealed', 'what counts as sealed has changed');
   const t = html.indexOf('  toRealm(ri){'), to = html.slice(t, html.indexOf('\n  },', t));
-  want(to.indexOf("closest('details.sealAll')") > 0 && to.indexOf('fold.open=true') < to.indexOf('d.open=true') && to.includes('SealFold.open=true'), 'road', 'a stone on the road does not open the fold to reach its realm');
+  want(to.indexOf("closest('details.sealAll')") > 0 && to.includes("if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri);")
+    && to.indexOf('this.renderMap()') < to.indexOf('\n    d.open=true;'), 'road', 'a stone on the road does not open the fold to reach its realm');
+  want(/\.node\.slim \.nm\{[^}]*white-space:nowrap; overflow:hidden; text-overflow:ellipsis;/.test(html), 'slim', 'a short row can wrap to a second line');
   want(html.includes('details.sealAll>summary{list-style:none;') && !/Game\.s\.seal/.test(html), 'css', 'the fold shows its marker, or is saved');
   return checks;
 })();

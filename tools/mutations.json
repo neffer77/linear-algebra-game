@@ -1,46 +1,25 @@
 {
-  "change": "The scratch pad sits in the fight's bar",
+  "change": "Map fixes: a sealed stone opens its fold, a short row stays one line",
   "mutations": [
     {
-      "name": "corner button back in fights",
+      "name": "stone leans on the toggle again",
       "file": "index.html",
-      "find": "const on = Prefs.d.calc!==false && this.relevant() && !fight;",
-      "replace": "const on = Prefs.d.calc!==false && this.relevant();",
+      "find": "if(fold && !fold.open){ SealFold.open=true; this.renderMap(); d=document.getElementById('realm-'+ri); if(!d) return; }",
+      "replace": "if(fold){ fold.open=true; }",
       "run": "verify"
     },
     {
-      "name": "no chip in the bar",
+      "name": "a detached fold can close it",
       "file": "index.html",
-      "find": "    if(Prefs.d.calc!==false) add('calc', '🧮 Scratch pad', true, ()=>Calc.shown?Calc.close():Calc.open());\n",
-      "replace": "",
+      "find": "ontoggle=\"if(this.isConnected) SealFold.open=this.open\"",
+      "replace": "ontoggle=\"SealFold.open=this.open\"",
       "run": "verify"
     },
     {
-      "name": "fight read as training",
+      "name": "short rows wrap",
       "file": "index.html",
-      "find": "return !!on && on.id==='s-battle';\n  },\n  syncButton",
-      "replace": "return !!on && on.id==='s-train';\n  },\n  syncButton",
-      "run": "verify"
-    },
-    {
-      "name": "chip ignores the setting",
-      "file": "index.html",
-      "find": "if(Prefs.d.calc!==false) add('calc',",
-      "replace": "if(true) add('calc',",
-      "run": "verify"
-    },
-    {
-      "name": "chip only opens",
-      "file": "index.html",
-      "find": "()=>Calc.shown?Calc.close():Calc.open());\n  },",
-      "replace": "()=>Calc.open());\n  },",
-      "run": "verify"
-    },
-    {
-      "name": "corner button gone from training",
-      "file": "index.html",
-      "find": "const on = Prefs.d.calc!==false && this.relevant() && !fight;",
-      "replace": "const on = Prefs.d.calc!==false && this.relevant() && !fight && false;",
+      "find": "font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}",
+      "replace": "font-size:14px;}",
       "run": "verify"
     }
   ]

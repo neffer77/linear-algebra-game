@@ -15,7 +15,7 @@ const { sleep } = require('./harness');
 const read = t => t.ev(() => {
   UI.go('s-map');
   const d = document.getElementById('sealAll'), list = document.getElementById('mapList');
-  const vis = el => !!el && !el.closest('details:not([open])') && el.getBoundingClientRect().height > 0;
+  const vis = el => !!el && !el.parentElement.closest('details:not([open])') && el.getBoundingClientRect().height > 0;   // its heading is in view
   const kids = d ? [...d.children].filter(c => c.matches('details.realm')).map(c => c.id) : [];
   const top = [...list.querySelectorAll('details.realm')].filter(x => !x.closest('#sealAll')).map(x => x.id);
   return { here: !!d, open: d ? d.open : null, summary: d ? d.querySelector('summary').innerText.replace(/\s+/g, ' ').trim() : null,
@@ -32,7 +32,7 @@ module.exports = {
   async run(t) {
     await t.newKnight('Ada');
     const keys = await t.ev(() => Object.keys(Game.s).sort().join());
-    await t.ev(() => { Game.s.firstRun = 1; SealFold.open = false; });
+    await t.ev(() => { Game.s.firstRun = 1; SealFold.open = false; Prefs.d.motion = false; });
     let r = await read(t);
     const shut = r.tall;
     t.ok('a new knight\'s six realms past the next are folded', r.here && r.open === false && r.kids.length === 6 && r.shown === 0, JSON.stringify(r));

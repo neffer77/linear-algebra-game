@@ -37,7 +37,7 @@ module.exports = {
     t.ok('a new knight has no short rows: every fight keeps its card', r.rows.every(x => !x.slim) && r.rows[0].reckon, JSON.stringify(r.rows.map(x => [x.slim, x.h])));
     const full = r.rows[0].h;
 
-    await t.ev(() => { Game.s.cleared = { '0:0': 'S', '0:1': 'B', '0:2': true }; });
+    await t.ev(() => { Game.s.cleared = { '0:0': 'S', '0:1': 'B', '0:2': true }; window.__qt = Quarry.today; Quarry.today = () => '0:2'; });
     for (const [w, h] of [[390, 844], [320, 640]]) {
       await t.page.setViewportSize({ width: w, height: h });
       await sleep(200);
@@ -50,7 +50,7 @@ module.exports = {
     await t.page.setViewportSize({ width: 390, height: 844 });
     r = await read(t);
     t.eq('each short row keeps its best grade, a won fight with none shows a tick', r.rows.slice(0, 3).map(x => x.best), ['S', 'B', null]);
-    t.ok('and names the foe and its gold', r.rows.slice(0, 3).every((x, i) => x.text.startsWith(foes[i].nm) && x.text.includes('🪙 ' + foes[i].gold)) && r.rows[2].text.includes('✓'),
+    t.ok('and names the foe and its gold', r.rows.slice(0, 3).every((x, i) => x.text.includes(foes[i].nm) && x.text.includes('🪙 ' + foes[i].gold)) && r.rows[2].text.includes('✓'),
       JSON.stringify(r.rows.map(x => x.text)));
     t.ok('without the health, strike or reckoning of a fight that is over', r.rows.slice(0, 3).every(x => !x.reckon && !/❤️|⚔️|blows fell/.test(x.text)), JSON.stringify(r.rows.map(x => x.text)));
     t.ok('the fight still to come keeps its card and its reckoning', !r.rows[3].slim && r.rows[3].reckon && /❤️/.test(r.rows[3].text), r.rows[3].text);
@@ -62,7 +62,7 @@ module.exports = {
     await sleep(600);
     const went = { s: await t.screen(), at: await t.ev(() => [Battle.ri, Battle.fi]) };
     t.ok('tapped, it opens that fight', went.s === 's-battle' && went.at.join() === '0,1', JSON.stringify(went));
-    await t.ev(() => { Battle.flee(); Game.s.cleared = {}; UI.go('s-map'); });
+    await t.ev(() => { Battle.flee(); Game.s.cleared = {}; Quarry.today = window.__qt; UI.go('s-map'); });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
   }
 };

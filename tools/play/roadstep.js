@@ -27,7 +27,7 @@ const read = t => t.ev(() => {
     if (a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1) hit.push(a.k + ' × ' + b.k);
   }
   const out = parts.filter(x => x.l < pr.left - 1 || x.r > pr.right + 1).map(x => x.k);
-  return { hit, out, h: Math.round(road.getBoundingClientRect().height), screen: Math.round(pr.height / innerHeight * 100) / 100,
+  return { hit, out, h: road.offsetHeight, screen: Math.round(pr.height / innerHeight * 100) / 100,
     states: [...p.querySelectorAll('.stone')].map(s => s.dataset.state).join(), wide: document.documentElement.scrollWidth <= innerWidth + 1 };
 });
 
