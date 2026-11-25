@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Enide');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the estimate can be called over or under', await t.ev(() =>
       /Or call it over or under: see four curves cut into strips, and say whether each T is over the area, under it, or exact\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTrap');

@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Lunete');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the graph can be read', await t.ev(() =>
       /Or read the graph: at four points on a graph, say whether it is joined up, has a hole, jumps, or runs off\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLimit');

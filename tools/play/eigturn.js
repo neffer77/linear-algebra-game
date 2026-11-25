@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Gawain');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each arrow can be called', await t.ev(() =>
       /Or call it: see four arrows, each with its matrix, and say whether each is kept, turned round or knocked off\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeEig');

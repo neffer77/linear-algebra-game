@@ -33,7 +33,8 @@ module.exports = {
     await t.newKnight('Lunete');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the workshop can put x in the ratio', await t.ev(() =>
       /Or put x in the ratio: step it along a power series and find how far from the centre it still adds up\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeGeo');

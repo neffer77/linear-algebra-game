@@ -30,7 +30,8 @@ module.exports = {
     await t.newKnight('Enide');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says a contour map can be read', await t.ev(() =>
       /Or read a contour map from above and pick which of four functions drew it\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeDescent');

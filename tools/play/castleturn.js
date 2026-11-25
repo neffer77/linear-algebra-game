@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Lunete');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each night can be called', await t.ev(() =>
       /Or call it: see four pairs of castles, and say whether A gains, holds or loses in one night\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCastles');

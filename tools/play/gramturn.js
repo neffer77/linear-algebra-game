@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Laudine');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each c can be called', await t.ev(() =>
       /Or call it: see four pairs of arrows, each with a c, and say whether each c is too low, just right or too high\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeGram');

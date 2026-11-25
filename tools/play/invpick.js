@@ -31,7 +31,8 @@ module.exports = {
     await t.newKnight('Percival');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the inverse slope workshop can be turned round', await t.ev(() =>
       /Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeInvSlope');

@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Enide');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each tangent can be called', await t.ev(() =>
       /Or call it: see four curves, each with a point, and say whether each tangent rises, falls, lies flat or stands straight up\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeImplicit');

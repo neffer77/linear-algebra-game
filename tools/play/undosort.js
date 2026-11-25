@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Gawain');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the undo workshop can name the undo', await t.ev(() =>
       /Or name the undo: for four matrices, say whether A undoes itself, Aᵀ undoes it, another matrix does, or nothing can\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeUndo');

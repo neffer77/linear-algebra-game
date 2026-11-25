@@ -28,7 +28,8 @@ module.exports = {
     await t.newKnight('Gawain');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the slice workshop can be turned round', await t.ev(() =>
       /Then turn it round: see a plane over a rectangle, and pick which of four numbers is the volume under it\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeSlice');
