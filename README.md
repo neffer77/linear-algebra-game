@@ -925,6 +925,14 @@ The game is built so that losing teaches you as much as winning.
   the fight: To the map, a rival's duel, a heroic rematch, then Fight again beside the Smithy. The quiet ways out
   now share one row of three at the very foot of the card ("🗺️ Map", "↻ Again", "🏪 Smithy"), so the next fight
   and the offers stand alone above them. With no next fight the map is still the gold "Onward". Nothing new is saved.
+- **🧪 Empty items take a small chip.** In a fight, a Draught, an Insight or a Rune with none left still spelled its
+  whole name in the skill bar ("🔥 Rune ×0"), so three empty items filled a row of a phone's fight. An empty one now
+  shrinks to its icon and its nought ("🔥 ×0"), greyed as before; its full name is still read out and shown on a long
+  press, and an item in hand keeps its name. Nothing new is saved.
+- **💡 The nudge and the working share a row.** Under a question, "Nudge me" and "Show me the working" took a
+  full-width line each. Offered together they now sit side by side, each with its price in small print under it
+  ("a step, half the strike", "the strike, not blood"); after a nudge, the working takes the full
+  line again. Nothing new is saved.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
   each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
@@ -3563,6 +3571,8 @@ Inside `index.html` the code is organised as:
 | `UI.ROADSTEP` | the campaign road's stones 54 apart and laid out by it; from the stylesheet, enough room between neighbours for two- and three-line labels, for a label beside the glowing stone, and for two stones on the same side |
 | `slim rows` | a won fight takes its own short row before the full card: it still begins its fight and is locked with its realm; it names the foe, its best grade or a tick, and its gold, and keeps the quarry and debt marks; no health, strike or reckoning; the fight to come keeps its card and reckoning; drawn short with a name that can wrap |
 | `WinRow` | with a next fight, the map, a rematch and the Smithy are one row of three, in that order, going where they say and none gold; with none, the row is Fight again and the Smithy; the map shows once on the card, and the row is last; no button in the row can wrap |
+| empty items | in a fight a Draught, Insight or Rune with none left is its icon and ×0, greyed, marked empty and named for a reader; one in hand keeps its name, and is greyed only when it cannot help |
+| two doors | offered together, the nudge and the working are one row of two in that order, each with its price, and each opens its own door; alone, or after a nudge, the working keeps its full line; neither shows once answered |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
 | `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |

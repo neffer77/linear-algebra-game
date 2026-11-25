@@ -186,6 +186,7 @@ details.skillRest[open]>summary{color:var(--dim)}
   font-size:13px;font-weight:800;cursor:pointer;min-height:38px;display:flex;align-items:center}
 #powerbar .pw:active{transform:translateY(2px)}
 #powerbar .pw.off{opacity:.35;pointer-events:none}
+#powerbar .pw.empty{padding-left:9px;padding-right:9px}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:50;
   background:#2b2247;border:1px solid var(--gold);color:var(--ink);padding:10px 16px;border-radius:12px;
@@ -450,6 +451,9 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   border:1px dashed var(--line); background:transparent;}
 #showwork .wbtn:active{background:rgba(255,255,255,.04);}
 #showwork .wbtn.nudge{margin-bottom:6px;}
+#showwork .wpair{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+#showwork .wpair .wbtn{margin:0; padding:8px 6px; line-height:1.25; font-size:13px;}
+#showwork .wbtn small{display:block; font-size:11px; opacity:.72; margin-top:2px;}
 #showwork .wnudge{margin-bottom:6px; padding:10px 12px; border-radius:12px; font-size:14px; line-height:1.45;
   border:1px solid rgba(255,212,121,.35); background:rgba(255,212,121,.06);}
 #showwork .wnudge b{color:var(--gold); font-size:12px; letter-spacing:.04em;}
@@ -11170,9 +11174,10 @@ const Battle = {
   renderPowers(){
     const bar=document.getElementById('powerbar'); const it=Game.s.items;
     bar.innerHTML='';
-    const add=(k,label,enabled,fn)=>{
+    const add=(k,label,enabled,fn,name)=>{
       const d=document.createElement('div');
-      d.className='pw'+(enabled?'':' off'); d.innerHTML=label;
+      d.className='pw'+(enabled?'':' off')+(name?' empty':''); d.innerHTML=label;
+      if(name){ d.title=name; d.setAttribute('aria-label', name); }
       d.dataset.pw=k;                          // what this is, for anyone reading the bar
       d.onclick=fn; bar.appendChild(d);
     };
@@ -11189,9 +11194,16 @@ const Battle = {
     if(Oath.can(this) || this.sworn) add('oath', Oath.label(this), Oath.can(this), ()=>Battle.swear());
     if(this.mode==='campaign') add('stance', Stance.label(this), Stance.can(this), ()=>Stance.turn(Battle));
     if(Flourish.can(this) || this.flourish) add('flourish', Flourish.label(this), Flourish.can(this), ()=>Flourish.ready(Battle));
-    add('potion', `${ITEMS.potion.ic} Draught ×${it.potion}`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
-    add('insight',`${ITEMS.insight.ic} Insight ×${it.insight}`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
-    add('rage',   `${ITEMS.rage.ic} Rune ×${it.rage}`, it.rage>0 && !this.rage, ()=>Battle.useRage());
+    /* An item with none left keeps its place in the bar, so a knight still
+       sees what a Smithy run would put there, but shrinks to its icon and its
+       nought: three empty items used to fill a whole row of a phone's fight.
+       Its full name is still read out and shown on a long press. */
+    const item=(k,nm,n,on,fn)=>n>0
+      ? add(k, `${ITEMS[k].ic} ${nm} ×${n}`, on, fn)
+      : add(k, `${ITEMS[k].ic} ×0`, false, fn, `${nm} ×0, none left`);
+    item('potion', 'Draught', it.potion, Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
+    item('insight','Insight', it.insight, !this.answered && this.insightUseful(), ()=>Battle.useInsight());
+    item('rage',   'Rune', it.rage, !this.rage, ()=>Battle.useRage());
     if(it.feather>0) add('feather', `${ITEMS.feather.ic} Feather ×${it.feather}`, false, ()=>{});
     /* Carried wards are a readout rather than a button, the way the Feather
        already is: they are not pressed, they spend themselves on the next blow
@@ -11516,9 +11528,13 @@ const Battle = {
     if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
     w.style.display='';
     const offer = !this.nudged && this.canNudge();
-    w.innerHTML=(this.nudged ? `<div class="wnudge"><b>💡 A way in</b><br><span></span></div>`
-                : offer ? `<div class="wbtn nudge" id="wnudge">💡 Nudge me — the first step, for half the strike</div>` : '')+
-      `<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>`;
+    /* Offered together, the two doors share one row, each with its price
+       in small print under it; alone, the working keeps its full line. */
+    const go=`<div class="wbtn" id="wgo">${offer ? '🔎 Show the working<small>the strike, not blood</small>'
+                                             : '🔎 Show me the working — costs the strike, not blood'}</div>`;
+    w.innerHTML=offer
+      ? `<div class="wpair"><div class="wbtn nudge" id="wnudge">💡 Nudge me<small>a step, half the strike</small></div>${go}</div>`
+      : (this.nudged ? `<div class="wnudge"><b>💡 A way in</b><br><span></span></div>` : '')+go;
     // Set as text: the step is plain words and sums, never markup.
     if(this.nudged) w.querySelector('.wnudge span').textContent=this.nudged.text;
     if(offer) document.getElementById('wnudge').onclick=()=>this.nudge();

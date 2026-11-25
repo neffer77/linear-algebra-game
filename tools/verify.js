@@ -4979,6 +4979,58 @@ const winRowNotes = (() => {
   want(/\.btnRow\.three>\.btn\{[^}]*white-space:nowrap;[^}]*text-align:center\}/.test(html), 'css', 'a button in the row of three can wrap');
   return checks;
 })();
+const fightBarNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('fight bar', key, msg); };
+  const method = name => { const s = html.indexOf('\n  ' + name + '(){'); return html.slice(s, html.indexOf('\n  },\n', s) + 5); };
+  // --- the bar: an item with none left shrinks to its icon and its nought ---
+  const mk = () => { const a = {}; return { dataset: {}, attrs: a, setAttribute: (k, v) => { a[k] = v; } }; };
+  let chips = [];
+  const bar = { set innerHTML(v) { chips = []; }, appendChild: d => chips.push(d) };
+  const doc = { getElementById: id => id === 'powerbar' ? bar : null, createElement: mk };
+  const ITEMS = { potion: { ic: '🧪' }, insight: { ic: '🔮' }, rage: { ic: '🔥' } };
+  const Game = { s: { items: {}, hp: 50, maxHp: 100 } };
+  const stub = { can: () => false, label: () => '' };
+  const P = new Function('document', 'ITEMS', 'Game', 'Loadout', 'Oath', 'Stance', 'Flourish', 'Dungeon', 'Prefs', 'Calc', 'Battle',
+    'return {' + method('renderPowers') + '};')(doc, ITEMS, Game, { chosen: () => [] }, stub, stub, stub, { wards: () => 0 }, { d: { calc: false } }, {}, {});
+  P.mode = 'arena'; P.answered = false; P.insightUseful = () => true;
+  const run = items => { Game.s.items = items; P.renderPowers(); return Object.fromEntries(chips.map(c => [c.dataset.pw, c])); };
+  let c = run({ potion: 0, insight: 0, rage: 0, feather: 0 });
+  for (const [k, ic, nm] of [['potion', '🧪', 'Draught'], ['insight', '🔮', 'Insight'], ['rage', '🔥', 'Rune']]) {
+    want(c[k] && c[k].innerHTML === ic + ' ×0', k + '-short', `an empty ${nm} still spells its name in the bar`);
+    want(c[k] && /\boff\b/.test(c[k].className) && /\bempty\b/.test(c[k].className), k + '-off', `an empty ${nm} is not greyed and marked empty`);
+    want(c[k] && c[k].attrs['aria-label'] === nm + ' ×0, none left' && c[k].title === nm + ' ×0, none left', k + '-name', `an empty ${nm} lost its name for a reader`);
+  }
+  want(Object.keys(c).join() === 'potion,insight,rage', 'order', 'the items left their places in the bar');
+  c = run({ potion: 2, insight: 3, rage: 1, feather: 0 });
+  want(c.potion.innerHTML === '🧪 Draught ×2' && c.insight.innerHTML === '🔮 Insight ×3' && c.rage.innerHTML === '🔥 Rune ×1', 'full', 'an item in hand lost its name');
+  want(Object.values(c).every(x => !/empty|off/.test(x.className) && !x.attrs['aria-label']), 'live', 'an item in hand is greyed or marked empty');
+  Game.s.hp = 100; P.rage = true; P.answered = true;
+  c = run({ potion: 2, insight: 3, rage: 1, feather: 0 });
+  want(/\boff\b/.test(c.potion.className) && /\boff\b/.test(c.insight.className) && /\boff\b/.test(c.rage.className), 'still-off', 'an item that cannot help now is pressable');
+  want(Object.values(c).every(x => !/empty/.test(x.className) && / ×\d$/.test(x.innerHTML) && x.innerHTML.split(' ').length === 3), 'still-named', 'an item in hand but not usable lost its name');
+  want(/#powerbar \.pw\.empty\{[^}]*padding-left:\d+px/.test(html), 'css', 'an empty item is not drawn smaller');
+  // --- the doors: offered together they share a row ---
+  let inner = '', ids = {};
+  const w = { style: {}, set innerHTML(v) { inner = v; ids = {}; }, get innerHTML() { return inner; }, querySelector: () => ({}) };
+  const doc2 = { getElementById: id => id === 'showwork' ? w : (inner.includes(`id="${id}"`) ? (ids[id] = ids[id] || {}) : null) };
+  const R = new Function('document', 'Working', 'return {' + method('renderWork') + '};')(doc2, { has: () => true });
+  R.workStep = () => 0; R.nudge = () => 'n'; R.showWork = () => 'w';
+  const draw = (nudged, can, answered) => { R.nudged = nudged; R.canNudge = () => can; R.answered = answered; R.renderWork(); return inner; };
+  const two = draw(null, true, false);
+  want(two.startsWith('<div class="wpair">') && two.indexOf('id="wnudge"') < two.indexOf('id="wgo"') && two.trim().endsWith('</div></div>'), 'pair', 'offered together, the nudge and the working are not one row');
+  want(two.includes('💡 Nudge me<small>a step, half the strike</small>') && two.includes('🔎 Show the working<small>the strike, not blood</small>'), 'prices', 'a door in the pair lost its price');
+  want(ids.wnudge && ids.wnudge.onclick() === 'n' && ids.wgo && ids.wgo.onclick() === 'w', 'acts', 'a door in the pair does not open');
+  const alone = draw(null, false, false);
+  want(!alone.includes('wpair') && !alone.includes('wnudge') && alone === '<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>', 'alone', 'the working alone lost its full line');
+  const after = draw({ text: 'x' }, true, false);
+  want(!after.includes('wpair') && after.startsWith('<div class="wnudge">') && after.endsWith('costs the strike, not blood</div>') && !after.includes('id="wnudge"'), 'after', 'after a nudge the working is paired, or the nudge is offered again');
+  draw(null, true, true);
+  want(w.style.display === 'none' && inner === '', 'answered', 'the doors show after the question is answered');
+  want(/#showwork \.wpair\{display:grid; grid-template-columns:1fr 1fr;/.test(html) && /#showwork \.wbtn small\{display:block;/.test(html), 'css2', 'the pair is not two columns, or its prices run into the label');
+  return checks;
+})();
 const titleWayNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const ts = html.indexOf('const TITLES = ['), te = html.indexOf('\n];\n', ts) + 4;
@@ -29302,6 +29354,7 @@ console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 1
 console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
 console.log(`  slim rows                 ${pad(slimRowNotes.toLocaleString(), 10)}  (a won fight takes one short row with its name, best grade and gold; the fight to come keeps its card)`);
 console.log(`  win row                   ${pad(winRowNotes.toLocaleString(), 10)}  (with a next fight, the map, a rematch and the Smithy share one row of three at the foot of the victory card)`);
+console.log(`  fight bar                 ${pad(fightBarNotes.toLocaleString(), 10)}  (an empty item shrinks to its icon and nought; the nudge and the working share a row)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);

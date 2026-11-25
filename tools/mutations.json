@@ -1,39 +1,53 @@
 {
-  "change": "One row of ways home",
+  "change": "Empty items take a small chip · The nudge and the working share a row",
   "mutations": [
     {
-      "name": "map back as a full button",
+      "name": "empty item spells its name",
       "file": "index.html",
-      "find": "${nx?'':`<button class=\"btn gold\" onclick=\"UI.go('s-map')\">🗺️ Onward</button>`}",
-      "replace": "<button class=\"btn${nx?'':' gold'}\" onclick=\"UI.go('s-map')\">🗺️ ${nx?'To the map':'Onward'}</button>",
+      "find": "      : add(k, `${ITEMS[k].ic} ×0`, false, fn, `${nm} ×0, none left`);",
+      "replace": "      : add(k, `${ITEMS[k].ic} ${nm} ×0`, false, fn, `${nm} ×0, none left`);",
       "run": "verify"
     },
     {
-      "name": "row of three always",
+      "name": "empty item loses its reader name",
       "file": "index.html",
-      "find": "    const map = nx ? `<button",
-      "replace": "    const map = true ? `<button",
+      "find": "      if(name){ d.title=name; d.setAttribute('aria-label', name); }",
+      "replace": "      if(name){ d.title=name; }",
       "run": "verify"
     },
     {
-      "name": "row out of order",
+      "name": "empty item pressable",
       "file": "index.html",
-      "find": "id=\"winRow\">${map}<button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>",
-      "replace": "id=\"winRow\"><button class=\"btn\" id=\"againBtn\" onclick=\"${again}\"${aw}</button>${map}",
+      "find": "      : add(k, `${ITEMS[k].ic} ×0`, false, fn,",
+      "replace": "      : add(k, `${ITEMS[k].ic} ×0`, true, fn,",
       "run": "verify"
     },
     {
-      "name": "row buttons wrap",
+      "name": "item in hand always pressable",
       "file": "index.html",
-      "find": "font-size:15px;white-space:nowrap;text-align:center}",
-      "replace": "font-size:15px;text-align:center}",
+      "find": "      ? add(k, `${ITEMS[k].ic} ${nm} ×${n}`, on, fn)",
+      "replace": "      ? add(k, `${ITEMS[k].ic} ${nm} ×${n}`, true, fn)",
       "run": "verify"
     },
     {
-      "name": "row before the offers",
+      "name": "doors stacked again",
       "file": "index.html",
-      "find": "        ${Rival.offer(this)}\n        ${Heroic.button(this)}\n        ${WinRow.html(this, nx)}`;",
-      "replace": "        ${WinRow.html(this, nx)}\n        ${Rival.offer(this)}\n        ${Heroic.button(this)}`;",
+      "find": "#showwork .wpair{display:grid; grid-template-columns:1fr 1fr; gap:8px;}",
+      "replace": "#showwork .wpair{display:grid; grid-template-columns:1fr; gap:8px;}",
+      "run": "verify"
+    },
+    {
+      "name": "working paired after a nudge",
+      "file": "index.html",
+      "find": "    w.innerHTML=offer\n      ? `<div class=\"wpair\">",
+      "replace": "    w.innerHTML=(offer||this.nudged)\n      ? `<div class=\"wpair\">",
+      "run": "verify"
+    },
+    {
+      "name": "pair loses a price",
+      "file": "index.html",
+      "find": "'🔎 Show the working<small>the strike, not blood</small>'",
+      "replace": "'🔎 Show the working'",
       "run": "verify"
     }
   ]

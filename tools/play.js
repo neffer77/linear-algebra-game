@@ -285,6 +285,7 @@ const SUITES = [
   require('./play/skillset'),    // Gear folds the skills with no use yet
   require('./play/road'),        // a win's road shows two and folds the rest
   require('./play/calcroom'),    // the scratch pad button never covers the bar
+  require('./play/fightbar'),    // empty items shrink, the nudge and the working share a row
   require('./play/tomefold'),    // the Tome folds its workshop cards
   require('./play/titleway'),    // each locked title says how far off it is
   require('./play/sealfold'),    // the map folds the sealed realms past the next
