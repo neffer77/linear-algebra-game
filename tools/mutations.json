@@ -1,54 +1,54 @@
 {
-  "change": "A shorter Saga: only the next chapter keeps its card, and the ones further on wait in one short list",
+  "change": "A shorter map: past the next realm to open, the sealed realms wait behind one line that counts and names them",
   "mutations": [
     {
-      "name": "every unread chapter gets a card again",
+      "name": "the next sealed realm is folded too",
       "file": "index.html",
-      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
-      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
+      "find": "const folded = !unlocked && ri>firstSealed;",
+      "replace": "const folded = !unlocked && ri>=firstSealed;",
       "run": "verify"
     },
     {
-      "name": "the short list is never drawn",
+      "name": "nothing is folded",
       "file": "index.html",
-      "find": "      this.far(next);\n    this.paint(list);",
-      "replace": "      '';\n    this.paint(list);",
+      "find": "    if(far.length) realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt);",
+      "replace": "    if(far.length) realms=realms.slice(0,farAt)+far.join('')+realms.slice(farAt);",
       "run": "verify"
     },
     {
-      "name": "the next chapter is the first, read or not",
+      "name": "the fold drops its last realm",
       "file": "index.html",
-      "find": "  next(){ return REALMS.findIndex((r,ri)=>!this.read(ri)); },",
-      "replace": "  next(){ return 0; },",
+      "find": "    const p=(parts||[]).filter(x=>x&&String(x).trim());\n    if(p.length<2) return p.join('');   // one alone is shown, not folded",
+      "replace": "    const p=(parts||[]).filter(x=>x&&String(x).trim()).slice(0,-1);\n    if(p.length<2) return p.join('');   // one alone is shown, not folded",
       "run": "verify"
     },
     {
-      "name": "the short list lists the next chapter too",
+      "name": "the fold forgets it was opened",
       "file": "index.html",
-      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
-      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>!this.read(ri));",
+      "find": "ontoggle=\"SealFold.open=this.open\"",
+      "replace": "ontoggle=\"\"",
       "run": "verify"
     },
     {
-      "name": "the short list lists chapters read",
+      "name": "a stone no longer opens the fold",
       "file": "index.html",
-      "find": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));",
-      "replace": "    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next);",
+      "find": "    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "every unread chapter gets a card again, seen in play",
+      "name": "the next sealed realm is folded too, seen in play",
       "file": "index.html",
-      "find": "this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+",
-      "replace": "this.card(ri,'saga-'+ri):this.locked(ri)).join('')+",
-      "run": "play:saga"
+      "find": "const folded = !unlocked && ri>firstSealed;",
+      "replace": "const folded = !unlocked && ri>=firstSealed;",
+      "run": "play:sealfold"
     },
     {
-      "name": "the short list rows run tall, seen in play",
+      "name": "a stone no longer opens the fold, seen in play",
       "file": "index.html",
-      "find": ".sagaFar{font-size:13px;padding:5px 0 0;",
-      "replace": ".sagaFar{font-size:13px;padding:40px 0 0;",
-      "run": "play:saga"
+      "find": "    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold\n",
+      "replace": "",
+      "run": "play:sealfold"
     }
   ]
 }

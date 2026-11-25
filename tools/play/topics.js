@@ -24,7 +24,8 @@ module.exports = {
   async run(t) {
     await t.newKnight('Ada');
     const keys = await t.ev(() => Object.keys(Game.s).sort().join());
-    await t.ev(() => { UI.go('s-map'); UI.renderMap(); });
+    // the realms past the next sealed one wait behind a fold; open it as a reader would
+    await t.ev(() => { SealFold.open = true; UI.go('s-map'); UI.renderMap(); });
     await sleep(300);
     let rs = await read(t);
     const shut = rs.filter(r => !r.open && r.labels.length > 3);
@@ -47,6 +48,7 @@ module.exports = {
     rs = await read(t);
     t.ok('closed again, it counts them again', rs.find(r => r.id === big.id).text === big.text, rs.find(r => r.id === big.id).text);
 
+    await t.ev(() => { SealFold.open = false; });
     t.ok('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()) === keys, 'a key was added to the save');
   }
 };

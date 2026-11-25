@@ -172,6 +172,10 @@ details.road>summary::-webkit-details-marker{display:none}
 details.road[open]>summary{color:var(--dim)}
 details.skillRest>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 details.skillRest>summary::-webkit-details-marker{display:none}
+details.sealAll>summary{list-style:none;margin:8px 0 2px;padding:10px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
+details.sealAll>summary::-webkit-details-marker{display:none}
+details.sealAll[open]>summary{color:var(--dim)}
+details.sealAll .sealSpan{display:block;margin-top:2px;font-size:12px;font-weight:600;color:var(--dim)}
 details.skillRest[open]>summary{color:var(--dim)}
 .wareMore{margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
@@ -9506,6 +9510,23 @@ const TomeFold = {
   }
 };
 
+/* Sealed realms. Under the road, every realm kept a heading of its own on the
+   map, so a new knight scrolled past six headings for realms they cannot yet
+   enter, each already a dark stone on the road above. The next realm to open
+   keeps its heading, since it says what to go and do; the ones past it wait
+   behind one line that counts and names them, which opens in place for the
+   rest of the sitting. A stone tapped on the road opens it on the way. */
+const SealFold = {
+  open:false,
+  wrap(parts, names){
+    const p=(parts||[]).filter(x=>x&&String(x).trim());
+    if(p.length<2) return p.join('');   // one alone is shown, not folded
+    const nm=(names||[]).filter(Boolean);
+    const span=nm.length>1?`${nm[0]} to ${nm[nm.length-1]}`:(nm[0]||'');
+    return `<details class="sealAll" id="sealAll"${this.open?' open':''} ontoggle="SealFold.open=this.open"><summary>＋ ${p.length} more sealed realms${span?` <span class="sealSpan">${span}</span>`:''}</summary>${p.join('')}</details>`;
+  }
+};
+
 const Road = {
   SHOW:2, open:false,
   group(parts){
@@ -17612,6 +17633,8 @@ const UI = {
   toRealm(ri){
     const d=document.getElementById('realm-'+ri);
     if(!d) return;
+    const fold=d.parentElement && d.parentElement.closest('details.sealAll');
+    if(fold){ fold.open=true; SealFold.open=true; }   // a sealed realm further on is reached through its fold
     d.open=true;
     d.scrollIntoView({block:'start', behavior: Prefs.d.motion ? 'smooth' : 'auto'});
   },
@@ -17756,11 +17779,17 @@ const UI = {
     const quarry=Quarry.today();
     // today's quarry heads the campaign, above the road
     let realms=Sitting.html()+Quarry.node(quarry)+Tale.html()+this.realmPath(cur);
+    // the realms past the next one to open are folded together below the rest
+    const sealedAt=REALMS.map((r,ri)=>ri>0 && !g.cleared[(ri-1)+':'+(REALMS[ri-1].foes.length-1)]);
+    const firstSealed=sealedAt.indexOf(true), far=[], farNames=[];
+    let farAt=-1;
     REALMS.forEach((r,ri)=>{
-      const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
-      const unlocked = ri===0 || !!g.cleared[prevBossKey];
+      const unlocked = !sealedAt[ri];
       const beaten=r.foes.filter((f,fi)=>g.cleared[ri+':'+fi]).length;
-      realms+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
+      const folded = !unlocked && ri>firstSealed;
+      if(folded && farAt<0) farAt=realms.length;
+      let realm='';
+      realm+=`<details class="realm" id="realm-${ri}"${ri===cur?' open':''}>
           <summary><div class="realmhdr"><span class="dot" style="background:${r.col}"></span>
             <h2 style="color:${r.col}">${r.nm}</h2>${unlocked?'':'<span class="tag">🔒 sealed</span>'}
             <span class="rcount">${beaten}/${r.foes.length}</span>${March.tag(ri, r.foes.length)}${Treasure.tag(ri)}${Sky.tag(ri)}${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
@@ -17769,7 +17798,7 @@ const UI = {
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
         const open = unlocked && prevDone;
-        realms+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
+        realm+=`<div class="node ${open?'':'locked'} ${done?'done':''}" onclick="Battle.begin(${ri},${fi})">
           <div class="ico" style="font-size:24px">${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
             <div class="nm">${f.nm} ${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}${f.boss?'<span class="tag r">boss</span>':''}${Quarry.tag(quarry===ri+':'+fi)}${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
@@ -17779,9 +17808,11 @@ const UI = {
           <div style="font-size:20px;color:var(--dim)">${open?'▶':'🔒'}</div>
         </div>`;
       });
-      realms+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
-      realms+='</details>';
+      realm+=Gauntlet.node(ri);   // a gauntlet to run, or one under way
+      realm+='</details>';
+      if(folded){ far.push(realm); farNames.push(r.nm); } else realms+=realm;
     });
+    if(far.length) realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt);
     /* A knight who never finished the cellar is offered it back before anything
        else — but the map is not locked behind it. Someone who walked out early
        should be able to get on with the game. */

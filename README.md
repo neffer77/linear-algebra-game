@@ -909,6 +909,11 @@ The game is built so that losing teaches you as much as winning.
   repeated its realm's whole list of topics. Now the foes still in the dark stand small, side by side, over one line
   that counts them ("three foes wait in Matrix Marches, the boss among them"), and a realm's topics are said once under
   its name. A new knight's Bestiary is a page of shadows, not thirty-two rows of them.
+- **🔒 A shorter map.** Under the road, every realm kept a heading of its own, so a new knight scrolled past six
+  headings for realms they could not yet enter, each already a dark stone on the road above. Now the realm being
+  worked through and the next to open keep their headings, and the ones past those wait behind one line that counts
+  and names them ("＋ 6 more sealed realms, Integral Abyss to Gradient Summit"). It opens in place and stays open
+  for the sitting, and tapping a sealed stone on the road opens it on the way to that realm.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
   each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
@@ -3538,6 +3543,7 @@ Inside `index.html` the code is organised as:
 | `Road` | every mix of five road offers, each there or empty: the first two in view and in order, the rest behind one counted fold, never a road of three folded, no empty offer drawn or counted, none dropped or doubled; the fold stays as it was left and a new fight starts it folded; Fight again and the Smithy in one row |
 | calc room | the strip under the scratch pad button is in the stylesheet, comes and goes with the button, and the button is no taller than the strip |
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
+| `SealFold` | every count of sealed realms from none to ten, folded or opened: two or more inside one fold with a line that counts them and names the first and last, in order, none dropped; one alone shown unfolded; blanks not counted; the fold stays as it was left; on the map only the realms past the next to open are folded; a stone on the road opens the fold before its realm |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
 | `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |

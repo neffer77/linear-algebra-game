@@ -4134,7 +4134,7 @@ const gauntletNotes = (() => {
   want(html.includes("const path=WarPath.broke(); March.broke();\n    Gauntlet.end();") && html.includes("if(live) Gauntlet.end();"), 'end', 'a fall or a flight does not break off a run');
   const esc = html.slice(html.indexOf('\n  escape(){'), html.indexOf('\n  flee(){'));
   want(esc.includes('const run=Gauntlet.won(this);') && esc.includes('UI.toast(Gauntlet.say(run));'), 'escape', 'a greedy foe that gets away does not count as passed');
-  want(html.includes("realms+=Gauntlet.node(ri);") && html.split('Gauntlet.won(').length === 3, 'map', 'the map does not show the gauntlet, or a run steps on elsewhere');
+  want(html.includes("realm+=Gauntlet.node(ri);") && html.split('Gauntlet.won(').length === 3, 'map', 'the map does not show the gauntlet, or a run steps on elsewhere');
   return checks;
 })();
 
@@ -4860,6 +4860,34 @@ const tomeFoldNotes = (() => {
   want(ids.length >= 40 && (inside.match(/<div class="panel"/g) || []).length === ids.length, 'cards', 'a workshop card has no button, or a card without one is folded');
   want(!/TOME\.map/.test(inside) && /TOME\.map/.test(outside), 'lore', 'the lessons are folded away with the cards');
   want(html.includes('details.tomeAll>summary{list-style:none;') && !/Game\.s\.tomeAll|Game\.s\.tomeFold/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
+const sealFoldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const SealFold = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('seal fold', key, msg); };
+  const F = new Function(src + ';return SealFold;')();
+  const NM = ['Vale', 'Marches', 'Cliffs', 'Abyss', 'Citadel', 'Reach', 'Expanse', 'Summit', 'Beyond', 'Further'];
+  for (let n = 0; n <= 10; n++) for (const open of [false, true]) {
+    F.open = open;
+    const parts = Array.from({ length: n }, (_, i) => '<details class="realm" id="realm-' + i + '"><summary>' + NM[i] + '</summary></details>');
+    const names = NM.slice(0, n), h = F.wrap(parts, names);
+    if (n < 2) { want(h === parts.join(''), 'alone ' + n, 'a lone sealed realm is folded, or dropped'); continue; }
+    want(h.startsWith('<details class="sealAll" id="sealAll"') && h.endsWith(parts.join('') + '</details>'), 'all ' + n, 'a realm is dropped, reordered, or sits outside the fold');
+    want(h.includes('<summary>＋ ' + n + ' more sealed realms <span class="sealSpan">' + names[0] + ' to ' + names[n - 1] + '</span></summary>'), 'count ' + n, 'the fold does not count and name the realms behind it');
+    want(h.includes('ontoggle="SealFold.open=this.open"') && h.includes('id="sealAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
+  }
+  F.open = false;
+  want(F.wrap(['<p>a</p>', '', null, '<p>b</p>'], ['A', 'B']).includes('＋ 2 more sealed realms'), 'blank', 'an empty part is counted as a realm');
+  const s = html.indexOf('  renderMap(){'), map = html.slice(s, html.indexOf('\n  },\n', s));
+  want(/const folded = !unlocked && ri>firstSealed;/.test(map) && map.includes("if(folded){ far.push(realm); farNames.push(r.nm); } else realms+=realm;")
+    && map.includes('realms=realms.slice(0,farAt)+SealFold.wrap(far, farNames)+realms.slice(farAt)'), 'wired', 'the realms past the next sealed one are not folded together, or the next one is folded with them');
+  want(map.includes("const unlocked = !sealedAt[ri];") && map.includes("const firstSealed=sealedAt.indexOf(true)"), 'sealed', 'what counts as sealed has changed');
+  const t = html.indexOf('  toRealm(ri){'), to = html.slice(t, html.indexOf('\n  },', t));
+  want(to.indexOf("closest('details.sealAll')") > 0 && to.indexOf('fold.open=true') < to.indexOf('d.open=true') && to.includes('SealFold.open=true'), 'road', 'a stone on the road does not open the fold to reach its realm');
+  want(html.includes('details.sealAll>summary{list-style:none;') && !/Game\.s\.seal/.test(html), 'css', 'the fold shows its marker, or is saved');
   return checks;
 })();
 const titleWayNotes = (() => {
@@ -29180,6 +29208,7 @@ console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 1
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
+console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
