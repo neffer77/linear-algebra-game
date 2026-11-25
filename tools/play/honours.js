@@ -92,6 +92,8 @@ module.exports = {
       && c.line.includes('3 of 8') && c.line.includes('✨ Your blade shines now: 3 bosses beaten.') && c.worn.glow === true, JSON.stringify(c));
 
     // the knight drawn on the scene wears it: gold in the ring around the lambda
+    // (with the same blade throughout, since each blade is drawn its own length)
+    await t.ev(() => { Game.s.weapon = 'w5'; });
     w = await fight(t, 0, 0, false);
     await sleep(600);
     const gold = () => t.ev(() => {

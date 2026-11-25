@@ -1,19 +1,40 @@
 {
-  "change": "The reckoning on the victory card: the next fight on the road says the blows it takes and the blows that fell you",
+  "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "no reckoning under the next fight",
+      "name": "a pose on a fall",
       "file": "index.html",
-      "find": "      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you\n",
-      "replace": "",
+      "find": "    if(!B || B.over!=='win') return null;",
+      "replace": "    if(!B || !B.over) return null;",
       "run": "verify"
     },
     {
-      "name": "no reckoning under the next fight, seen in play",
+      "name": "no hop",
       "file": "index.html",
-      "find": "      +Reckon.line(f, Game.s)   // the blows it takes, and the blows that fell you\n",
-      "replace": "",
-      "run": "play:nextfight"
+      "find": "hop:Math.round(Math.abs(Math.sin((t||0)*7))*9) };",
+      "replace": "hop:0 };",
+      "run": "verify"
+    },
+    {
+      "name": "the blade not raised",
+      "file": "index.html",
+      "find": "  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);",
+      "replace": "  cx.rotate(0.22 + lunge*2.2);",
+      "run": "verify"
+    },
+    {
+      "name": "the fight never poses",
+      "file": "index.html",
+      "find": "    const pose=Pose.of(B, Anim.t);\n",
+      "replace": "    const pose=null;\n",
+      "run": "verify"
+    },
+    {
+      "name": "the fight never poses, seen in play",
+      "file": "index.html",
+      "find": "    const pose=Pose.of(B, Anim.t);\n",
+      "replace": "    const pose=null;\n",
+      "run": "play:arms"
     }
   ]
 }

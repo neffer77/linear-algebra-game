@@ -7338,18 +7338,101 @@ function withOutline(drawAt){
   drawAt();
 }
 
+/* Arms on show. The knight in the fight wears what they bought: each
+   blade is drawn its own length and in its own steel, from the rusted
+   trainer's short brown stub to the long gold of the Gradient Ascendant,
+   and each armour has its own plate, from the tunic's plain cloth to the
+   regalia's gold. Buying better gear is seen at once, in every fight,
+   and the Smithy shows each piece as it will be drawn. It reads what is
+   worn and writes nothing. */
+const Arms = {
+  // length of the blade above the guard, and its three steels from tip to hilt
+  BLADES: {
+    w0:{len:40, top:'#c9a27a', mid:'#a8774a', low:'#6e4a2c', guard:'#8a6a44'},
+    w1:{len:48, top:'#f0f3f7', mid:'#c3cad4', low:'#7d8794', guard:'#9aa3ae'},
+    w2:{len:54, top:'#ffffff', mid:'#dfe8f5', low:'#93a3ba', guard:'#f2c14e'},
+    w3:{len:58, top:'#ffffff', mid:'#e3d6c7', low:'#9c8a76', guard:'#c0763a'},
+    w4:{len:62, top:'#fffbe6', mid:'#d8e6a8', low:'#7c9a4a', guard:'#f2c14e'},
+    w5:{len:66, top:'#ffffff', mid:'#ffd0d2', low:'#e5484d', guard:'#f2c14e'},
+    w6:{len:70, top:'#ffffff', mid:'#d5c2ff', low:'#7b5cd6', guard:'#e9c46a'},
+    w7:{len:74, top:'#ffffff', mid:'#b8fff4', low:'#2bbcae', guard:'#e9c46a'},
+    w8:{len:78, top:'#ffffff', mid:'#c9d0ff', low:'#5f6de8', guard:'#ffd479'},
+    w9:{len:82, top:'#fffdf2', mid:'#ffe08a', low:'#ff9c1f', guard:'#ffd479'},
+    wD:{len:60, top:'#e6f2ff', mid:'#8fb3d9', low:'#3d5f86', guard:'#5a7ca3'}
+  },
+  // the plate's face and its shadow
+  PLATES: {
+    a0:{skin:'#d9c9a8', dark:'#a08a64'},
+    a1:{skin:'#b98a5e', dark:'#7a5536'},
+    a2:{skin:'#b4bcc6', dark:'#78818d'},
+    a3:{skin:'#c9d3e0', dark:'#8b97a8'},
+    a4:{skin:'#dfe9f7', dark:'#9fb2cc'},
+    a5:{skin:'#bfe3d6', dark:'#6fa894'},
+    a6:{skin:'#d6cdf2', dark:'#958ac2'},
+    a7:{skin:'#e8edf3', dark:'#b0bccb'},
+    a8:{skin:'#f2dc9a', dark:'#c29d3e'},
+    aD:{skin:'#9fb6cf', dark:'#5a7391'}
+  },
+  blade(g){ return this.BLADES[g && g.weapon] || this.BLADES.w2; },
+  plate(g){ return this.PLATES[g && g.armor] || this.PLATES.a3; },
+  /* At the Smithy, each blade and each armour is shown as the fight will draw
+     it: the blade at its own length in its own steels, the plate in its own
+     colours, so what a purchase looks like is seen before it is bought. */
+  len(id){ const b=this.BLADES[id]; return b ? Math.round(b.len*0.4) : 0; },
+  bladeSvg(id){
+    const b=this.BLADES[id]; if(!b) return '';
+    const L=this.len(id), t=32-L;
+    return \`<svg class="armsee" data-len="\${L}" width="24" height="44" viewBox="0 0 24 44" aria-hidden="true">\`
+      +\`<defs><linearGradient id="armsee-\${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="\${b.top}"/>\`
+      +\`<stop offset=".5" stop-color="\${b.mid}"/><stop offset="1" stop-color="\${b.low}"/></linearGradient></defs>\`
+      +\`<polygon points="9.5,32 14.5,32 13.6,\${t+4} 12,\${t} 10.4,\${t+4}" fill="url(#armsee-\${id})"/>\`
+      +\`<rect x="4" y="32" width="16" height="3" rx="1" fill="\${b.guard}"/><rect x="10.5" y="35" width="3" height="8" rx="1" fill="#6b5a3e"/></svg>\`;
+  },
+  plateSvg(id){
+    const p=this.PLATES[id]; if(!p) return '';
+    return \`<svg class="armsee" data-skin="\${p.skin}" width="24" height="34" viewBox="0 0 24 34" aria-hidden="true">\`
+      +\`<path d="M4 7 Q12 2 20 7 L19 26 Q12 33 5 26 Z" fill="\${p.skin}" stroke="\${p.dark}" stroke-width="2"/>\`
+      +\`<path d="M12 6 L12 29" stroke="\${p.dark}" stroke-width="1.5"/></svg>\`;
+  }
+};
+
+/* A blade aflame. A streak shows on the knight: from five right answers in
+   a row the blade burns, and hotter at six and at seven, where the streak's
+   blow stops growing, so the fire says the streak is worth keeping and
+   a miss puts it out. Drawn only in a fight; nothing is saved. */
+const Flame = {
+  of(B){
+    const c=B && B.combo|0;
+    if(c<5) return null;
+    return c>=7 ? {col:'#ff5d2d', blur:20} : c===6 ? {col:'#ff7a33', blur:15} : {col:'#ff9c3d', blur:10};
+  }
+};
+
+/* A victory pose. The fight won, the knight lifts the blade overhead and
+   hops for joy until the card comes up, so the last moment of a fight is a
+   cheer and not a pause. Only on a win, never on a fall; nothing is saved. */
+const Pose = {
+  RAISE: -2.3,
+  of(B, t){
+    if(!B || B.over!=='win') return null;
+    return { raise:this.RAISE, hop:Math.round(Math.abs(Math.sin((t||0)*7))*9) };
+  }
+};
+
 /* --- knight (the player) --- */
-function drawKnight(x,y,s,lunge,hurt,dead){
+function drawKnight(x,y,s,lunge,hurt,dead,pose){
   cx.save();
-  cx.translate(x + lunge*70, y);
+  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));   // a won fight: a hop for joy
   if(dead){ cx.rotate(-0.9); cx.globalAlpha=.55; }
   cx.scale(s,s);
 
   // shadow
   contactShadow(0,4,36,0);
 
-  const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
-  const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
+  // what the knight wears shows: the plate's own colour, and the blade's own length and steel
+  const plate = Arms.plate(Game.s), blade = Arms.blade(Game.s);
+  const skin = hurt>0 ? '#ff8b8b' : plate.skin;
+  const dark = hurt>0 ? '#c05c5c' : plate.dark;
   // The colour chosen in the quarters, worn where it shows: cape, tabard, plume.
   const cape = Battle.capeCol || '#7a2f8f';
   const plume = Battle.plumeCol || '#e5484d';
@@ -7402,14 +7485,16 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   // sword (right arm) — swings with the lunge
   cx.save();
   cx.translate(36,-58);
-  cx.rotate(0.22 + lunge*2.2);   // rests clear of the helm, slashes forward
+  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);   // rests clear of the helm, slashes forward, held high in victory
   setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
-  setFill('#f2c14e'); cx.fillRect(-13,-10,28,7);        // crossguard
-  const g=cx.createLinearGradient(0,-70,0,-8);
-  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,hon.glow?'#fff1c2':'#dfe8f5'); g.addColorStop(1,hon.glow?'#e9c46a':'#93a3ba');
+  setFill(blade.guard); cx.fillRect(-13,-10,28,7);      // crossguard
+  const tip=-10-blade.len, g=cx.createLinearGradient(0,tip+4,0,-8);
+  g.addColorStop(0,blade.top); g.addColorStop(.5,hon.glow?'#fff1c2':blade.mid); g.addColorStop(1,hon.glow?'#e9c46a':blade.low);
   if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }
+  const fire=Flame.of(Battle);   // a streak sets the blade burning
+  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }
   setFill(g);
-  cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
+  cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,tip+10); cx.lineTo(0,tip); cx.lineTo(-4,tip+10); cx.closePath(); cx.fill();
   cx.restore();
 
   cx.restore();
@@ -8038,7 +8123,8 @@ const Anim = {
     drawBg(B.realm ? B.realm.bg : null);
     const gy = H-120;
     const pLunge=Anim.pl>0?Math.sin(Anim.pl*Math.PI):0;
-    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose'));
+    const pose=Pose.of(B, Anim.t);
+    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));
     if(B.foe && B.slamNext && !B.over){
       const r=1+Math.sin(Anim.t*6)*.5;
       cx.save(); cx.globalAlpha=.25+r*.2; cx.strokeStyle='#e5484d'; cx.lineWidth=3+r*2;
@@ -17328,7 +17414,7 @@ const UI = {
     WEAPONS.filter(w=>!w.forge).forEach(w=>{
       const owned=!!g.owned[w.id], eq=g.weapon===w.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
-        <div class="ic">\${w.ic}</div>
+        <div class="ic">\${Arms.bladeSvg(w.id)||w.ic}</div>
         <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">\${w.ds}</div>
           <div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div>
         \${eq?'<span class="pill">equipped</span>':
@@ -17340,7 +17426,7 @@ const UI = {
     ARMORS.filter(a=>!a.forge).forEach(a=>{
       const owned=!!g.owned[a.id], eq=g.armor===a.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
-        <div class="ic">\${a.ic}</div>
+        <div class="ic">\${Arms.plateSvg(a.id)||a.ic}</div>
         <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">\${a.ds}</div>
           <div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div>
         \${eq?'<span class="pill">equipped</span>':

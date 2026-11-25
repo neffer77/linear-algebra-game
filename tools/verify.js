@@ -4490,6 +4490,101 @@ const reckonNotes = (() => {
   return checks;
 })();
 
+const armsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Arms = {');
+  const src = html.slice(start, html.indexOf('/* --- knight (the player) --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('arms', key, msg); };
+  const A = new Function(src + ';return Arms;')();
+  const list = (name) => [...html.slice(html.indexOf('const ' + name + ' = ['), html.indexOf('];', html.indexOf('const ' + name + ' = ['))).matchAll(/\{id:'(\w+)'[^}]*?(dmg|def):(\d+)[^}]*?cost:(\d+)(, forge:true)?/g)]
+    .map(m => ({ id: m[1], n: +m[3], cost: +m[4], forge: !!m[5] }));
+  const W = list('WEAPONS'), R = list('ARMORS'), hex = /^#[0-9a-f]{6}$/;
+  want(W.length === 11 && R.length === 10, 'gear', JSON.stringify([W.length, R.length]));
+  want(W.every(w => A.BLADES[w.id]) && Object.keys(A.BLADES).length === W.length, 'blades', 'a weapon is drawn with no blade of its own');
+  want(R.every(r => A.PLATES[r.id]) && Object.keys(A.PLATES).length === R.length, 'plates', 'an armour is drawn with no plate of its own');
+  for (const [id, b] of Object.entries(A.BLADES))
+    want([b.top, b.mid, b.low, b.guard].every(c => hex.test(c)) && b.len >= 36 && b.len <= 86, 'blade ' + id, JSON.stringify(b));
+  for (const [id, p] of Object.entries(A.PLATES)) want(hex.test(p.skin) && hex.test(p.dark) && p.skin !== p.dark, 'plate ' + id, JSON.stringify(p));
+  // the better the blade sold, the longer it is drawn; the forged one sits among them by its blow
+  const sold = W.filter(w => !w.forge).sort((a, b) => a.n - b.n);
+  sold.forEach((w, i) => { if (i) want(A.BLADES[w.id].len > A.BLADES[sold[i - 1].id].len, 'longer ' + w.id, `${w.id} is drawn no longer than ${sold[i - 1].id}`); });
+  const forged = W.find(w => w.forge), below = sold.filter(w => w.n < forged.n).pop(), above = sold.find(w => w.n > forged.n);
+  want(A.BLADES[forged.id].len > A.BLADES[below.id].len && A.BLADES[forged.id].len < A.BLADES[above.id].len, 'forged', 'the forged blade is drawn out of its place');
+  const key = o => JSON.stringify(o);
+  want(new Set(Object.values(A.BLADES).map(key)).size === W.length && new Set(Object.values(A.PLATES).map(p => p.skin)).size === R.length, 'apart', 'two pieces of gear are drawn alike');
+  for (const w of W) for (const r of R) {
+    const g = { weapon: w.id, armor: r.id };
+    want(A.blade(g) === A.BLADES[w.id] && A.plate(g) === A.PLATES[r.id], 'worn ' + w.id + r.id, 'what is worn is not what is drawn');
+  }
+  want(A.blade(null) === A.BLADES.w2 && A.plate(undefined) === A.PLATES.a3 && A.blade({ weapon: 'zz' }) === A.BLADES.w2 && A.plate({}) === A.PLATES.a3, 'none', 'a knight with nothing worn is not drawn plainly');
+  // at the Smithy: every blade at its own length in its own steels, every plate in its own colours
+  for (const w of W) {
+    const b = A.BLADES[w.id], v = A.bladeSvg(w.id), L = Math.round(b.len * 0.4);
+    want(A.len(w.id) === L && v.includes(`data-len="${L}"`) && v.includes(`12,${32 - L}`) && [b.top, b.mid, b.low, b.guard].every(c => v.includes(`"${c}"`))
+      && v.includes(`id="armsee-${w.id}"`) && v.includes(`url(#armsee-${w.id})`) && v.includes('aria-hidden="true"') && v.startsWith('<svg') && v.endsWith('</svg>'), 'smithy ' + w.id, v);
+  }
+  sold.forEach((w, i) => { if (i) want(A.len(w.id) > A.len(sold[i - 1].id), 'smithy longer ' + w.id, 'a better blade is shown no longer at the Smithy'); });
+  for (const r of R) {
+    const p = A.PLATES[r.id], v = A.plateSvg(r.id);
+    want(v.includes(`data-skin="${p.skin}"`) && v.includes(`fill="${p.skin}" stroke="${p.dark}" stroke-width="2"`) && v.includes(`<path d="M12 6 L12 29" stroke="${p.dark}"`) && v.includes('aria-hidden="true"'), 'smithy ' + r.id, v);
+  }
+  want(A.bladeSvg('zz') === '' && A.plateSvg('zz') === '' && A.len('zz') === 0, 'smithy none', 'a piece with no look is drawn');
+  const shop = html.slice(html.indexOf('  renderShop(){'), html.indexOf("    out.push('</div><div class=\"panel\"><h2>🛡️ Armour</h2>');"));
+  const shop2 = html.slice(html.indexOf("    out.push('</div><div class=\"panel\"><h2>🛡️ Armour</h2>');"), html.indexOf("The Keep's workrooms"));
+  want(shop.includes('<div class="ic">${Arms.bladeSvg(w.id)||w.ic}</div>') && shop2.includes('<div class="ic">${Arms.plateSvg(a.id)||a.ic}</div>'), 'smithy wired', 'the Smithy does not show the gear as it is drawn');
+  // the wiring: the knight drawn in the fight reads what is worn, the blade's length sets its tip
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(k.includes("const plate = Arms.plate(Game.s), blade = Arms.blade(Game.s);") && k.includes("const skin = hurt>0 ? '#ff8b8b' : plate.skin;") && k.includes("const dark = hurt>0 ? '#c05c5c' : plate.dark;"), 'plate wired', 'the plate drawn is not the armour worn');
+  want(k.includes("setFill(blade.guard); cx.fillRect(-13,-10,28,7);") && k.includes("const tip=-10-blade.len") && k.includes("cx.lineTo(0,tip);")
+    && k.includes("g.addColorStop(0,blade.top); g.addColorStop(.5,hon.glow?'#fff1c2':blade.mid); g.addColorStop(1,hon.glow?'#e9c46a':blade.low);") && !k.includes('-74'), 'blade wired', 'the blade drawn is not the weapon worn');
+  return checks;
+})();
+
+const flameNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Flame = {');
+  const src = html.slice(start, html.indexOf('/* --- knight (the player) --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('flame', key, msg); };
+  const F = new Function(src + ';return Flame;')();
+  let last = 0;
+  for (let c = -1; c <= 30; c++) {
+    const f = F.of({ combo: c });
+    if (c < 5) { want(f === null, 'cold ' + c, JSON.stringify(f)); continue; }
+    want(f && /^#[0-9a-f]{6}$/.test(f.col) && f.blur >= 8 && f.blur <= 24, 'fire ' + c, JSON.stringify(f));
+    want(c <= 7 ? f.blur > last : f.blur === last, 'hotter ' + c, `${f.blur} after ${last}`);
+    last = f.blur;
+  }
+  want(new Set([5, 6, 7].map(c => F.of({ combo: c }).col)).size === 3, 'colours', 'the fire does not change as it grows');
+  want(F.of(null) === null && F.of({}) === null, 'none', 'a fire with no fight');
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(k.includes("  if(hon.glow){ cx.shadowColor='#ffd479'; cx.shadowBlur=12; }\n  const fire=Flame.of(Battle);   // a streak sets the blade burning\n  if(fire){ cx.shadowColor=fire.col; cx.shadowBlur=fire.blur; }\n  setFill(g);"), 'wired', 'the blade drawn does not burn with the streak');
+  return checks;
+})();
+
+const poseNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Pose = {');
+  const src = html.slice(start, html.indexOf('/* --- knight (the player) --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('pose', key, msg); };
+  const P = new Function(src + ';return Pose;')();
+  for (const over of [undefined, null, false, 'lose', 'flee', 'win']) for (let t = 0; t < 3; t += 0.05) {
+    const p = P.of({ over }, t);
+    if (over !== 'win') { want(p === null, 'no pose ' + over, JSON.stringify(p)); continue; }
+    want(p && p.raise === P.RAISE && p.raise < -1.6 && p.raise > -3 && Number.isInteger(p.hop) && p.hop >= 0 && p.hop <= 9, 'pose ' + t.toFixed(2), JSON.stringify(p));
+  }
+  const hops = new Set(); for (let t = 0; t < 1; t += 0.01) hops.add(P.of({ over: 'win' }, t).hop);
+  want(hops.has(0) && hops.has(9) && hops.size > 5, 'hops', 'the knight does not hop: ' + [...hops].join());
+  want(P.of(null, 1) === null && P.of({ over: 'win' }).hop === 0, 'none', 'a pose with no fight');
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
+  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
+    && k.includes("  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);"), 'drawn', 'the knight is not drawn in the pose');
+  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));"), 'wired', 'the fight does not pose its knight');
+  return checks;
+})();
+
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -28493,6 +28588,9 @@ console.log(`  dicers checked            ${pad(dicerNotes.toLocaleString(), 10)}
 console.log(`  hearths checked           ${pad(hearthNotes.toLocaleString(), 10)}  (a day streak paying the first campaign victory of a sitting a tenth more gold for each day in a row, up to seven, in no other mode and on no later victory, counted in on the card and said there and on the title)`);
 console.log(`  letters checked           ${pad(letterNotes.toLocaleString(), 10)}  (one from home for every tenth victory, eight in all, each a few plain sentences, a draught tucked in each, said on the victory card and kept on the Saga page with when the next arrives)`);
 console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)}  (every realm's boss announced as its fight opens, its name across the screen in its own colour and a line of its own mathematics under it, eight lines and none alike, in the campaign only and never for a foe that is not a boss)`);
+console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
+console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
+console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);
