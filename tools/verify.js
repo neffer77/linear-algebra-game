@@ -4579,12 +4579,127 @@ const poseNotes = (() => {
   want(hops.has(0) && hops.has(9) && hops.size > 5, 'hops', 'the knight does not hop: ' + [...hops].join());
   want(P.of(null, 1) === null && P.of({ over: 'win' }).hop === 0, 'none', 'a pose with no fight');
   const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('/* --- enemies --- */'));
-  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
+  want(k.startsWith("function drawKnight(x,y,s,lunge,hurt,dead,pose,dents){\n  cx.save();\n  cx.translate(x + lunge*70, y - (pose ? pose.hop : 0));")
     && k.includes("  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);"), 'drawn', 'the knight is not drawn in the pose');
-  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose));"), 'wired', 'the fight does not pose its knight');
+  want(html.includes("    const pose=Pose.of(B, Anim.t);\n    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose, Dents.of(Game.s)));"), 'wired', 'the fight does not pose its knight');
+  return checks;
+})();
+const dentsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Dents = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Scars ----------', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('dents', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const D = new Function('cx', src + ';return Dents;')(cx);
+  for (let maxHp = 1; maxHp <= 600; maxHp += 11) for (let hp = -2; hp <= maxHp; hp++) {
+    const n = D.of({ hp, maxHp });
+    const k = hp / maxHp, w = k > 0.75 ? 0 : k > 0.5 ? 1 : k > 0.25 ? 2 : 3;
+    want(n === w, 'dents ' + hp + '/' + maxHp, n + ' not ' + w);
+  }
+  want(D.of(null) === 0 && D.of({ hp: 1 }) === 0 && D.of({ hp: 1, maxHp: 0 }) === 0, 'none', 'dents with no knight or no health');
+  want(D.AT.length === 3 && D.AT.every(([x, y, r]) => Math.abs(x) <= 20 && y < -30 && y > -118 && r >= 5 && r <= 8), 'on the plate', JSON.stringify(D.AT));
+  want(D.AT[1][1] < -100 && D.AT[0][1] > -80 && D.AT[2][1] > -80, 'helm second', 'the helm is not the second dent');
+  for (const dark of ['#5a4f43', '#c05c5c']) for (const n of [-1, 0, 1, 2, 3, 4, 7]) {
+    log = [];
+    const got = D.beat(n, dark), m = Math.max(0, Math.min(n, 3));
+    const arcs = log.filter(l => l[0] === 'arc'), strokes = log.filter(l => l[0] === 'stroke').length;
+    want(got === m && arcs.length === m * 2 && strokes === m * 2, 'beat ' + dark + n, JSON.stringify({ got, strokes }));
+    if (!m) { want(log.length === 0, 'blank ' + n, 'drew nothing yet touched the canvas'); continue; }
+    want(log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept ' + n, 'the canvas state leaks');
+    want(arcs.every((a, i) => { const [x, y, r] = D.AT[i >> 1]; return i % 2 ? a[1] === x + 1 && a[2] === y + 1.5 && a[3] === r : a[1] === x && a[2] === y && a[3] === r; }), 'placed ' + n, JSON.stringify(arcs));
+    want(log.filter(l => l[0] === '=strokeStyle' && l[1] === dark).length === m, 'the plate dark ' + n, 'a dent not in the plate\'s own dark');
+  }
+  const k = html.slice(html.indexOf('function drawKnight('), html.indexOf('\n}\n', html.indexOf('function drawKnight(')));
+  want(k.startsWith('function drawKnight(x,y,s,lunge,hurt,dead,pose,dents){') && k.includes("  Honours.circlet(hon.crowns);\n  Dents.beat(dents, dark);   // the plate shows the blows taken\n")
+    && k.indexOf('Dents.beat(') > k.indexOf("const dark = hurt>0") && k.indexOf('Dents.beat(') < k.lastIndexOf('cx.restore();'), 'drawn', 'the knight is not dented in its own frame');
+  want(html.includes("drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose', pose, Dents.of(Game.s)));"), 'wired', 'the fight does not dent its knight');
+  want((html.match(/Dents\.of\(/g) || []).length === 1 && (html.match(/Dents\.beat\(/g) || []).length === 1, 'once', 'dents drawn somewhere else too');
+  return checks;
+})();
+const scarsNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Scars = {');
+  const src = html.slice(start, html.indexOf('/* --- enemies --- */', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('scars', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const S = new Function('cx', src + ';return Scars;')(cx);
+  for (let emax = 1; emax <= 400; emax += 7) for (let ehp = -3; ehp <= emax; ehp++) {
+    const n = S.of({ foe: {}, ehp, emax });
+    const k = ehp / emax, w = k > 0.75 ? 0 : k > 0.5 ? 1 : k > 0.25 ? 2 : 3;
+    want(n === w, 'cuts ' + ehp + '/' + emax, n + ' not ' + w);
+  }
+  for (const over of ['win', 'lose', 'flee']) want(S.of({ foe: {}, ehp: 1, emax: 100, over }) === 0, 'over ' + over, 'a fight that is over is scarred');
+  want(S.of(null) === 0 && S.of({ ehp: 1, emax: 100 }) === 0 && S.of({ foe: {}, ehp: 1, emax: 0 }) === 0 && S.of({ foe: {}, ehp: 1 }) === 0, 'none', 'scars with no foe or no health');
+  for (const art of ['slime', 'goblin', 'skeleton', 'golem', 'wisp', 'harpy', 'dragon', 'lich', 'knightfoe']) for (const n of [-1, 0, 1, 2, 3, 4, 9]) {
+    log = [];
+    const got = S.cut(n, art), m = Math.max(0, Math.min(n, 3));
+    const strokes = log.filter(l => l[0] === 'stroke').length, moves = log.filter(l => l[0] === 'moveTo');
+    want(got === m && strokes === m * 2 && moves.length === m, 'cut ' + art + ' ' + n, JSON.stringify({ got, strokes }));
+    if (!m) { want(log.length === 0, 'blank ' + art + ' ' + n, 'drew nothing yet touched the canvas'); continue; }
+    const dy = art === 'slime' ? 28 : 0;
+    want(log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept ' + art + n, 'the canvas state leaks');
+    want(moves.every((l, i) => l[1] === S.CUTS[i][0][0] && l[2] === S.CUTS[i][0][1] + dy), 'placed ' + art + n, JSON.stringify(moves));
+    const lines = log.filter(l => l[0] === 'lineTo');
+    want(lines.length === m * 3 && lines.every(l => l[2] < 0 && Math.abs(l[1]) < 30), 'on the body ' + art + n, JSON.stringify(lines));
+    want(log.some(l => l[0] === '=strokeStyle' && l[1] === '#1a1622') && log.some(l => l[0] === '=lineWidth' && l[1] === 4), 'dark ' + art + n, 'the cracks are not dark');
+  }
+  for (let n = -1; n <= 5; n++) for (let tt = 0; tt < 3; tt += 0.03) {
+    const r = S.reel(n, tt);
+    if (n < 3) want(r === 0, 'still ' + n, 'a foe reels before its last quarter: ' + r);
+    else want(Math.abs(r) <= S.REEL + 1e-12 && Math.abs(r - Math.sin(tt * 4.5) * S.REEL) < 1e-12, 'reels ' + n + ' ' + tt.toFixed(2), String(r));
+  }
+  want(S.REEL > 0.03 && S.REEL < 0.15 && S.reel(3) === 0, 'reel size', 'the sway is no sway or a fall: ' + S.REEL);
+  const sw = new Set(); for (let tt = 0; tt < 2; tt += 0.01) sw.add(Math.sign(Math.round(S.reel(3, tt) * 1000)));
+  want(sw.has(1) && sw.has(-1), 'both ways', 'the foe sways one way only');
+  const f = html.slice(html.indexOf('function drawFoe('), html.indexOf('\n}\n', html.indexOf('function drawFoe(')) + 3);
+  want(f.startsWith("function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){\n  cx.save();\n  cx.translate(x - lunge*70, y);\n  if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet\n"), 'reeling', 'a foe in its last quarter does not reel from its feet');
+  want(f.startsWith('function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){') && f.endsWith("  if(scars) Scars.cut(scars, art);   // its wounds, riding with it\n  cx.restore();\n}\n"), 'drawn', 'drawFoe does not cut its scars inside its own frame');
+  want(html.includes("eLunge, Anim.eh, B.over==='win', Scars.of(B)));"), 'wired', 'the fight does not scar its foe');
+  want((html.match(/Scars\.of\(/g) || []).length === 1 && (html.match(/Scars\.cut\(/g) || []).length === 1, 'once', 'scars drawn somewhere else too');
   return checks;
 })();
 
+const waymarkNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Waymark = {');
+  const src = html.slice(start, html.indexOf("/* A herald. A realm's boss", start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('waymark', key, msg); };
+  const shown = [], sounds = [];
+  const Celebrate = { banner(t, s, c, snd) { shown.push({ t, s, c }); if (snd) snd(); } };
+  const Sfx = { milestone() { sounds.push('milestone'); } };
+  const W = new Function('Celebrate', 'Sfx', src + ';return Waymark;')(Celebrate, Sfx);
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const named = [...realms.matchAll(/^  \{nm:'([^']+)', col:'(#[0-9a-f]{6})'/gim)].map(m => ({ nm: m[1], col: m[2] }));
+  want(named.length === 8 && Object.keys(W.SAY).length === 8 && named.every(r => W.SAY[r.nm]), 'every', JSON.stringify([named.map(r => r.nm), Object.keys(W.SAY)]));
+  want(new Set(Object.values(W.SAY)).size === 8, 'apart', 'two realms are greeted the same');
+  Object.entries(W.SAY).forEach(([nm, t]) => want(typeof t === 'string' && t.length > 10 && t.length < 60 && !/[{}<>$.!—–]/.test(t) && /^[a-z]/.test(t), 'line ' + nm, t));
+  const foes = n => [0, 1, 2, 3].map(fi => fi);
+  for (let ri = 0; ri < 8; ri++) for (const mode of ['campaign', 'daily', 'dungeon', 'arena', undefined]) for (const boss of [false, true]) {
+    // every way the save can stand: nothing beaten, this realm touched, only other realms touched
+    const saves = [{}, { cleared: {} }, { cleared: { [ri + ':0']: true } }, { cleared: { [ri + ':2']: 'A' } }, { cleared: { [ri + ':1']: false } },
+      { cleared: { [((ri + 1) % 8) + ':0']: true, [((ri + 3) % 8) + ':3']: true } }, { cleared: { [(ri + 10) + ':0']: true, [ri + '1:0']: true } }];
+    for (const g of saves) {
+      shown.length = 0; sounds.length = 0;
+      const B = { mode, ri, realm: named[ri], foe: { nm: 'A foe', boss } };
+      const touched = Object.keys(g.cleared || {}).some(k => k.split(':')[0] === String(ri) && g.cleared[k]);
+      const on = mode === 'campaign' && !boss && !touched;
+      want(W.on(B, g) === on, 'on ' + ri + mode + boss + JSON.stringify(g), String(W.on(B, g)));
+      const r = W.announce(B, g);
+      want(r === on && shown.length === (on ? 1 : 0) && sounds.join() === (on ? 'milestone' : ''), 'announce ' + ri + mode + boss, JSON.stringify(shown));
+      if (on) want(shown[0].t === '🗺️ ' + named[ri].nm.toUpperCase() && shown[0].s === W.SAY[named[ri].nm] && shown[0].c === named[ri].col, 'banner ' + ri, JSON.stringify(shown[0]));
+    }
+  }
+  shown.length = 0;
+  want(W.on(null, {}) === false && W.on({ mode: 'campaign', ri: 0, realm: named[0] }, {}) === false && W.announce({ mode: 'campaign', ri: 0, realm: { nm: 'Nowhere' }, foe: {} }, {}) === false && W.fresh(null, 0) === true && shown.length === 0, 'none', 'a waymark with no foe or no realm');
+  want(html.includes("    Herald.announce(this);   // a realm's boss arrives announced\n    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n")
+    && (html.match(/Waymark\.announce\(/g) || []).length === 1, 'wired', 'the fight does not greet a new realm once as it opens');
+  return checks;
+})();
 const heraldNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Herald = {');
@@ -28591,6 +28706,9 @@ console.log(`  heralds checked           ${pad(heraldNotes.toLocaleString(), 10)
 console.log(`  arms checked              ${pad(armsNotes.toLocaleString(), 10)}  (every weapon drawn as its own blade and every armour as its own plate, none alike, each better blade sold drawn longer than the last and the forged one in its place, read from what is worn in the fight, plain when nothing is, and shown at the Smithy as it will be drawn)`);
 console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}  (the blade burns from a streak of five, hotter at six and seven and no hotter after, cold below five and with no fight)`);
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
+console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10)}  (a realm's name and a line of its land across the screen at its first fights, until a foe of it falls; never for a boss, never outside the campaign)`);
+console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
+console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
 console.log(`  tales checked             ${pad(taleNotes.toLocaleString(), 10)}  (every campaign victory's verse written into the sitting's tale with its foe and grade, newest first, the last twelve kept and the rest counted, and only words)`);

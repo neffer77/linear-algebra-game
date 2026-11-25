@@ -26,19 +26,24 @@ const fight = (t, ri, fi, fresh) => t.ev(([ri, fi, fresh]) => {
 }, [ri, fi, fresh]);
 /* The killing blow, with a right answer; then what the victory card says.
    The answer is the step's own, since a fight can open on a step or a rite
-   whose answer is not the problem's, and it is struck until the foe falls. */
+   whose answer is not the problem's. A rite's rungs can take the foe to
+   nothing and still climb on to the finisher, so the fight is won only when
+   it says so: each open step is answered and each answer clicked through
+   until the fight is over. */
 const finish = async t => {
-  for (let i = 0; i < 6; i++) {
-    const won = await t.ev(() => {
-      if (Battle.over || Battle.ehp <= 0) return true;
-      const st = Battle.step && Battle.step(); if (!st) return false;
-      const cs = Combat.strike; Combat.strike = () => 5;
-      Battle.answered = false; Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = 1;
-      Battle.answer(null, st.a);
-      Combat.strike = cs;
-      return Battle.ehp <= 0;
+  for (let i = 0; i < 14; i++) {
+    const over = await t.ev(() => {
+      if (Battle.over) return true;
+      const st = Battle.step && Battle.step();
+      if (st && !Battle.answered) {
+        const cs = Combat.strike; Combat.strike = () => 5;
+        Battle.shownWork = false; Battle.slamNext = false; Battle.charge = 0; Battle.ehp = Math.min(Battle.ehp, 1);
+        Battle.answer(null, st.a);
+        Combat.strike = cs;
+      }
+      return !!Battle.over;
     });
-    if (won) break;
+    if (over) break;
     await sleep(900);
     await t.ev(() => { const b = document.querySelector('#explain button'); if (b && !Battle.over) b.click(); });
     await sleep(300);
@@ -96,17 +101,27 @@ module.exports = {
     await t.ev(() => { Game.s.weapon = 'w5'; });
     w = await fight(t, 0, 0, false);
     await sleep(600);
-    const gold = () => t.ev(() => {
-      const cv = document.getElementById('scene');
-      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-      let n = 0;
-      for (let i = 0; i < d.length; i += 4) if (d[i] > 235 && d[i + 1] > 200 && d[i + 1] < 235 && d[i + 2] > 110 && d[i + 2] < 165) n++;
-      return n;
-    });
+    // the scene moves (the knight breathes, the foe bobs, the weather drifts), so a
+    // few gold pixels come and go from frame to frame: the most of four frames is read
+    const gold = async () => {
+      let most = 0;
+      for (let k = 0; k < 4; k++) {
+        most = Math.max(most, await t.ev(() => {
+          const cv = document.getElementById('scene');
+          const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 4) if (d[i] > 235 && d[i + 1] > 200 && d[i + 1] < 235 && d[i + 2] > 110 && d[i + 2] < 165) n++;
+          return n;
+        }));
+        await sleep(120);
+      }
+      return most;
+    };
     // the stars are a few pixels each, too small to count apart from the glow, so the frame's own call is read
     await t.ev(() => { window.__stars = []; const s = Honours.stars; window.__starsFn = s; Honours.stars = n => { window.__stars.push(n); s.call(Honours, n); }; });
     await sleep(600);
     const drawn = await t.ev(() => { Honours.stars = window.__starsFn; return Math.max(-1, ...window.__stars); });
+    // stars and the glow together are no less gold than the glow alone, within that drift
     const worn = await gold();
     await t.ev(() => { Battle.honours = { stars: 0, crowns: 0, glow: true }; });
     await sleep(600);
@@ -114,7 +129,7 @@ module.exports = {
     await t.ev(() => { Battle.honours = { stars: 0, crowns: 0, glow: false }; });
     await sleep(600);
     const bare = await gold();
-    t.ok('and the knight on the scene is drawn wearing it: stars on the shield and a shining blade', w.stars === 3 && w.glow && drawn === 3 && worn >= shine && shine - bare > 40, JSON.stringify([w, drawn, worn, shine, bare]));
+    t.ok('and the knight on the scene is drawn wearing it: stars on the shield and a shining blade', w.stars === 3 && w.glow && drawn === 3 && worn + 6 >= shine && shine - bare > 40, JSON.stringify([w, drawn, worn, shine, bare]));
 
     await t.ev(() => { Battle.flee(); [Bounty.bump, Bounty.claim, Quarry.of] = window.__keep; UI.go('s-title'); });
     t.eq('nothing new is saved', await t.ev(() => Object.keys(Game.s).sort().join()), keys);

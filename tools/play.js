@@ -88,8 +88,10 @@ const SUITES = [
   require('./play/hearth'),      // a day streak pays the first victory of each sitting more gold
   require('./play/letters'),     // every tenth victory brings a letter from home, with a draught inside
   require('./play/herald'),      // a realm's boss arrives announced, its name across the screen
+  require('./play/waymark'),     // a realm not yet won in is arrived in, its name across the screen
   require('./play/reckon'),      // under every open fight, the blows that fell it and the blows that would fell you
   require('./play/arms'),        // the knight in the fight is drawn in the blade and armour they wear
+  require('./play/scars'),       // a crack opens across the foe for each quarter of its health lost
   require('./play/sky'),         // a realm's omen this sitting: a gold moon, a fair wind or a mist
   require('./play/ballad'),      // every victory card sings the fight in a line of its own
   require('./play/tale'),        // every campaign victory's verse kept on the map, newest first

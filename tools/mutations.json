@@ -2,39 +2,67 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "a pose on a fall",
+      "name": "every fight greeted",
       "file": "index.html",
-      "find": "    if(!B || B.over!=='win') return null;",
-      "replace": "    if(!B || !B.over) return null;",
+      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
       "run": "verify"
     },
     {
-      "name": "no hop",
+      "name": "a boss greeted twice",
       "file": "index.html",
-      "find": "hop:Math.round(Math.abs(Math.sin((t||0)*7))*9) };",
-      "replace": "hop:0 };",
+      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "replace": "    return !!(B && B.mode==='campaign' && B.foe && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
       "run": "verify"
     },
     {
-      "name": "the blade not raised",
+      "name": "the daily greeted",
       "file": "index.html",
-      "find": "  cx.rotate(pose ? pose.raise : 0.22 + lunge*2.2);",
-      "replace": "  cx.rotate(0.22 + lunge*2.2);",
+      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "replace": "    return !!(B && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
       "run": "verify"
     },
     {
-      "name": "the fight never poses",
+      "name": "another realm's win counts",
       "file": "index.html",
-      "find": "    const pose=Pose.of(B, Anim.t);\n",
-      "replace": "    const pose=null;\n",
+      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
+      "replace": "    return !Object.keys(c).some(k=>c[k]);",
       "run": "verify"
     },
     {
-      "name": "the fight never poses, seen in play",
+      "name": "realm 1 counts for realm 10",
       "file": "index.html",
-      "find": "    const pose=Pose.of(B, Anim.t);\n",
-      "replace": "    const pose=null;\n",
-      "run": "play:arms"
+      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
+      "replace": "    return !Object.keys(c).some(k=>k.startsWith(String(ri)) && c[k]);",
+      "run": "verify"
+    },
+    {
+      "name": "the wrong colour",
+      "file": "index.html",
+      "find": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], B.realm.col, ()=>Sfx.milestone());",
+      "replace": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], 'var(--gold)', ()=>Sfx.milestone());",
+      "run": "verify"
+    },
+    {
+      "name": "never greeted",
+      "file": "index.html",
+      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "never greeted, seen in play",
+      "file": "index.html",
+      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
+      "replace": "",
+      "run": "play:waymark"
+    },
+    {
+      "name": "every fight greeted, seen in play",
+      "file": "index.html",
+      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
+      "run": "play:waymark"
     }
   ]
 }
