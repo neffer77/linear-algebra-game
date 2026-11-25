@@ -179,6 +179,10 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .vs.up{color:var(--green)}
 .btnRow{display:flex;gap:8px}
 .btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+.bestShades{display:flex;flex-wrap:wrap;gap:6px 10px;padding:8px 0 4px;border-top:1px solid rgba(255,255,255,.08)}
+.bestShade{display:flex;flex-direction:column;align-items:center;gap:2px;width:60px;font-size:12px;font-weight:800;opacity:.6}
+.bestDark{font-size:13px;opacity:.6}
+.sagaFar{font-size:13px;padding:5px 0 0;margin-top:5px;border-top:1px solid rgba(255,255,255,.08)}
 details.tomeAll>summary{list-style:none;margin:6px 0 10px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:14px;font-weight:700;color:var(--gold);cursor:pointer}
 details.tomeAll>summary::-webkit-details-marker{display:none}
 details.tomeAll[open]>summary{color:var(--dim)}
@@ -9264,6 +9268,13 @@ const Bestiary = {
     return REALMS.flatMap((r,ri)=>r.foes.map((f,fi)=>({f, r, ri, fi, beaten:!!(g.cleared&&g.cleared[ri+':'+fi])})));
   },
   count(){ const a=this.all(); return {beaten:a.filter(e=>e.beaten).length, total:a.length}; },
+  // the one line under a realm's shadows: how many still wait there, and whether the boss is one
+  shadeLine(n, boss, nm){
+    const WORD=['no','one','two','three','four','five','six','seven','eight'];
+    if(n<1) return '';
+    if(n===1) return boss ? \`Not yet beaten: the boss of \${nm}.\` : \`Not yet beaten: one foe waits in \${nm}.\`;
+    return \`Not yet beaten: \${WORD[n]||n} foes wait in \${nm}\${boss?', the boss among them':''}.\`;
+  },
   // what a realm tests, by the names the Tome uses
   tests(r){ return [...new Set(r.pool.map(k=>TOPIC_LABEL[k]||k))]; },
   // a foe's portrait into a small canvas: its own colours, or a shadow
@@ -9287,24 +9298,27 @@ const Bestiary = {
     document.getElementById('bestBar').style.width=(beaten/total*100)+'%';
     let html='';
     REALMS.forEach((r,ri)=>{
-      const es=this.all().filter(e=>e.ri===ri);
-      html+=\`<div class="panel" style="padding:10px"><h2 style="font-size:15px;color:\${r.col}">\${r.nm} · \${es.filter(e=>e.beaten).length}/\${es.length}</h2>\`;
-      es.forEach(e=>{
+      const es=this.all().filter(e=>e.ri===ri), seen=es.filter(e=>e.beaten), dark=es.filter(e=>!e.beaten);
+      html+=\`<div class="panel" style="padding:10px"><h2 style="font-size:15px;color:\${r.col}">\${r.nm} · \${seen.length}/\${es.length}</h2>\`;
+      // what the realm tests, said once under its name rather than under every foe
+      if(seen.length) html+=\`<div class="bestTests" style="font-size:12px;opacity:.75;margin:-2px 0 4px">Tests: \${this.tests(r).join(', ')}</div>\`;
+      seen.forEach(e=>{
         const {f, fi}=e, id=\`best-\${ri}-\${fi}\`;
         html+=\`<div class="bestRow" id="\${id}" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
           <canvas width="96" height="96" style="width:72px;height:72px;flex:0 0 72px" aria-hidden="true" data-ri="\${ri}" data-fi="\${fi}"></canvas>
-          <div style="flex:1;min-width:0">\`+(e.beaten
-          ? \`<div style="font-weight:800">\${f.boss?'👑 ':''}\${f.nm}</div>
+          <div style="flex:1;min-width:0">
+             <div style="font-weight:800">\${f.boss?'👑 ':''}\${f.nm}</div>
              <div style="font-size:13px;opacity:.85">❤️ \${f.hp} · ⚔️ \${f.atk} · 💰 \${f.gold}</div>
              <div style="font-size:13px;font-style:italic;margin-top:3px">\${this.LORE[f.nm]||''}</div>
              \${f.boss&&Talk.BOSS[f.nm]?\`<div style="font-size:13px;margin-top:3px;color:var(--gold)">“\${Talk.BOSS[f.nm].meet}”</div>\`:''}
              <div class="bestWeak" style="font-size:13px;margin-top:3px;color:#7ff0a8">\${Weak.line(f)}</div>
-             <div style="font-size:12px;opacity:.75;margin-top:3px">Tests: \${this.tests(r).join(', ')}</div>
-             <button class="btn sm ghost" style="width:auto;margin-top:6px" onclick="Battle.begin(\${ri},\${fi})" aria-label="Fight \${f.nm} again">⚔️ Fight again</button>\`
-          : \`<div style="font-weight:800;opacity:.6">\${f.boss?'👑 ':''}???</div>
-             <div style="font-size:13px;opacity:.6">Not yet beaten. \${f.boss?'The boss of':'It waits in'} \${r.nm}.</div>\`)+
-          \`</div></div>\`;
+             <button class="btn sm ghost" style="width:auto;margin-top:6px" onclick="Battle.begin(\${ri},\${fi})" aria-label="Fight \${f.nm} again">⚔️ Fight again</button>
+          </div></div>\`;
       });
+      // the foes still in the dark stand side by side as small shadows, with one line for them all
+      if(dark.length) html+=\`<div class="bestShades">\`+dark.map(({f, fi})=>
+          \`<div class="bestRow bestShade" id="best-\${ri}-\${fi}"><canvas width="96" height="96" style="width:56px;height:56px" aria-hidden="true" data-ri="\${ri}" data-fi="\${fi}"></canvas><div>\${f.boss?'👑 ':''}???</div></div>\`).join('')+
+        \`</div><div class="bestDark">\${this.shadeLine(dark.length, dark.some(e=>e.f.boss), r.nm)}</div>\`;
       html+='</div>';
     });
     list.innerHTML=html;
@@ -9622,20 +9636,32 @@ const Saga = {
       <div class="sub" style="margin-top:6px;font-size:14px">Beat the boss of \${r.nm} to read it.</div>
     </div>\`;
   },
+  // the first chapter not yet read, which keeps its card; -1 once all are read
+  next(){ return REALMS.findIndex((r,ri)=>!this.read(ri)); },
+  // the chapters past that one, not read either: one short line each in one panel, not a card apiece
+  far(next){
+    const ris=REALMS.map((r,ri)=>ri).filter(ri=>ri!==next && !this.read(ri));
+    if(!ris.length) return '';
+    return \`<div class="panel sagaFarAll" id="sagaFar" style="text-align:left;opacity:.65">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.08em">📜 STILL TO COME</div>\`+
+      ris.map(ri=>\`<div class="sagaCh sagaFar" id="saga-\${ri}">Chapter \${ri+1} of \${this.CH.length} · after the boss of \${REALMS[ri].nm}</div>\`).join('')+
+    \`</div>\`;
+  },
   // the bosses into their canvases, once the html is in place
   paint(root){
     (root||document).querySelectorAll('canvas[data-saga]').forEach(c=>Bestiary.shot(c, this.boss(+c.dataset.saga), true));
   },
   render(){
     const list=document.getElementById('sagaList'); if(!list) return;
-    const n=this.count(), N=this.CH.length;
+    const n=this.count(), N=this.CH.length, next=this.next();
     document.getElementById('sagaCount').textContent=\`\${n} of \${N} chapters read\`+(n===N?' · the whole saga 🏆':'');
     document.getElementById('sagaBar').style.width=(n/N*100)+'%';
     list.innerHTML=\`<div class="panel" id="saga-open" style="text-align:left">
         <div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--gold)">📜 THE OPENING</div>
         <div class="sub" style="margin-top:6px;font-size:14px;line-height:1.6">\${OPENING.map(o=>o.b).join(' ')}</div>
       </div>\`+
-      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):this.locked(ri)).join('');
+      REALMS.map((r,ri)=>this.read(ri)?this.card(ri,'saga-'+ri):ri===next?this.locked(ri):'').join('')+
+      this.far(next);
     this.paint(list);
   }
 };

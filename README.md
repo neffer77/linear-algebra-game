@@ -905,6 +905,13 @@ The game is built so that losing teaches you as much as winning.
   riddles" read the same at 3 as at 249. Every title that can be counted now says where the knight stands
   ("40/250", "9/15", or a realm's share cleared), and the one nearest to earning gets a dashed gold edge, so the
   next title is always in sight. Read from what the save already holds; nothing new is saved.
+- **👹 A shorter Bestiary.** A realm not yet entered took four full rows of "???" on a phone, and every beaten foe
+  repeated its realm's whole list of topics. Now the foes still in the dark stand small, side by side, over one line
+  that counts them ("three foes wait in Matrix Marches, the boss among them"), and a realm's topics are said once under
+  its name. A new knight's Bestiary is a page of shadows, not thirty-two rows of them.
+- **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
+  for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
+  each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
 - **📚 A shorter Tome.** Under its index of every workshop, the Tome went on to give each one a card of its
   own, forty-odd paragraphs, so the lessons at the foot of the page sat thirty screens down on a phone. Those cards
   now wait behind one line that counts them ("＋ What each of the 57 workshops does"), which opens in place and stays
@@ -3532,6 +3539,8 @@ Inside `index.html` the code is organised as:
 | calc room | the strip under the scratch pad button is in the stylesheet, comes and goes with the button, and the button is no taller than the strip |
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
+| `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
+| `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |
 | `Daze` | three gold stars circling a beaten foe's head, found by turning the crown by the angle a foe falls at, at the foe's own size; on a ring round the head, circling; the canvas state kept; drawn only on a won fight; the wiring |
 | `Scars` | a crack for each quarter of the foe's health lost, none on an unhurt foe and none once a fight is over; each crack across the body in the sprite's own frame, lower on the short slime; a sway from the feet in the last quarter only, both ways and never a fall; drawn dark with a light edge, the canvas state kept; the wiring in the foe's drawing |
 | `Waymark` | every realm greeted with a line of its own, none alike; only campaign fights in a realm with no foe yet beaten, never a boss, never the daily, an arena or a dungeon; the name in capitals and the realm's colour; once, as the fight opens, after the herald; the wiring |

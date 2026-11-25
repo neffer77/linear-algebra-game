@@ -2653,7 +2653,8 @@ const sagaNotes = (() => {
   want(Saga.count() === 0 && r.count === '0 of 8 chapters read' && r.bar === '0%', 'new knight', `a new knight has read ${r.count}`);
   want(Saga.CH.every(c => !r.list.includes(c.t) && !r.list.includes(c.b)), 'new knight', 'a chapter is given away before its boss falls');
   want(OPENING.every(o => r.list.includes(o.b)) && r.list.indexOf('THE OPENING') < r.list.indexOf('CHAPTER 1'), 'opening', 'the opening does not come first');
-  want((r.list.match(/Beat the boss of /g) || []).length === 8, 'new knight', 'a chapter not read does not say how to read it');
+  want((r.list.match(/Beat the boss of /g) || []).length === 1 && r.list.includes('id="saga-0"') && r.list.indexOf('Beat the boss of Vale of Vectors') < r.list.indexOf('STILL TO COME'), 'new knight', 'the next chapter does not keep its card, or more than it do');
+  want(REALMS.every((x, ri) => !ri || r.list.includes(`<div class="sagaCh sagaFar" id="saga-${ri}">Chapter ${ri + 1} of 8 · after the boss of ${x.nm}</div>`)) && (r.list.match(/class="sagaCh sagaFar"/g) || []).length === 7, 'far', 'a chapter further on is missing from the short list, or has a card of its own');
   G.s.cleared = { '0:0': true, '0:1': true, '0:2': true };
   want(Saga.count() === 0, 'boss', 'a realm\'s foes without its boss read its chapter');
   G.s.cleared['0:3'] = true; G.s.cleared['2:3'] = true;
@@ -2661,9 +2662,11 @@ const sagaNotes = (() => {
   want(r.count === '2 of 8 chapters read' && r.bar === '25%', 'cleared', `with two bosses down it reads ${r.count}, ${r.bar}`);
   want(r.list.includes(Saga.CH[0].b) && r.list.includes(Saga.CH[2].b) && !r.list.includes(Saga.CH[1].b), 'cleared', 'the chapters read are not the bosses beaten');
   want(r.list.includes('id="saga-0"') && r.list.includes('The fall of The Vector Wyrm.') && r.list.includes('CHAPTER 3 OF 8 · CLIFFS OF CHANGE'), 'cleared', 'a chapter read is not headed by its realm and boss');
+  want(Saga.next() === 1 && r.list.includes('Beat the boss of Matrix Marches to read it.') && (r.list.match(/Beat the boss of /g) || []).length === 1 && (r.list.match(/class="sagaCh sagaFar"/g) || []).length === 5 && !r.list.includes('id="saga-2">Chapter'), 'cleared next', 'with chapters 1 and 3 read, chapter 2 does not keep the card, or the short list holds the wrong ones');
   want(painted.join() === 'The Vector Wyrm,true,The Tangent Wraith,true', 'portraits', `the portraits drawn are ${painted.join()}`);
   REALMS.forEach((x, ri) => { G.s.cleared[ri + ':' + (x.foes.length - 1)] = true; });
   r = render(); want(r.count === '8 of 8 chapters read · the whole saga 🏆' && r.bar === '100%', 'all', `every boss down reads ${r.count}`);
+  want(Saga.next() === -1 && !r.list.includes('STILL TO COME') && !r.list.includes('Beat the boss of '), 'all far', 'a saga read through still says what is to come');
   // told on the spot: a boss's first fall, and never a foe or a rematch
   const win = html.slice(html.indexOf('\n  win(){'), html.indexOf('\n  lose(){'));
   want(win.includes("${this.foe.boss&&first?Saga.card(this.ri):''}") && win.includes("if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));"), 'victory', 'a boss\'s first fall does not tell its chapter');
@@ -4897,6 +4900,31 @@ const titleWayNotes = (() => {
   want(realm && realm.n === 60 && W.text(realm) === '60%', 'realm', 'the nearest realm is not measured by its share cleared');
   want(W.of(by('squire'), null) === null, 'empty', 'a missing save is counted');
   want(html.includes('${TITLES.map(t=>TitleWay.medal(t,Game.s)).join(\'\')}') && html.includes('.medal.near{'), 'wired', 'the titles page does not show how far off each title is');
+  return checks;
+})();
+const bestShadeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const a = html.indexOf('  shadeLine(n, boss, nm){');
+  const B = new Function('return {' + html.slice(a, html.indexOf('\n  },\n', a) + 4) + '};')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('bestiary shades', key, msg); };
+  const WORDS = ['two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+  for (const nm of ['Vale of Vectors', 'Matrix Marches', 'The Gradient Summit'])
+    for (const boss of [false, true]) {
+      want(B.shadeLine(0, boss, nm) === '', 'none', 'a realm with no foe in the dark gets a line');
+      want(B.shadeLine(1, boss, nm) === (boss ? `Not yet beaten: the boss of ${nm}.` : `Not yet beaten: one foe waits in ${nm}.`), 'one ' + boss, 'one foe in the dark is told wrong: ' + B.shadeLine(1, boss, nm));
+      WORDS.forEach((w, i) => {
+        const got = B.shadeLine(i + 2, boss, nm);
+        want(got === `Not yet beaten: ${w} foes wait in ${nm}${boss ? ', the boss among them' : ''}.`, w + ' ' + boss, 'the foes in the dark are counted wrong: ' + got);
+      });
+      want(B.shadeLine(12, boss, nm).startsWith('Not yet beaten: 12 foes wait in'), 'many', 'a count past the words is lost');
+    }
+  const s = html.indexOf('  render(){\n    const list=document.getElementById(\'bestList\')'), r = html.slice(s, html.indexOf('\n  }\n', s));
+  want((r.match(/Tests: /g) || []).length === 1 && r.indexOf('if(seen.length) html+=`<div class="bestTests"') > 0 && r.indexOf('if(seen.length)') < r.indexOf('seen.forEach('), 'tests', 'a realm\'s topics are not said once under its name');
+  want(r.includes('dark.map(({f, fi})=>') && r.includes('<div class="bestRow bestShade" id="best-${ri}-${fi}">') && r.includes('${f.boss?\'👑 \':\'\'}???</div>'), 'shades', 'a foe in the dark has no shadow of its own, or gives away its name');
+  want(r.includes('this.shadeLine(dark.length, dark.some(e=>e.f.boss), r.nm)') && r.indexOf('dark.map(') > r.indexOf('seen.forEach('), 'line', 'the line under the shadows is not counted from them, or the shadows come first');
+  want(!/f\.nm/.test(r.slice(r.indexOf('dark.map('), r.indexOf('</div><div class="bestDark">'))), 'secret', 'a shadow names its foe');
+  want(html.includes('.bestShades{display:flex;flex-wrap:wrap;') && html.includes('.bestShade{display:flex;flex-direction:column;'), 'css', 'the shadows do not stand side by side');
   return checks;
 })();
 const haulNotes = (() => {
@@ -29153,6 +29181,7 @@ console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)} 
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
+console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);
