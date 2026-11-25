@@ -2,67 +2,46 @@
   "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
   "mutations": [
     {
-      "name": "every fight greeted",
+      "name": "every foe new",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
+      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
       "run": "verify"
     },
     {
-      "name": "a boss greeted twice",
+      "name": "new outside the campaign",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "find": "    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';",
+      "replace": "    if(!B || !B.foe || B.ri==null || B.fi==null) return '';",
       "run": "verify"
     },
     {
-      "name": "the daily greeted",
+      "name": "the wrong foe's clear",
       "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
+      "find": "    return c[B.ri+':'+B.fi] ? '' :",
+      "replace": "    return c[B.ri+':0'] ? '' :",
       "run": "verify"
     },
     {
-      "name": "another realm's win counts",
+      "name": "never marked",
       "file": "index.html",
-      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
-      "replace": "    return !Object.keys(c).some(k=>c[k]);",
+      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
+      "replace": ";\n",
       "run": "verify"
     },
     {
-      "name": "realm 1 counts for realm 10",
+      "name": "never marked, seen in play",
       "file": "index.html",
-      "find": "    return !Object.keys(c).some(k=>k.split(':')[0]===String(ri) && c[k]);",
-      "replace": "    return !Object.keys(c).some(k=>k.startsWith(String(ri)) && c[k]);",
-      "run": "verify"
+      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
+      "replace": ";\n",
+      "run": "play:folio"
     },
     {
-      "name": "the wrong colour",
+      "name": "every foe new, seen in play",
       "file": "index.html",
-      "find": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], B.realm.col, ()=>Sfx.milestone());",
-      "replace": "    Celebrate.banner(this.text(B.realm), this.SAY[B.realm.nm], 'var(--gold)', ()=>Sfx.milestone());",
-      "run": "verify"
-    },
-    {
-      "name": "never greeted",
-      "file": "index.html",
-      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "never greeted, seen in play",
-      "file": "index.html",
-      "find": "    Waymark.announce(this, Game.s);   // and a realm not yet won in is arrived in\n",
-      "replace": "",
-      "run": "play:waymark"
-    },
-    {
-      "name": "every fight greeted, seen in play",
-      "file": "index.html",
-      "find": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm] && this.fresh(g, B.ri));",
-      "replace": "    return !!(B && B.mode==='campaign' && B.foe && !B.foe.boss && B.realm && this.SAY[B.realm.nm]);",
-      "run": "play:waymark"
+      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "run": "play:folio"
     }
   ]
 }

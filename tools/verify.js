@@ -4618,6 +4618,134 @@ const dentsNotes = (() => {
   want((html.match(/Dents\.of\(/g) || []).length === 1 && (html.match(/Dents\.beat\(/g) || []).length === 1, 'once', 'dents drawn somewhere else too');
   return checks;
 })();
+const levelBarNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const LevelBar = {');
+  const src = html.slice(start, html.indexOf('/* Letters from home.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('levelbar', key, msg); };
+  let el = null; const timers = [];
+  const document = { getElementById: id => id === 'lvlFill' ? el : null };
+  const setTimeout = (f, ms) => timers.push([f, ms]);
+  const L = new Function('document', 'setTimeout', src + ';return LevelBar;')(document, setTimeout);
+  // the bar's measure is the game's own: what a level needs, by the same rule gainXp levels on
+  want(html.includes('  xpNeeded(){ return 60 + (this.s.lvl-1)*45; },') && src.includes('need:60+(g.lvl-1)*45'), 'the same need', 'the bar measures a level differently from the game');
+  const gain = (g, n) => { g = Object.assign({}, g); g.xp += n; let ups = 0; while (g.xp >= 60 + (g.lvl - 1) * 45) { g.xp -= 60 + (g.lvl - 1) * 45; g.lvl++; ups++; } return [g, ups]; };
+  for (let lvl = 1; lvl <= 30; lvl += 1) for (const xp of [0, 1, 30, 59, 100, 400]) for (const n of [0, 5, 12, 40, 90, 300, 2000]) {
+    const need = 60 + (lvl - 1) * 45; if (xp >= need) continue;
+    const g0 = { lvl, xp }, [g1, ups] = gain(g0, n);
+    const a = L.read(g0), b = L.read(g1), p = L.of(a, b);
+    want(a.need === need && b.need === 60 + (g1.lvl - 1) * 45, 'read ' + lvl + ':' + xp, JSON.stringify([a, b]));
+    want(p.lvl === g1.lvl && p.left === b.need - g1.xp && p.left > 0, 'left ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    want(p.from === (ups ? 0 : Math.round(xp / need * 100)) && p.to === Math.round(g1.xp / b.need * 100) && p.from >= 0 && p.to <= 100, 'span ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    want(ups || p.to >= p.from, 'fills forward ' + lvl + ':' + xp + '+' + n, JSON.stringify(p));
+    const h = L.html(p);
+    want(h.includes(`🛡️ Level ${g1.lvl} · ${p.left} more experience to level ${g1.lvl + 1}`) && h.includes(`id="lvlFill" style="width:${p.from}%;`) && (h.match(/<div/g) || []).length === (h.match(/<\/div>/g) || []).length, 'html ' + lvl, h);
+  }
+  want(L.of(null, { lvl: 1 }) === null && L.of({ lvl: 1 }, null) === null && L.read(null) === null && L.html(null) === '' && L.pct(5, 0) === 0 && L.pct(-3, 10) === 0 && L.pct(30, 10) === 100, 'none', 'a bar for nothing');
+  el = null; timers.length = 0;
+  want(L.fill({ to: 40 }) === false && timers.length === 0 && L.fill(null) === false, 'no bar', 'filled with no bar on the card');
+  el = { style: { width: '10%' } };
+  want(L.fill({ to: 40 }) === true && timers.length === 1 && el.style.width === '10%', 'waits', 'the bar jumps before the card is seen');
+  timers[0][0]();
+  want(el.style.width === '40%' && timers[0][1] > 0 && timers[0][1] < 600, 'fills', JSON.stringify([el.style.width, timers[0][1]]));
+  // read before the experience is gained and after, and shown under the experience paid
+  const w = html.indexOf('  win(){\n    if(this.over) return;');
+  const at0 = html.indexOf('    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level\n    const ups=Game.gainXp(xp+fXp);\n', w);
+  const at1 = html.indexOf('    const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now\n    const folio=', w);
+  want(at0 > w && at1 > at0 && (html.match(/LevelBar\.read\(/g) || []).length === 2 && at1 < html.indexOf("      UI.go('s-result');", w), 'read either side', 'the bar is not read either side of the experience a win pays');
+  want(html.includes("now lies open.</div>`:''}\n          </div>\n          ${LevelBar.html(lvl)}\n") && html.includes("      LevelBar.fill(lvl);   // and the way to the next level fills\n")
+    && (html.match(/LevelBar\.(html|fill)\(/g) || []).length === 2, 'wired', 'the victory card shows no level bar, or it never fills');
+  return checks;
+})();
+const folioNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Folio = {');
+  const src = html.slice(start, html.indexOf('/* Letters from home.', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('folio', key, msg); };
+  const bsrc = html.slice(html.indexOf('const Bestiary = {'), html.indexOf('\n};', html.indexOf('const Bestiary = {')) + 3);
+  const LORE = new Function(bsrc.replace('const Bestiary = {', 'return {').replace(/\n\};$/, '\n};'))().LORE;
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const names = [...realms.matchAll(/\{nm:'([^']+)'/g)].map(m => m[1]).filter(n => LORE[n]);
+  want(names.length === 32 && Object.keys(LORE).length === 32, 'every foe has lore', JSON.stringify([names.length, Object.keys(LORE).length]));
+  let count = { beaten: 0, total: 32 };
+  const Bestiary = { LORE, count: () => count };
+  const Weak = { line: f => f.nm === 'Meadow Slime' ? '🎯 Weak point: vectors' : '' };
+  const shots = [];
+  Bestiary.shot = (el, f, known) => shots.push([el, f, known]);
+  let el = null; const document = { getElementById: id => id === 'folioPic' ? el : null };
+  const Game = { s: { cleared: {} } };
+  const F = new Function('Bestiary', 'Weak', 'document', 'Game', src + ';return Folio;')(Bestiary, Weak, document, Game);
+  for (const nm of names) for (const mode of ['campaign', 'daily', 'arena', 'dungeon', undefined]) for (const first of [true, false]) for (const n of [1, 7, 32]) {
+    count = { beaten: n, total: 32 };
+    const p = F.of({ mode, foe: { nm } }, first), on = mode === 'campaign' && first;
+    want(on ? p && p.nm === nm && p.lore === LORE[nm] && p.n === n && p.of === 32 : p === null, 'of ' + nm + mode + first, JSON.stringify(p));
+    const l = F.line(p);
+    if (!on) { want(l === '', 'quiet ' + nm + mode + first, l); continue; }
+    want(l.includes('id="folioWon"') && l.includes(`📖 A new page in the Bestiary · ${n} of 32`) && l.includes(LORE[nm]) && (l.match(/<div/g) || []).length === (l.match(/<\/div>/g) || []).length, 'line ' + nm + n, l);
+    want(nm === 'Meadow Slime' ? l.includes('🎯 Weak point: vectors') : !l.includes('🎯'), 'weak ' + nm, l);
+    want(p.f && p.f.nm === nm && l.includes('<canvas id="folioPic" width="96" height="96"'), 'likeness ' + nm, l);
+    shots.length = 0; el = null;
+    want(F.paint(p) === false && shots.length === 0, 'no canvas ' + nm, 'painted with no canvas on the card');
+    el = { id: 'folioPic' };
+    want(F.paint(p) === true && shots.length === 1 && shots[0][0] === el && shots[0][1] === p.f && shots[0][2] === true, 'painted ' + nm, JSON.stringify(shots.map(s => [s[1].nm, s[2]])));
+    el = null;
+  }
+  // the nameplate's mark: a campaign foe not yet beaten, by its own clear, and no other
+  for (const mode of ['campaign', 'daily', 'arena', 'dungeon', undefined]) for (const ri of [0, 3, 7]) for (const fi of [0, 3]) for (const was of [undefined, false, true, 'S', 'B']) {
+    Game.s = { cleared: { [ri + ':' + fi]: was, [((ri + 1) % 8) + ':' + fi]: true, [ri + ':' + ((fi + 1) % 4)]: true } };
+    if (was === undefined) delete Game.s.cleared[ri + ':' + fi];
+    const tag = F.tag({ mode, ri, fi, foe: { nm: 'A foe' } }), on = mode === 'campaign' && !was;
+    want(on ? tag === ' <span class="pips" title="Not yet in your Bestiary">✨ New</span>' : tag === '', 'tag ' + mode + ri + fi + was, tag);
+  }
+  Game.s = null;
+  want(F.tag({ mode: 'campaign', ri: 0, fi: 0, foe: {} }).includes('✨ New') && F.tag(null) === '' && F.tag({ mode: 'campaign', foe: {} }) === '' && F.tag({ mode: 'campaign', ri: 0, fi: 0 }) === '', 'tag none', 'a mark with no save, no foe or no place');
+  want(html.includes("<span class=\"pips\" title=\"Second phase\">🔥 Phase II</span>':'')+Folio.tag(this);   // and a foe still to be written in the Bestiary\n") && (html.match(/Folio\.tag\(/g) || []).length === 1, 'tag wired', 'an unbeaten foe wears no mark on its nameplate');
+  want(F.of(null, true) === null && F.of({ mode: 'campaign' }, true) === null && F.of({ mode: 'campaign', foe: { nm: 'No such foe' } }, true) === null && F.line(null) === '', 'none', 'a page for no foe, or a foe with no lore');
+  // the page is read once the clear is marked, so the count it says includes the foe just beaten
+  const w = html.indexOf('  win(){\n    if(this.over) return;'), mark = html.indexOf('    g.cleared[key]=Grade.keep(had, Grade.of(marks));', w), at = html.indexOf('    const folio=Folio.of(this, first);   // a first fall opens the foe\'s Bestiary page\n    Game.save();\n', w);
+  want(w > 0 && mark > w && at > mark && html.slice(w, at).includes("const had=g.cleared[key], first=!had;"), 'after the clear', 'the page is read before the win is marked, so it miscounts');
+  want(html.includes("          ${Ballad.line(song)}\n          ${Folio.line(folio)}\n") && (html.match(/Folio\.(of|line)\(/g) || []).length === 2, 'wired', 'the victory card does not open the new page');
+  want(html.includes("      if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));\n      Folio.paint(folio);   // and the new page's likeness\n") && (html.match(/Folio\.paint\(/g) || []).length === 1, 'painted', 'the new page is shown with no likeness');
+  return checks;
+})();
+const dazeNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const Daze = {');
+  const src = html.slice(start, html.indexOf('/* ---------- Scars ----------', start));
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('daze', key, msg); };
+  let log = [];
+  const cx = new Proxy({}, { get: (o, k) => k in o ? o[k] : (...a) => { log.push([k, ...a]); }, set: (o, k, v) => { o[k] = v; log.push(['=' + k, v]); return true; } });
+  const D = new Function('cx', src + ';return Daze;')(cx);
+  // the head of a foe laid over by FALL, where drawFoe lays it: its crown turned about the feet
+  for (const s of [1.28, 1.55, 1, 0.5]) {
+    const h = D.head(s), a = D.FALL, want0 = { x: -(-D.HEAD * s) * Math.sin(a), y: (-D.HEAD * s) * Math.cos(a) };
+    want(Math.abs(h.x - want0.x) < 1e-9 && Math.abs(h.y - want0.y) < 1e-9 && h.x > 0 && h.y < 0, 'head ' + s, JSON.stringify([h, want0]));
+    for (let tt = 0; tt < 4; tt += 0.05) {
+      const st = D.stars(tt, s);
+      want(st.length === 3, 'three ' + s + tt.toFixed(2), String(st.length));
+      const cxm = st.reduce((v, p) => v + p.x, 0) / 3, cym = st.reduce((v, p) => v + p.y, 0) / 3;
+      want(Math.abs(cxm - h.x) < 1e-9 && Math.abs(cym - (h.y - D.LIFT)) < 1e-9, 'round the head ' + s + tt.toFixed(2), JSON.stringify([cxm, cym, h]));
+      want(st.every(p => Math.abs(Math.hypot((p.x - h.x) / D.RX, (p.y - h.y + D.LIFT) / D.RY) - 1) < 1e-9), 'on the ring ' + tt.toFixed(2), JSON.stringify(st));
+      want(st.some(p => p.front) || st.some(p => !p.front), 'sides ' + tt.toFixed(2), '');
+    }
+    const a0 = D.stars(0, s)[0], a1 = D.stars(0.3, s)[0];
+    want(Math.hypot(a0.x - a1.x, a0.y - a1.y) > 1, 'circling ' + s, 'the stars stand still');
+  }
+  want(D.FALL === 0.9 && html.includes("  if(dead){ cx.rotate(Daze.FALL); cx.globalAlpha=.5; }"), 'fall', 'the stars do not follow the angle a foe falls at');
+  log = [];
+  const n = D.draw(605, 300, 1.28, 1.2);
+  want(n === 3 && log[0][0] === 'save' && log[log.length - 1][0] === 'restore', 'kept', 'the canvas state leaks');
+  want(log.filter(l => l[0] === 'fill').length === 3 && log.filter(l => l[0] === 'moveTo').length === 3 && log.filter(l => l[0] === 'lineTo').length === 27, 'stars', 'not three five-pointed stars');
+  want(log.filter(l => l[0] === '=fillStyle').every(l => l[1] === '#ffd166'), 'gold', 'the stars are not gold');
+  const pts = log.filter(l => l[0] === 'moveTo' || l[0] === 'lineTo'), h = D.head(1.28);
+  want(pts.every(l => Math.abs(l[1] - (605 + h.x)) < D.RX + 8 && Math.abs(l[2] - (300 + h.y - D.LIFT)) < D.RY + 8), 'placed', JSON.stringify(pts.slice(0, 3)));
+  want(html.includes("      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head\n")
+    && html.includes("withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28,") && (html.match(/Daze\.draw\(/g) || []).length === 1, 'wired', 'a beaten foe is not dazed, or dazed somewhere else');
+  return checks;
+})();
 const scarsNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Scars = {');
@@ -28708,6 +28836,9 @@ console.log(`  flames checked            ${pad(flameNotes.toLocaleString(), 10)}
 console.log(`  poses checked             ${pad(poseNotes.toLocaleString(), 10)}  (a won fight lifts the blade overhead and hops the knight, never a fall, a flight or a fight still on)`);
 console.log(`  waymarks checked          ${pad(waymarkNotes.toLocaleString(), 10)}  (a realm's name and a line of its land across the screen at its first fights, until a foe of it falls; never for a boss, never outside the campaign)`);
 console.log(`  scars checked             ${pad(scarsNotes.toLocaleString(), 10)}  (a crack across the foe for each quarter of its health lost, drawn in its own frame, a sway on its feet in its last quarter, none once the fight is over)`);
+console.log(`  dazes checked             ${pad(dazeNotes.toLocaleString(), 10)}  (three gold stars circling a beaten foe's head, found where drawFoe lays it over, at the foe's own size)`);
+console.log(`  folios checked            ${pad(folioNotes.toLocaleString(), 10)}  (a foe not yet beaten marked new on its nameplate; its first fall opens its Bestiary page on the victory card: its likeness, its lore, its weak point, the count the book holds; campaign only)`);
+console.log(`  level bars checked        ${pad(levelBarNotes.toLocaleString(), 10)}  (the victory card's bar to the next level, from where the knight stood to where they stand, by the game's own rule)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

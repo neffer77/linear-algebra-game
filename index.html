@@ -7511,6 +7511,41 @@ const Dents = {
   }
 };
 
+/* ---------- Dazed ----------
+   A beaten foe lies where it fell with three little stars circling its head
+   until the victory card comes up. drawFoe lays a fallen foe over by FALL
+   radians about its feet, so the head is found by turning the sprite's
+   crown, HEAD up, by the same angle at the foe's own size. Nothing is
+   saved. */
+const Daze = {
+  FALL:0.9, HEAD:100, N:3, RX:24, RY:8, LIFT:22, SPIN:3,
+  head(s){ return { x: this.HEAD*s*Math.sin(this.FALL), y: -this.HEAD*s*Math.cos(this.FALL) }; },
+  stars(t, s){
+    const h=this.head(s), out=[];
+    for(let i=0;i<this.N;i++){
+      const a=(t||0)*this.SPIN + i*Math.PI*2/this.N;
+      out.push({ x: h.x + Math.cos(a)*this.RX, y: h.y - this.LIFT + Math.sin(a)*this.RY, front: Math.sin(a)>0 });
+    }
+    return out;
+  },
+  draw(x, y, s, t){
+    const st=this.stars(t, s);
+    cx.save();
+    for(const p of st){
+      cx.globalAlpha=p.front ? 1 : .55;
+      cx.beginPath();
+      for(let k=0;k<10;k++){
+        const r=k%2 ? 2.6 : 6.5, a=-Math.PI/2 + k*Math.PI/5;
+        const px=x+p.x+Math.cos(a)*r, py=y+p.y+Math.sin(a)*r;
+        k ? cx.lineTo(px,py) : cx.moveTo(px,py);
+      }
+      cx.closePath(); cx.fillStyle='#ffd166'; cx.fill();
+    }
+    cx.restore();
+    return st.length;
+  }
+};
+
 /* ---------- Scars ----------
    A foe wears its wounds. Each quarter of its health lost opens a crack
    across it: one past three quarters, two past half, three past a quarter.
@@ -7552,7 +7587,7 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead,scars){
   cx.save();
   cx.translate(x - lunge*70, y);
   if(scars>=3) cx.rotate(Scars.reel(scars, Anim.t));   // its last quarter: it reels from its feet
-  if(dead){ cx.rotate(0.9); cx.globalAlpha=.5; }
+  if(dead){ cx.rotate(Daze.FALL); cx.globalAlpha=.5; }
   cx.scale(s,s);                     // sprites are authored facing left, toward the knight
   const c = hurt>0 ? '#ffffff' : col;
   const bob = Math.sin(Anim.t*2.2)*4;
@@ -8193,6 +8228,7 @@ const Anim = {
       }
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                               eLunge, Anim.eh, B.over==='win', Scars.of(B)));
+      if(B.over==='win') Daze.draw(605, gy, B.foe.boss?1.55:1.28, Anim.t);   // stars round a beaten foe's head
     }
     // ---- impact decoration, over the sprites ----
     cx.save();
@@ -9215,6 +9251,71 @@ const Bestiary = {
       const e=this.all().find(x=>x.ri==c.dataset.ri && x.fi==c.dataset.fi);
       this.shot(c, e.f, e.beaten);
     });
+  }
+};
+
+/* ---------- Folio: a foe's first fall writes its page in the Bestiary ----------
+   The first time a campaign foe is beaten, the victory card opens its Bestiary
+   page there and then: the line of lore, where its weak point lies, and how
+   many of the realms' foes the book now holds. Read from the clears, so it
+   needs nothing saved of its own. */
+const Folio = {
+  of(B, first){
+    if(!B || B.mode!=='campaign' || !first || !B.foe) return null;
+    const lore=Bestiary.LORE[B.foe.nm]; if(!lore) return null;
+    const c=Bestiary.count();
+    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total};
+  },
+  line(p){
+    if(!p) return '';
+    return `<div id="folioWon" style="margin-top:8px;padding:8px 10px;border:1px solid var(--edge);border-radius:10px;text-align:left;display:flex;gap:10px;align-items:center">
+      <canvas id="folioPic" width="96" height="96" style="width:64px;height:64px;flex:0 0 64px" aria-hidden="true"></canvas>
+      <div style="flex:1;min-width:0">
+      <div style="color:var(--gold);font-weight:800">📖 A new page in the Bestiary · ${p.n} of ${p.of}</div>
+      <div style="font-size:13px;font-style:italic;margin-top:3px">${p.lore}</div>
+      ${p.weak?`<div style="font-size:13px;margin-top:3px;color:#7ff0a8">${p.weak}</div>`:''}
+      </div>
+    </div>`;
+  },
+  // a campaign foe not yet beaten wears a mark on its nameplate: its page is still to be written
+  tag(B){
+    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';
+    const c=(Game.s && Game.s.cleared) || {};
+    return c[B.ri+':'+B.fi] ? '' : ' <span class="pips" title="Not yet in your Bestiary">✨ New</span>';
+  },
+  // the foe's likeness on its new page, drawn as the Bestiary draws it
+  paint(p){
+    const el=p && document.getElementById('folioPic'); if(!el) return false;
+    Bestiary.shot(el, p.f, true); return true;
+  }
+};
+
+/* ---------- The level bar: experience filling on the victory card ----------
+   Under the gold and experience a win pays, a bar shows the way to the next
+   level: it starts where the knight stood before the fight and fills to where
+   they stand now, with how much more it takes. A level gained starts the new
+   level's bar from empty. Read from the save before and after; nothing new
+   is kept. */
+const LevelBar = {
+  read(g){ return g ? {lvl:g.lvl, xp:g.xp, need:60+(g.lvl-1)*45} : null; },
+  pct(x, n){ return n>0 ? Math.max(0, Math.min(100, Math.round(x/n*100))) : 0; },
+  of(a, b){
+    if(!a || !b) return null;
+    const from = b.lvl>a.lvl ? 0 : this.pct(a.xp, a.need);
+    return {from, to:this.pct(b.xp, b.need), lvl:b.lvl, left:Math.max(0, b.need-b.xp)};
+  },
+  html(p){
+    if(!p) return '';
+    return `<div id="lvlBar" style="margin-top:4px">
+      <div class="xptrack" style="height:9px;border-radius:6px"><div id="lvlFill" style="width:${p.from}%;transition:width 1s ease-out"></div></div>
+      <div class="small" style="margin-top:4px">🛡️ Level ${p.lvl} · ${p.left} more experience to level ${p.lvl+1}</div>
+    </div>`;
+  },
+  // the bar fills once the card is up, so the gain is seen
+  fill(p){
+    const el=p && document.getElementById('lvlFill'); if(!el) return false;
+    setTimeout(()=>{ el.style.width=p.to+'%'; }, 150);
+    return true;
   }
 };
 
@@ -10788,7 +10889,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+(this.foe.greedy?'💰 Greedy ':'')+(this.foe.heroic?'⚔️ Heroic ':'')+(this.foe.rival?'🛡️ ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'')+Folio.tag(this);   // and a foe still to be written in the Bestiary
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
@@ -11747,6 +11848,7 @@ const Battle = {
     // the fight sung in a line, read before a level-up restores the knight's health
     const song=Ballad.of(this, over, g.hp, g.maxHp);
     const crowned=!wasCrowned && Grade.crowned(g.cleared, this.ri, nfoes);
+    const lv0=LevelBar.read(g);   // where the knight stood on the way to the next level
     const ups=Game.gainXp(xp+fXp);
     Boon.offer(this, ups);
     Tale.add(this, song, Grade.of(marks));   // the fight's verse, written into the sitting's tale
@@ -11771,6 +11873,8 @@ const Battle = {
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
+    const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now
+    const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page
     Game.save();
 
     setTimeout(()=>{
@@ -11782,6 +11886,7 @@ const Battle = {
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           ${Ballad.line(song)}
+          ${Folio.line(folio)}
           ${Phase.flawless(this)?`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>`:''}
           ${WarPath.line()}
           ${Grade.sLine(sGold)}
@@ -11814,6 +11919,7 @@ const Battle = {
             ${ups?`<div style="color:var(--gold)">⬆️ Level ${g.lvl}! Health restored to ${g.maxHp}.</div>`:''}
             ${unlocked?`<div style="color:var(--green)">🗺️ ${unlocked} now lies open.</div>`:''}
           </div>
+          ${LevelBar.html(lvl)}
           ${this.mode==='campaign'?Boon.card():''}
           <hr>
           ${Grade.card(marks, had)}
@@ -11835,6 +11941,8 @@ const Battle = {
         ${Heroic.button(this)}
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
+      Folio.paint(folio);   // and the new page's likeness
+      LevelBar.fill(lvl);   // and the way to the next level fills
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
