@@ -66,6 +66,14 @@ module.exports = {
     t.eq('every chapter has its place', p.rows, 8);
     t.ok('and none is given away', CH.every(c => !p.list.includes(c.t) && !p.list.includes(c.b.slice(0, 40))), p.list.slice(0, 300));
     t.ok('each one says where to read it', /CHAPTER 1 OF 8 · \?\?\?\nBeat the boss of Vale of Vectors to read it\./.test(p.list), p.list.slice(0, 400));
+    const far = () => t.ev(() => {
+      const box = document.getElementById('sagaFar'), rows = [...document.querySelectorAll('#sagaList .sagaFar')];
+      return { rows: rows.map(r => r.innerText), h: box ? box.getBoundingClientRect().height : 0,
+               card: (document.querySelector('#sagaList .sagaCh:not(.sagaFar):not([id="saga-0"])') || document.getElementById('saga-0')).getBoundingClientRect().height };
+    });
+    let f = await far(t);
+    t.ok('only the next chapter keeps a card; the rest wait in one short list', f.rows.length === 7 && f.rows[0] === 'Chapter 2 of 8 · after the boss of Matrix Marches' && f.rows[6] === 'Chapter 8 of 8 · after the boss of Gradient Summit', JSON.stringify(f.rows));
+    t.ok('a list well under the height of the cards it replaces', f.h > 0 && f.h < 0.7 * f.rows.length * f.card, JSON.stringify(f));
 
     // a plain foe, beaten for the first time, tells nothing
     await fight(t, 0, true); await finish(t);
@@ -98,6 +106,8 @@ module.exports = {
     t.ok('and keeps it to read again, drawn the same', !!kept && kept.text.includes(CH[0].b) && kept.text.includes('The fall of The Vector Wyrm.') && kept.cols > 4, JSON.stringify(kept));
     const next = await chapter(t, 'saga-1');
     t.ok('the next is still held back', !!next && !next.text.includes(CH[1].t) && next.text.includes('Beat the boss of Matrix Marches to read it.'), JSON.stringify(next));
+    f = await far(t);
+    t.ok('and the short list starts after it', f.rows.length === 6 && f.rows[0] === 'Chapter 3 of 8 · after the boss of Cliffs of Change', JSON.stringify(f.rows));
     await t.ev(() => { Battle.flee(); UI.go('s-tome'); });
     await t.ev(() => [...document.querySelectorAll('#tomeList button')].find(b => /The saga so far/.test(b.innerText)).click());
     t.eq('the Tome opens it too', await t.screen(), 's-saga');
