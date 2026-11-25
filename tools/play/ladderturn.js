@@ -37,7 +37,8 @@ module.exports = {
     await t.newKnight('Lynette');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each ladder can be called', await t.ev(() =>
       /Or call it: see four ladders, and say whether each top falls faster than its foot, just as fast, or slower\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLadder');

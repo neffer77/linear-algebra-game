@@ -285,6 +285,7 @@ const SUITES = [
   require('./play/skillset'),    // Gear folds the skills with no use yet
   require('./play/road'),        // a win's road shows two and folds the rest
   require('./play/calcroom'),    // the scratch pad button never covers the bar
+  require('./play/tomefold'),    // the Tome folds its workshop cards
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

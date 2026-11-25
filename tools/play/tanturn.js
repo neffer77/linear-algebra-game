@@ -36,7 +36,8 @@ module.exports = {
     await t.newKnight('Enide');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the estimate can be called too high or too low', await t.ev(() =>
       /Or call it high or low: see four curves, each estimated by its tangent at a, and say whether each L\(x\) is too high, too low or exact\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTanLine');

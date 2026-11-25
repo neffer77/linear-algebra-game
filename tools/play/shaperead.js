@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Laudine');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the shape can be read', await t.ev(() =>
       /Or read the shape: say at each point whether it rises or falls and bends like a cup or a cap\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeBend');

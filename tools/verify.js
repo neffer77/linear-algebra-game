@@ -4832,6 +4832,33 @@ const calcRoomNotes = (() => {
   want(html.split('Calc.syncButton()').length >= 3, 'called', 'the button is not synced when a screen changes');
   return checks;
 })();
+const tomeFoldNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const start = html.indexOf('const TomeFold = {');
+  const src = html.slice(start, html.indexOf('\n};\n', start) + 3);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('tome fold', key, msg); };
+  const F = new Function(src + ';return TomeFold;')();
+  for (let n = 0; n <= 60; n++) for (const open of [false, true]) {
+    F.open = open;
+    const cards = Array.from({ length: n }, (_, i) => '<div class="panel"><button id="tome' + i + '">' + i + '</button></div>').join('');
+    const h = F.wrap(cards);
+    if (!n) { want(h === '', 'none', 'an empty fold is drawn'); continue; }
+    want(h.startsWith('<details class="tomeAll" id="tomeAll"') && h.endsWith(cards + '</details>'), 'all ' + n, 'a card is dropped, or sits outside the fold');
+    want(h.includes('<summary>＋ What each of the ' + n + ' workshops does</summary>'), 'count ' + n, 'the fold does not count the cards behind it');
+    want(h.includes('ontoggle="TomeFold.open=this.open"') && h.includes('id="tomeAll" open ') === open, 'open ' + n, 'the fold does not stay as it was left');
+  }
+  F.open = false;
+  const s = html.indexOf('  renderTome(){'), tome = html.slice(s, html.indexOf('\n  }\n', s));
+  const a = tome.indexOf('TomeFold.wrap(`'), m = tome.indexOf('🛠 Matrix Workshop'), b = tome.indexOf('`) +\n      TOME.map(');
+  want(a > 0 && a < m && b > m && tome.indexOf('MixPick.open()') < a && tome.indexOf('WorkshopIndex.html()') < a, 'wired', 'the workshop cards are not folded, or the index and the mix are folded with them');
+  const inside = tome.slice(a, b), outside = tome.slice(0, a) + tome.slice(b);
+  const ids = (inside.match(/id="tome[A-Za-z]+"/g) || []);
+  want(ids.length >= 40 && (inside.match(/<div class="panel"/g) || []).length === ids.length, 'cards', 'a workshop card has no button, or a card without one is folded');
+  want(!/TOME\.map/.test(inside) && /TOME\.map/.test(outside), 'lore', 'the lessons are folded away with the cards');
+  want(html.includes('details.tomeAll>summary{list-style:none;') && !/Game\.s\.tomeAll|Game\.s\.tomeFold/.test(html), 'css', 'the fold shows its marker, or is saved');
+  return checks;
+})();
 const haulNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const start = html.indexOf('const Haul = {');
@@ -29084,6 +29111,7 @@ console.log(`  smithy comparisons        ${pad(wareNotes.toLocaleString(), 10)} 
 console.log(`  skill folds               ${pad(skillsetNotes.toLocaleString(), 10)}  (Gear shows the skills carried or with a use, the rest folded behind a count; one topic "needs work")`);
 console.log(`  road folds                ${pad(roadNotes.toLocaleString(), 10)}  (a win shows two road offers and folds the rest; Fight again and Smithy share a row)`);
 console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 10)}  (the scratch pad button leaves a strip under the bar, and only while it shows)`);
+console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);
 console.log(`  reckonings checked        ${pad(reckonNotes.toLocaleString(), 10)}  (under every open fight on the map, how many plain blows of the weapon fell the foe and how many of its blows would fell the knight as they stand, each a division rounded up and shown worked in its title, for every foe, weapon, armour and rune, red where the knight would fall first)`);
 console.log(`  ballads checked           ${pad(balladNotes.toLocaleString(), 10)}  (every victory sung in a line of its own fight, the moment most worth singing first, the words naming the foe and turning with it, and only words)`);

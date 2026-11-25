@@ -37,7 +37,8 @@ module.exports = {
     await t.newKnight('Gawain');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each step can be called', await t.ev(() =>
       /Or call it: see four curves, each with a first guess, and say whether the step goes left or right, stays put at a root, or sticks on a flat tangent\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeNewton');

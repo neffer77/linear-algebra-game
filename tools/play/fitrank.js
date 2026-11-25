@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Percival');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the lines can be ranked', await t.ev(() =>
       /Or rank the lines: four lines through the same points, from the best fit to the worst\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeFit');

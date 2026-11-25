@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Isolde');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says the hillwalker workshop can walk a fence', await t.ev(() =>
       /Or walk a fence to its lowest point, where ∇f = λ∇g\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeHill');

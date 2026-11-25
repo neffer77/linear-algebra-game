@@ -35,7 +35,8 @@ module.exports = {
     await t.newKnight('Gareth');
     const before = await t.ev(() => JSON.stringify(Game.s));
 
-    await t.ev(() => UI.go('s-tome'));
+    // the workshop cards wait behind the Tome's fold; open it as a reader would
+    await t.ev(() => { TomeFold.open = true; UI.go('s-tome'); });
     t.ok('the Tome says each surface can be called', await t.ev(() =>
       /Or call four surfaces: does each stay above its tangent plane, below it, or cross it\?/.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTanPlane');

@@ -160,6 +160,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .item .vs.up{color:var(--green)}
 .btnRow{display:flex;gap:8px}
 .btnRow>.btn{flex:1 1 0;min-width:0;margin:8px 0}
+details.tomeAll>summary{list-style:none;margin:6px 0 10px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:14px;font-weight:700;color:var(--gold);cursor:pointer}
+details.tomeAll>summary::-webkit-details-marker{display:none}
+details.tomeAll[open]>summary{color:var(--dim)}
 details.road>summary{list-style:none;margin:6px 0 2px;padding:9px;border-radius:12px;border:1px dashed rgba(255,255,255,.18);text-align:center;font-size:13px;font-weight:700;color:var(--gold);cursor:pointer}
 details.road>summary::-webkit-details-marker{display:none}
 details.road[open]>summary{color:var(--dim)}
@@ -9472,6 +9475,20 @@ const Skillset = {
    card of its own, stacked between the victory and the way back to the map.
    The first two stay in view; the rest wait behind one line that says how
    many more there are, and open in place. Nothing is lost and nothing saved. */
+/* Tome fold. Under the index of every workshop, the Tome went on to give each
+   one a card of its own, forty-odd paragraphs, so the lessons at the foot of
+   the page sat thirty screens down on a phone. The index already opens every
+   workshop; the cards that say what each one does now wait behind one line
+   that counts them, and open in place for the rest of the sitting. */
+const TomeFold = {
+  open:false,
+  wrap(cards){
+    const n=(String(cards).match(/<div class="panel"/g)||[]).length;
+    if(!n) return '';
+    return `<details class="tomeAll" id="tomeAll"${this.open?' open':''} ontoggle="TomeFold.open=this.open"><summary>＋ What each of the ${n} workshops does</summary>${cards}</details>`;
+  }
+};
+
 const Road = {
   SHOW:2, open:false,
   group(parts){
@@ -17976,7 +17993,7 @@ const UI = {
          <div class="sub" style="margin-top:6px;font-size:14px">${MixPick.LIST.length} workshops can each be turned round. Here they come mixed: one question from a different workshop each time, its rule stated first, and every workshop once before any comes back.</div>
          <button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick.open()">Mix them up</button>
        </div>` +
-      `<div class="panel" style="border-color:var(--gold-dk)">
+      TomeFold.wrap(`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it. Or rank the stretch: four matrices, from the biggest stretch of area to the smallest.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
@@ -18260,7 +18277,7 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🗺️ Hillwalker Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom. Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way. Or walk a fence to its lowest point, where ∇f = λ∇g.</div>
          <button class="btn sm" id="tomeHill" style="width:auto;margin-top:8px" onclick="Hill.open()">Open the hillwalker workshop</button>
-       </div>` +
+       </div>`) +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
   }
