@@ -1,47 +1,33 @@
 {
-  "change": "A victory pose: a won fight lifts the knight's blade overhead and hops them for joy",
+  "change": "Nameplate: a long foe nameplate wraps in its own half of the bars and never pushes the foe's health off a phone's screen",
   "mutations": [
     {
-      "name": "every foe new",
+      "name": "the health pushed off the screen",
       "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
+      "find": ".bars>.bar{min-width:0}\n",
+      "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "new outside the campaign",
+      "name": "a long name never wraps",
       "file": "index.html",
-      "find": "    if(!B || B.mode!=='campaign' || !B.foe || B.ri==null || B.fi==null) return '';",
-      "replace": "    if(!B || !B.foe || B.ri==null || B.fi==null) return '';",
+      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
+      "replace": "\n",
       "run": "verify"
     },
     {
-      "name": "the wrong foe's clear",
+      "name": "the health pushed off the screen, seen in play",
       "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' :",
-      "replace": "    return c[B.ri+':0'] ? '' :",
-      "run": "verify"
+      "find": ".bars>.bar{min-width:0}\n.bar .lbl{gap:6px}\n#foeName{min-width:0; overflow-wrap:anywhere}\n#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}\n",
+      "replace": "\n",
+      "run": "play:nameplate"
     },
     {
-      "name": "never marked",
+      "name": "a long name never wraps, seen in play",
       "file": "index.html",
-      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
-      "replace": ";\n",
-      "run": "verify"
-    },
-    {
-      "name": "never marked, seen in play",
-      "file": "index.html",
-      "find": "+Folio.tag(this);   // and a foe still to be written in the Bestiary\n",
-      "replace": ";\n",
-      "run": "play:folio"
-    },
-    {
-      "name": "every foe new, seen in play",
-      "file": "index.html",
-      "find": "    return c[B.ri+':'+B.fi] ? '' : ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "replace": "    return ' <span class=\"pips\" title=\"Not yet in your Bestiary\">✨ New</span>';",
-      "run": "play:folio"
+      "find": "#foeName{min-width:0; overflow-wrap:anywhere}\n",
+      "replace": "#foeName{min-width:0}\n",
+      "run": "play:nameplate"
     }
   ]
 }

@@ -230,6 +230,18 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 #comboTxt.hot{color:var(--gold);font-weight:900;text-shadow:0 0 10px rgba(242,193,78,.6)}
 #comboTxt.blaze{color:#ff9c3d;font-weight:900;text-shadow:0 0 14px rgba(255,120,40,.8)}
 .xpwrap{flex:none;width:52px}
+/* the victory card's spoils: the totals as a row of chips, the bonuses as a tidy list */
+.spoils{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0 4px}
+.spoils>div{flex:1 1 0;min-width:96px;background:#1a1430;border:1px solid var(--edge);border-radius:12px;padding:8px 6px;line-height:1.25;font-weight:800}
+.spoils b{display:block;font-size:22px;font-family:var(--serif)}
+.spoils span.k{display:block;font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.spoils>div.wide{flex-basis:100%;font-size:15px}
+.haul{margin:10px 0 2px;text-align:left;position:relative}
+.haul:empty{display:none}
+.haul .haulHead{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px 2px}
+.haul>div:not(.haulHead):not(.haulOpen){font-size:13px!important;font-weight:600!important;line-height:1.35;margin:0 0 4px!important;padding:6px 9px;border-radius:9px;background:#1a1430;border-left:3px solid currentColor}
+.haul.folded{overflow:hidden;-webkit-mask-image:linear-gradient(#000 calc(100% - 34px),transparent);mask-image:linear-gradient(#000 calc(100% - 34px),transparent)}
+.haulOpen{font-size:13px;font-weight:700;color:var(--gold);text-align:center;padding:8px;cursor:pointer;border-radius:9px;border:1px dashed var(--edge);margin:2px 0 6px}
 .xptrack{height:5px;border-radius:4px;background:#140f24;border:1px solid var(--edge);overflow:hidden}
 .xptrack div{height:100%;background:linear-gradient(90deg,#5aa9e6,#a06bd6);transition:width .5s ease}
 .pref{display:flex;align-items:center;gap:10px;padding:11px;border-radius:12px;margin:6px 0;
@@ -519,6 +531,11 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .bars{align-items:flex-end;}
 .bar .lbl{align-items:baseline;}
 #foeName{font-family:var(--serif); font-size:13px;}
+/* a long foe name wraps within its own half of the bars, never pushing its health off the screen */
+.bars>.bar{min-width:0}
+.bar .lbl{gap:6px}
+#foeName{min-width:0; overflow-wrap:anywhere}
+#pHpTxt,#eHpTxt{flex:none; white-space:nowrap}
 #comboTxt{display:inline-flex; align-items:center; padding:2px 9px; border-radius:999px; background:#1d1633;
   border:1px solid var(--edge);}
 #comboTxt.hot{border-color:var(--gold); background:#2c2249;}
@@ -559,6 +576,10 @@ details.realm .realmhdr{min-height:44px;}
 details.realm .rcount{margin-left:auto; font-size:12px; color:var(--dim); font-weight:800;}
 details.realm .schev{color:var(--dim); transition:transform .18s ease; margin-left:6px;}
 details.realm[open] .schev{transform:rotate(90deg)}
+/* a closed realm names its first few topics and counts the rest; opened, it names them all */
+details.realm:not([open]) .rmore{display:none}
+details.realm[open] .rless{display:none}
+details.realm .rless{color:var(--gold); font-weight:700}
 /* ---- the knight on the title, and the hall of doors ---- */
 .kcard{display:flex; align-items:center; gap:12px; margin:10px 0 8px; padding:10px 12px; border-radius:14px;
   background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--edge);}
@@ -9279,11 +9300,13 @@ const Bestiary = {
    many of the realms' foes the book now holds. Read from the clears, so it
    needs nothing saved of its own. */
 const Folio = {
+  // every eighth page filled, the Order pays a purse; the whole book, the most
+  MARKS:{8:60, 16:150, 24:250, 32:500},
   of(B, first){
     if(!B || B.mode!=='campaign' || !first || !B.foe) return null;
     const lore=Bestiary.LORE[B.foe.nm]; if(!lore) return null;
     const c=Bestiary.count();
-    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total};
+    return {f:B.foe, nm:B.foe.nm, lore, weak:Weak.line(B.foe), n:c.beaten, of:c.total, prize:this.MARKS[c.beaten]||0};
   },
   line(p){
     if(!p) return '';
@@ -9293,6 +9316,7 @@ const Folio = {
       <div style="color:var(--gold);font-weight:800">📖 A new page in the Bestiary · \${p.n} of \${p.of}</div>
       <div style="font-size:13px;font-style:italic;margin-top:3px">\${p.lore}</div>
       \${p.weak?\`<div style="font-size:13px;margin-top:3px;color:#7ff0a8">\${p.weak}</div>\`:''}
+      \${p.prize?\`<div id="folioPrize" style="color:var(--gold);font-weight:800;margin-top:4px">🏅 \${p.n>=p.of?'The Bestiary complete':p.n+' pages filled'}: the Order pays 🪙 \${p.prize}.</div>\`:''}
       </div>
     </div>\`;
   },
@@ -9335,6 +9359,61 @@ const LevelBar = {
     const el=p && document.getElementById('lvlFill'); if(!el) return false;
     setTimeout(()=>{ el.style.width=p.to+'%'; }, 150);
     return true;
+  }
+};
+
+/* The victory card's spoils. A big win can earn a dozen bonuses, each said in a
+   sentence of its own; stacked bold and centred above the totals, they buried what
+   was won, a long scroll on a phone. Now the totals lead as a row of chips, and the
+   bonuses sit under them as one tidy list under a small heading. Past the first few,
+   the list is folded to its first rows with a line that opens the rest. The fold only
+   clips the list, so every line is still there to read and nothing is saved. */
+const Haul = {
+  SHOW:3,
+  // the gold, the experience and the find, each a chip of its own
+  chips(loot){
+    return \`<div class="spoils" id="spoils">\`
+      + \`<div class="coin"><b>+<span id="rGold">0</span></b><span class="k">🪙 gold</span></div>\`
+      + \`<div style="color:var(--blue)"><b>+<span id="rXp">0</span></b><span class="k">✨ experience</span></div>\`
+      + (loot?\`<div id="rLoot" class="wide" style="color:var(--purple)">Looted \${loot}</div>\`:'')
+      + \`</div>\`;
+  },
+  // the rows of bonus lines inside a list, not counting its heading or its opener
+  rows(el){ return el ? [...el.children].filter(c=>c.tagName==='DIV' && !c.classList.contains('haulHead') && !c.classList.contains('haulOpen')) : []; },
+  // title the list, and fold it past the first few rows; returns how many were folded
+  fold(el){
+    const rows=this.rows(el);
+    if(!rows.length){ if(el) el.innerHTML=''; return 0; }
+    const h=document.createElement('div'); h.className='haulHead';
+    h.textContent=rows.length===1?'A bonus':'Bonuses · '+rows.length;
+    el.insertBefore(h, el.firstChild);
+    const hid=rows.length-this.SHOW;
+    if(hid<2) return 0;   // one more line is shown, not folded behind a button
+    const last=rows[this.SHOW-1];
+    el.style.maxHeight=(last.offsetTop+last.offsetHeight+18)+'px';
+    el.classList.add('folded');
+    const b=document.createElement('div'); b.id='haulOpen'; b.className='haulOpen';
+    b.setAttribute('role','button'); b.tabIndex=0;
+    b.textContent='＋ '+hid+' more bonuses';
+    const open=()=>{ el.classList.remove('folded'); el.style.maxHeight=''; b.remove(); };
+    b.onclick=open; b.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } };
+    el.after(b);
+    return hid;
+  }
+};
+
+/* The topics under each realm on the map. Every realm's heading named all its
+   topics, up to twenty-six of them, so the closed realms below the one being
+   worked through were a wall of small print, most of it out of reach. A closed
+   realm now names its first three and says how many more; opened, it names
+   them all, in the same order. Every topic is still on the page. */
+const Topics = {
+  SHOW:3,
+  line(keys){
+    const ls=(keys||[]).map(k=>TOPIC_LABEL[k]||k), rest=ls.slice(this.SHOW);
+    return \`<div class="small rtopics" style="margin:2px 0 4px">\${ls.slice(0,this.SHOW).join(' · ')}\`
+      + (rest.length ? \`<span class="rmore"> · \${rest.join(' · ')}</span><span class="rless"> · and \${rest.length} more</span>\` : '')
+      + \`</div>\`;
   }
 };
 
@@ -11894,6 +11973,7 @@ const Battle = {
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
     const lvl=LevelBar.of(lv0, LevelBar.read(g));   // and where they stand now
     const folio=Folio.of(this, first);   // a first fall opens the foe's Bestiary page
+    if(folio && folio.prize) g.gold+=folio.prize;   // and every eighth page filled pays a purse
     Game.save();
 
     setTimeout(()=>{
@@ -11905,7 +11985,13 @@ const Battle = {
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           \${Ballad.line(song)}
-          \${Folio.line(folio)}
+          \${Haul.chips(loot)}
+          <div style="font-size:15px;font-weight:800;line-height:1.7">
+            \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
+            \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
+          </div>
+          \${LevelBar.html(lvl)}
+          <div id="haul" class="haul">
           \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${WarPath.line()}
           \${Grade.sLine(sGold)}
@@ -11930,15 +12016,8 @@ const Battle = {
           \${Sky.line(this)}
           \${Honours.line(hon)}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
-          <hr>
-          <div style="font-size:16px;font-weight:800;line-height:1.9">
-            <div class="coin">+<span id="rGold">0</span> gold</div>
-            <div style="color:var(--blue)">+<span id="rXp">0</span> experience</div>
-            \${loot?\`<div id="rLoot" style="color:var(--purple)">Looted \${loot}</div>\`:''}
-            \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
-            \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
           </div>
-          \${LevelBar.html(lvl)}
+          \${Folio.line(folio)}
           \${this.mode==='campaign'?Boon.card():''}
           <hr>
           \${Grade.card(marks, had)}
@@ -11962,6 +12041,7 @@ const Battle = {
       if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));
       Folio.paint(folio);   // and the new page's likeness
       LevelBar.fill(lvl);   // and the way to the next level fills
+      Haul.fold(document.getElementById('haul'));   // and the bonuses list, folded past the first few
       if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold+sGold+oGold+rGold+bGold+cGold+vGold+eGold, 900);
       countUp(document.getElementById('rXp'),   xp+fXp,   900);
@@ -17533,7 +17613,7 @@ const UI = {
           <summary><div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
             <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}
             <span class="rcount">\${beaten}/\${r.foes.length}</span>\${March.tag(ri, r.foes.length)}\${Treasure.tag(ri)}\${Sky.tag(ri)}\${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}<span class="schev">▸</span></div>
-            <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>\`;
+            \${Topics.line(r.pool)}</summary>\`;   // its first few topics, the rest when it is opened
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
