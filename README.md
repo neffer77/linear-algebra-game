@@ -917,6 +917,10 @@ The game is built so that losing teaches you as much as winning.
 - **🗺️ A shorter road.** The campaign's road set its stones far apart, so on a phone it filled most of the screen
   by itself. Neighbouring stones sit on opposite sides, so only a label's lines and the glowing stone need the room;
   they now sit closer, and the road is about a quarter shorter, with no label or stone touching another.
+- **✓ Beaten fights take one short row.** In the realm being worked through, every fight already won kept its full
+  card on the map, with its health, strike, gold and reckoning of blows, so three of them stood between the realm's
+  heading and the fight still to come. A won fight now takes one short row with its name, its best grade and its
+  gold, still a tap away; the fight still to come keeps its card, a few rows under the heading.
 - **📜 A shorter Saga.** Every chapter not yet read had a card of its own saying which boss to beat, seven of them
   for a new knight. Now only the next chapter keeps its card, and the ones further on wait in one short list, a line
   each ("Chapter 3 of 8 · after the boss of Cliffs of Change"), so the chapters read sit near the top.
@@ -3548,6 +3552,7 @@ Inside `index.html` the code is organised as:
 | `TomeFold` | every count of workshop cards, folded or opened: all of them inside one fold with a counted line, none dropped, nothing drawn for none; the fold stays as it was left; the index, the mix and the lessons stay outside it |
 | `SealFold` | every count of sealed realms from none to ten, folded or opened: two or more inside one fold with a line that counts them and names the first and last, in order, none dropped; one alone shown unfolded; blanks not counted; the fold stays as it was left; on the map only the realms past the next to open are folded; a stone on the road opens the fold before its realm |
 | `UI.ROADSTEP` | the campaign road's stones 54 apart and laid out by it; from the stylesheet, enough room between neighbours for two- and three-line labels, for a label beside the glowing stone, and for two stones on the same side |
+| `slim rows` | a won fight takes its own short row before the full card: it still begins its fight and is locked with its realm; it names the foe, its best grade or a tick, and its gold, and keeps the quarry and debt marks; no health, strike or reckoning; the fight to come keeps its card and reckoning; drawn short with a name that can wrap |
 | `TitleWay` | every counted title at counts from below zero to past its mark: capped at its mark, agreeing with the title's own rule, read as n/of; titles that cannot be counted claim nothing; the nearest unfinished title is the one marked; an earned title shows no count; a realm measured by its share cleared |
 | `Bestiary.shadeLine` | the line under a realm's shadows for every count with and without its boss; the topics said once under a realm's name and under no foe; each shadow its own tile that names nothing, side by side |
 | `Saga.far` | a new knight's saga: the first chapter's card and seven short lines after it; with chapters 1 and 3 read, chapter 2 keeps the card and five lines follow; a saga read through lists nothing to come |

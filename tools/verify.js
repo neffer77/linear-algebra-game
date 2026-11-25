@@ -3127,7 +3127,7 @@ const bestGradeNotes = (() => {
   want(win.includes('const had=g.cleared[key], first=!had;') && win.includes('g.cleared[key]=Grade.keep(had, Grade.of(marks));'), 'win', 'the best grade is not kept in the clear');
   want(win.indexOf('g.cleared[key]=Grade.keep(had') < win.indexOf('Game.save();'), 'win', 'the best grade is kept after the save');
   want(win.includes("else if(crowned) Celebrate.banner('REALM CROWNED'"), 'win', 'a crown is not celebrated');
-  want(html.includes("'<span class=\"tag g\">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi])") && html.includes('${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}'), 'map', 'the map does not show best grades and crowns');
+  want(html.includes("${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}") && html.includes('${Grade.crown(Grade.crowned(g.cleared, ri, r.foes.length))}'), 'map', 'the map does not show best grades and crowns');
   want(!/Game\.s|localStorage/.test(src.slice(src.indexOf('RANK:'), src.indexOf('crown(on)'))), 'saved', 'the best grade reaches into the save');
   return checks;
 })();
@@ -4909,6 +4909,21 @@ const roadStepNotes = (() => {
     want(step >= lab / 2 + disc / 2 + 2, 'stone ' + lines, `a label of ${lines} lines touches the glowing stone below it at a step of ${step}`);
   }
   want(2 * step >= disc + small, 'same side', 'two stones on the same side touch');
+  return checks;
+})();
+const slimRowNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('slim rows', key, msg); };
+  const s = html.indexOf('  renderMap(){'), map = html.slice(s, html.indexOf('\n  },\n', s));
+  const a = map.indexOf('        if(done){'), b = map.indexOf('          return;\n        }', a), slim = map.slice(a, b), full = map.slice(b);
+  want(a > 0 && b > a && map.indexOf('const open = unlocked && prevDone;') < a, 'won', 'a won fight does not take its own row before the full card');
+  want(slim.includes('<div class="node done slim ${open?\'\':\'locked\'}" onclick="Battle.begin(${ri},${fi})">'), 'fight', 'a short row does not begin its fight, or is never locked with its realm');
+  want(slim.includes("${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}") && slim.includes('<div class="sgold">🪙 ${f.gold}</div>'), 'says', 'a short row does not name the foe, its best grade or its gold');
+  want(slim.includes("${Quarry.tag(quarry===ri+':'+fi)}") && slim.includes("${Revenge.tag(Revenge.of(ri+':'+fi))}"), 'marks', 'a short row loses the quarry or the debt it is marked with');
+  want(!/Reckon\.line|f\.hp|f\.atk/.test(slim), 'over', 'a short row still plans a fight that is over');
+  want(full.includes('${open?Reckon.line(f, g):\'\'}') && !/done\?/.test(full.slice(0, full.indexOf('Gauntlet.node(ri)'))), 'full', 'the fight still to come loses its card, or the card still asks whether it was won');
+  want(/\.node\.slim\{padding:6px 10px;/.test(html) && /\.node\.slim \.nm\{flex:1; min-width:0;/.test(html) && /\.node\.slim \.sgold\{[^}]*white-space:nowrap/.test(html), 'css', 'a short row is not drawn short, or its name cannot wrap');
   return checks;
 })();
 const titleWayNotes = (() => {
@@ -29231,6 +29246,7 @@ console.log(`  calc room                 ${pad(calcRoomNotes.toLocaleString(), 1
 console.log(`  tome fold                 ${pad(tomeFoldNotes.toLocaleString(), 10)}  (the Tome's workshop cards wait behind one counted line; the index, the mix and the lessons stay out)`);
 console.log(`  seal fold                 ${pad(sealFoldNotes.toLocaleString(), 10)}  (the sealed realms past the next fold behind one line that counts and names them; a stone opens it)`);
 console.log(`  road step                 ${pad(roadStepNotes.toLocaleString(), 10)}  (the campaign road's stones 54 apart, enough for a three-line label beside the glowing stone)`);
+console.log(`  slim rows                 ${pad(slimRowNotes.toLocaleString(), 10)}  (a won fight takes one short row with its name, best grade and gold; the fight to come keeps its card)`);
 console.log(`  title ways                ${pad(titleWayNotes.toLocaleString(), 10)}  (each locked title counted from the save, agreeing with its rule; the nearest marked)`);
 console.log(`  bestiary shades           ${pad(bestShadeNotes.toLocaleString(), 10)}  (foes in the dark stand small side by side over one counted line; a realm's tests said once)`);
 console.log(`  dents checked             ${pad(dentsNotes.toLocaleString(), 10)}  (a dent in the knight's plate for each quarter of their health lost, breastplate, helm, then the other side, in the plate's own dark)`);

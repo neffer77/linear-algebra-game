@@ -405,6 +405,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* Map nodes: a gilt edge and a plate behind the sigil. */
 .node{border-left:3px solid var(--gold-dk);}
 .node.done{border-left-color:#3f6a46;}
+.node.slim{padding:6px 10px; margin:5px 0; gap:8px;}
+.node.slim .ico{width:30px; height:30px; font-size:17px; border-radius:8px;}
+.node.slim .nm{flex:1; min-width:0; font-size:14px;}
+.node.slim .sgold{font-size:12px; color:var(--dim); white-space:nowrap;}
 .node .ico{border:1px solid var(--gold-dk); background:linear-gradient(180deg,#1d1633,#120d24);}
 .realmhdr h2{font-family:var(--serif);}
 
@@ -17822,10 +17826,23 @@ const UI = {
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
         const open = unlocked && prevDone;
-        realm+=\`<div class="node \${open?'':'locked'} \${done?'done':''}" onclick="Battle.begin(\${ri},\${fi})">
+        /* A fight already won takes one short row: its name, its best grade
+           and its gold, still a tap away. Its health, its blows and the
+           reckoning were for planning a fight that is over, and three such
+           rows stood between the realm's heading and the fight still to come. */
+        if(done){
+          realm+=\`<div class="node done slim \${open?'':'locked'}" onclick="Battle.begin(\${ri},\${fi})">
+          <div class="ico">\${f.boss?'👑':'👾'}</div>
+          <div class="nm">\${f.nm} \${Grade.tag(g.cleared[ri+':'+fi])||'<span class="tag g">✓</span>'}\${Quarry.tag(quarry===ri+':'+fi)}\${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
+          <div class="sgold">🪙 \${f.gold}</div>
+          <div style="font-size:16px;color:var(--dim)">\${open?'▶':'🔒'}</div>
+        </div>\`;
+          return;
+        }
+        realm+=\`<div class="node \${open?'':'locked'}" onclick="Battle.begin(\${ri},\${fi})">
           <div class="ico" style="font-size:24px">\${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
-            <div class="nm">\${f.nm} \${done?'<span class="tag g">cleared</span>'+Grade.tag(g.cleared[ri+':'+fi]):''}\${f.boss?'<span class="tag r">boss</span>':''}\${Quarry.tag(quarry===ri+':'+fi)}\${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
+            <div class="nm">\${f.nm} \${f.boss?'<span class="tag r">boss</span>':''}\${Quarry.tag(quarry===ri+':'+fi)}\${Revenge.tag(Revenge.of(ri+':'+fi))}</div>
             <div class="dt">❤️ \${f.hp} · ⚔️ \${f.atk} · 🪙 \${f.gold}\${Quarry.dt(quarry===ri+':'+fi)}</div>
             \${open?Reckon.line(f, g):''}
           </div>

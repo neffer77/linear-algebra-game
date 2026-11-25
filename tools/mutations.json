@@ -1,40 +1,54 @@
 {
-  "change": "A shorter road: the campaign's stones sit closer, and no label or stone touches another",
+  "change": "Beaten fights take one short row: the fight still to come keeps its card and sits near the realm's heading",
   "mutations": [
     {
-      "name": "the stones sit as far apart as before",
+      "name": "a won fight keeps its full card",
       "file": "index.html",
-      "find": "  ROADSTEP: 54,",
-      "replace": "  ROADSTEP: 74,",
+      "find": "        if(done){\n",
+      "replace": "        if(false){\n",
       "run": "verify"
     },
     {
-      "name": "the stones crowd",
+      "name": "a short row drops its best grade",
       "file": "index.html",
-      "find": "  ROADSTEP: 54,",
-      "replace": "  ROADSTEP: 34,",
+      "find": "<div class=\"nm\">${f.nm} ${Grade.tag(g.cleared[ri+':'+fi])||'<span class=\"tag g\">✓</span>'}",
+      "replace": "<div class=\"nm\">${f.nm} <span class=\"tag g\">✓</span>",
       "run": "verify"
     },
     {
-      "name": "the road ignores its step",
+      "name": "a short row still reckons",
       "file": "index.html",
-      "find": "STEP=this.ROADSTEP, H=STEP*(n-1)+60;",
-      "replace": "STEP=74, H=STEP*(n-1)+60;",
+      "find": "          <div class=\"sgold\">🪙 ${f.gold}</div>\n",
+      "replace": "          <div class=\"sgold\">🪙 ${f.gold}</div>${Reckon.line(f, g)}\n",
       "run": "verify"
     },
     {
-      "name": "the stones crowd, seen in play",
+      "name": "a short row no longer fights",
       "file": "index.html",
-      "find": "  ROADSTEP: 54,",
-      "replace": "  ROADSTEP: 30,",
-      "run": "play:roadstep"
+      "find": "<div class=\"node done slim ${open?'':'locked'}\" onclick=\"Battle.begin(${ri},${fi})\">",
+      "replace": "<div class=\"node done slim ${open?'':'locked'}\">",
+      "run": "verify"
     },
     {
-      "name": "the labels run wide, seen in play",
+      "name": "a won fight keeps its full card, seen in play",
       "file": "index.html",
-      "find": ".stone .slab{position:absolute; top:50%; transform:translateY(-50%); width:120px;",
-      "replace": ".stone .slab{position:absolute; top:50%; transform:translateY(-50%); width:220px;",
-      "run": "play:roadstep"
+      "find": "        if(done){\n",
+      "replace": "        if(false){\n",
+      "run": "play:slimrows"
+    },
+    {
+      "name": "a short row runs tall, seen in play",
+      "file": "index.html",
+      "find": ".node.slim{padding:6px 10px; margin:5px 0; gap:8px;}",
+      "replace": ".node.slim{padding:26px 10px; margin:5px 0; gap:8px;}",
+      "run": "play:slimrows"
+    },
+    {
+      "name": "a short row no longer fights, seen in play",
+      "file": "index.html",
+      "find": "<div class=\"node done slim ${open?'':'locked'}\" onclick=\"Battle.begin(${ri},${fi})\">",
+      "replace": "<div class=\"node done slim ${open?'':'locked'}\">",
+      "run": "play:slimrows"
     }
   ]
 }
